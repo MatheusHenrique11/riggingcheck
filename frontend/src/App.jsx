@@ -438,7 +438,7 @@ export default function App() {
           <div>
             <div style={S.logoText}>RiggingCheck</div>
             <div style={S.logoSub}>Verificador de Segurança em Içamento</div>
-            <div style={S.apiBadge}>● API Java Spring Boot conectada</div>
+            <div style={S.apiBadge}></div>
           </div>
         </div>
         <div style={S.tabs}>
