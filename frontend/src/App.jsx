@@ -100,7 +100,7 @@ const S = {
     fontSize: 12, letterSpacing: "2px", textTransform: "uppercase",
     color: "#f59e0b", marginBottom: 20, display: "flex", alignItems: "center", gap: 8,
   },
-  grid: (cols) => ({ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 16 }),
+  grid: (cols) => ({ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }),
   field: { display: "flex", flexDirection: "column", gap: 6 },
   label: { fontSize: 11, color: "#64748b", letterSpacing: "1px", textTransform: "uppercase" },
   input: {
