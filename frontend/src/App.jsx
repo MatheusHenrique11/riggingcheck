@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const API = "http://localhost:8080";
+const API = "https://riggingcheck-production.up.railway.app";
 
 // ── CHECKLIST DATA (NR-11 / ABNT NBR 11900) ────────────────────────────────────
 const CHECKLIST = [
