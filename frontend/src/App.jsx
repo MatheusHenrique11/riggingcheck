@@ -234,7 +234,7 @@ function CapacityModule() {
       </div>
       <div style={{ marginTop: 20 }}>
         <button style={S.btn(loading)} onClick={calculate} disabled={loading}>
-          {loading ? "Consultando API..." : "Verificar via API"}
+          {loading ? "Consultar..." : "Verificar "}
         </button>
       </div>
       {error && <div style={S.errorBox}>{error}</div>}
@@ -327,7 +327,7 @@ function SlingModule() {
       </div>
       <div style={{ marginTop: 20 }}>
         <button style={S.btn(loading)} onClick={calculate} disabled={loading}>
-          {loading ? "Calculando via API..." : "Calcular via API"}
+          {loading ? "Calculando..." : "Calcular "}
         </button>
       </div>
       {error && <div style={S.errorBox}>{error}</div>}
