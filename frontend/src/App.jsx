@@ -821,23 +821,47 @@ const statusColor = (s) => s === "PROSSEGUIR" ? "#22c55e" : s === "PARAR" ? "#ef
 
 // ── ADMIN DASHBOARD (página separada) ────────────────────────────────────────────
 function AdminDashboard({ onVoltar, isMobile }) {
+  const [painel, setPainel] = useState("solicitacoes"); // "solicitacoes" | "equipe"
+
+  // ── Solicitações ──
   const [statusFiltro, setStatusFiltro] = useState("ANALISAR");
   const [lista, setLista] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingSol, setLoadingSol] = useState(true);
   const [obs, setObs] = useState({});
+
+  // ── Equipe ──
+  const [equipe, setEquipe] = useState([]);
+  const [loadingEq, setLoadingEq] = useState(false);
+  const [novoForm, setNovoForm] = useState({ nome: "", email: "", senha: "", role: "RIGGER" });
+  const [erroEq, setErroEq] = useState(null);
+  const [sucEq, setSucEq] = useState(null);
+
   const user = getUser();
   const isSuperAdmin = IS_SUPER(user?.role);
 
+  // ── Carregar solicitações ──
   const carregar = useCallback(async (s) => {
-    setLoading(true);
+    setLoadingSol(true);
     try {
       const res = await authFetch(`${API}/api/liberacoes?status=${s}`);
       if (res.ok) setLista(await res.json());
     } catch { /* ignora */ }
-    setLoading(false);
+    setLoadingSol(false);
   }, []);
 
   useEffect(() => { carregar(statusFiltro); }, [carregar, statusFiltro]);
+
+  // ── Carregar equipe ──
+  const carregarEquipe = useCallback(async () => {
+    setLoadingEq(true);
+    try {
+      const res = await authFetch(`${API}/api/funcionarios`);
+      if (res.ok) setEquipe(await res.json());
+    } catch { /* ignora */ }
+    setLoadingEq(false);
+  }, []);
+
+  useEffect(() => { if (painel === "equipe") carregarEquipe(); }, [painel, carregarEquipe]);
 
   const resolver = async (id, acao) => {
     try {
@@ -849,6 +873,29 @@ function AdminDashboard({ onVoltar, isMobile }) {
         setLista(p => p.filter(s => s.id !== id));
         setObs(o => { const n = { ...o }; delete n[id]; return n; });
       }
+    } catch { /* ignora */ }
+  };
+
+  const criarFuncionario = async () => {
+    setErroEq(null); setSucEq(null);
+    try {
+      const res = await authFetch(`${API}/api/funcionarios`, {
+        method: "POST",
+        body: JSON.stringify(novoForm),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setErroEq(data.error || "Erro ao criar usuário."); return; }
+      setSucEq(`Usuário ${data.nome} criado com sucesso.`);
+      setNovoForm({ nome: "", email: "", senha: "", role: "RIGGER" });
+      carregarEquipe();
+    } catch { setErroEq("Erro de conexão."); }
+  };
+
+  const alternarAtivo = async (id, ativo) => {
+    const acao = ativo ? "desativar" : "reativar";
+    try {
+      const res = await authFetch(`${API}/api/funcionarios/${id}/${acao}`, { method: "POST" });
+      if (res.ok) setEquipe(p => p.map(f => f.id === id ? { ...f, ativo: !ativo } : f));
     } catch { /* ignora */ }
   };
 
@@ -894,7 +941,7 @@ function AdminDashboard({ onVoltar, isMobile }) {
             <button onClick={onVoltar} style={{ ...S.logoutBtn(isMobile), borderColor: "#f59e0b44", color: "#f59e0b" }}>← Voltar</button>
             <div>
               <div style={S.logoText(isMobile)}>Painel Administrativo</div>
-              <div style={S.logoSub(isMobile)}>Gerenciamento de Solicitações</div>
+              <div style={S.logoSub(isMobile)}>{user?.empresaName || "RiggingCheck"}</div>
             </div>
           </div>
           <div style={S.userInfo(isMobile)}>
@@ -902,84 +949,173 @@ function AdminDashboard({ onVoltar, isMobile }) {
             <div style={S.userBadge(isMobile)}>{user?.userName}</div>
           </div>
         </div>
-        {/* Filtro de status */}
+        {/* Navegação principal do painel */}
         <div style={S.tabs(isMobile)}>
-          {["ANALISAR", "PROSSEGUIR", "PARAR", "TODOS"].map(s => (
-            <button key={s} style={S.tab(statusFiltro === s, isMobile)} onClick={() => setStatusFiltro(s)}>{s}</button>
-          ))}
-          <button onClick={() => carregar(statusFiltro)} style={{ ...S.tab(false, isMobile), marginLeft: 8 }}>↻</button>
+          <button style={S.tab(painel === "solicitacoes", isMobile)} onClick={() => setPainel("solicitacoes")}>📋 Solicitações</button>
+          <button style={S.tab(painel === "equipe", isMobile)} onClick={() => setPainel("equipe")}>👥 Equipe</button>
         </div>
       </div>
 
       <div style={{ maxWidth: 960, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 24px" }}>
-        {loading && <div style={{ color: "#64748b", textAlign: "center", padding: 40 }}>Carregando...</div>}
 
-        {!loading && lista.length === 0 && (
-          <div style={{ ...S.normaBox, textAlign: "center", padding: 36 }}>
-            Nenhuma solicitação com status "{statusFiltro}".
-          </div>
-        )}
+        {/* ── PAINEL SOLICITAÇÕES ── */}
+        {painel === "solicitacoes" && (
+          <>
+            {/* Filtro de status */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
+              {["ANALISAR", "PROSSEGUIR", "PARAR", "TODOS"].map(s => (
+                <button key={s} style={S.tab(statusFiltro === s, isMobile)} onClick={() => setStatusFiltro(s)}>{s}</button>
+              ))}
+              <button onClick={() => carregar(statusFiltro)} style={{ ...S.tab(false, isMobile), marginLeft: 4 }}>↻</button>
+            </div>
 
-        {!loading && Object.entries(grupos).map(([empresa, solicitacoes]) => (
-          <div key={empresa}>
-            {isSuperAdmin && (
-              <div style={{ fontSize: 11, color: "#f59e0b", letterSpacing: "2px", textTransform: "uppercase", marginBottom: 12, marginTop: 24, display: "flex", alignItems: "center", gap: 8 }}>
-                🏢 {empresa}
-                <span style={{ color: "#475569", fontWeight: 400 }}>({solicitacoes.length} solicitação{solicitacoes.length !== 1 ? "ões" : ""})</span>
+            {loadingSol && <div style={{ color: "#64748b", textAlign: "center", padding: 40 }}>Carregando...</div>}
+
+            {!loadingSol && lista.length === 0 && (
+              <div style={{ ...S.normaBox, textAlign: "center", padding: 36 }}>
+                Nenhuma solicitação com status "{statusFiltro}".
               </div>
             )}
-            {solicitacoes.map(sol => (
-              <div key={sol.id} style={{ background: "#0f0f1a", border: `1px solid ${statusColor(sol.status)}22`, borderRadius: 12, padding: 24, marginBottom: 16 }}>
-                {/* Cabeçalho do card */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
-                  <div>
-                    <div style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 15 }}>OS: {sol.operacaoOs}</div>
-                    <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 4 }}>Rigger: {sol.riggerNome}</div>
-                    <div style={{ color: "#475569", fontSize: 11, marginTop: 4 }}>
-                      Solicitado em: {new Date(sol.criadoEm).toLocaleString("pt-BR")}
-                    </div>
-                    {sol.resolvidoEm && (
-                      <div style={{ color: "#475569", fontSize: 11 }}>
-                        Resolvido em: {new Date(sol.resolvidoEm).toLocaleString("pt-BR")} por {sol.aprovadoPorNome}
-                      </div>
-                    )}
-                    {sol.observacao && (
-                      <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>Obs: "{sol.observacao}"</div>
-                    )}
-                  </div>
-                  <div style={S.riskBadge(statusColor(sol.status))}>{sol.status}</div>
-                </div>
 
-                {/* Dados técnicos */}
-                {cardTecnico(sol)}
-
-                {/* Ações (só para ANALISAR) */}
-                {sol.status === "ANALISAR" && (
-                  <div style={{ marginTop: 16 }}>
-                    <input
-                      style={{ ...S.input, fontSize: 12, padding: "8px 12px", width: "100%", boxSizing: "border-box" }}
-                      placeholder="Observação (opcional)"
-                      value={obs[sol.id] || ""}
-                      onChange={e => setObs(o => ({ ...o, [sol.id]: e.target.value }))}
-                    />
-                    <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
-                      <button
-                        style={{ ...S.btn(false), background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#000", padding: "10px 24px" }}
-                        onClick={() => resolver(sol.id, "aprovar")}>
-                        ✅ Autorizar Içamento
-                      </button>
-                      <button
-                        style={{ ...S.btn(false), background: "rgba(239,68,68,0.12)", border: "1px solid #ef444466", color: "#ef4444", padding: "10px 24px" }}
-                        onClick={() => resolver(sol.id, "negar")}>
-                        🚫 Negar
-                      </button>
-                    </div>
+            {!loadingSol && Object.entries(grupos).map(([empresa, solicitacoes]) => (
+              <div key={empresa}>
+                {isSuperAdmin && (
+                  <div style={{ fontSize: 11, color: "#f59e0b", letterSpacing: "2px", textTransform: "uppercase", marginBottom: 12, marginTop: 24, display: "flex", alignItems: "center", gap: 8 }}>
+                    🏢 {empresa}
+                    <span style={{ color: "#475569", fontWeight: 400 }}>({solicitacoes.length} solicitação{solicitacoes.length !== 1 ? "ões" : ""})</span>
                   </div>
                 )}
+                {solicitacoes.map(sol => (
+                  <div key={sol.id} style={{ background: "#0f0f1a", border: `1px solid ${statusColor(sol.status)}22`, borderRadius: 12, padding: 24, marginBottom: 16 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
+                      <div>
+                        <div style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 15 }}>OS: {sol.operacaoOs}</div>
+                        <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 4 }}>Rigger: {sol.riggerNome}</div>
+                        <div style={{ color: "#475569", fontSize: 11, marginTop: 4 }}>
+                          Solicitado em: {new Date(sol.criadoEm).toLocaleString("pt-BR")}
+                        </div>
+                        {sol.resolvidoEm && (
+                          <div style={{ color: "#475569", fontSize: 11 }}>
+                            Resolvido em: {new Date(sol.resolvidoEm).toLocaleString("pt-BR")} por {sol.aprovadoPorNome}
+                          </div>
+                        )}
+                        {sol.observacao && (
+                          <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>Obs: "{sol.observacao}"</div>
+                        )}
+                      </div>
+                      <div style={S.riskBadge(statusColor(sol.status))}>{sol.status}</div>
+                    </div>
+
+                    {cardTecnico(sol)}
+
+                    {sol.status === "ANALISAR" && (
+                      <div style={{ marginTop: 16 }}>
+                        <input
+                          style={{ ...S.input, fontSize: 12, padding: "8px 12px", width: "100%", boxSizing: "border-box" }}
+                          placeholder="Observação (opcional)"
+                          value={obs[sol.id] || ""}
+                          onChange={e => setObs(o => ({ ...o, [sol.id]: e.target.value }))}
+                        />
+                        <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+                          <button
+                            style={{ ...S.btn(false), background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#000", padding: "10px 24px" }}
+                            onClick={() => resolver(sol.id, "aprovar")}>
+                            ✅ Autorizar Içamento
+                          </button>
+                          <button
+                            style={{ ...S.btn(false), background: "rgba(239,68,68,0.12)", border: "1px solid #ef444466", color: "#ef4444", padding: "10px 24px" }}
+                            onClick={() => resolver(sol.id, "negar")}>
+                            🚫 Negar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             ))}
-          </div>
-        ))}
+          </>
+        )}
+
+        {/* ── PAINEL EQUIPE ── */}
+        {painel === "equipe" && (
+          <>
+            {/* Formulário novo usuário */}
+            <div style={{ background: "#0f0f1a", border: "1px solid #1e2a3a", borderRadius: 12, padding: 24, marginBottom: 32 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#f59e0b", marginBottom: 16, letterSpacing: "1px", textTransform: "uppercase" }}>
+                + Novo Usuário
+              </div>
+              <div style={S.grid()}>
+                <div style={S.field}>
+                  <label style={S.label}>Nome completo</label>
+                  <input style={S.input} placeholder="João da Silva" value={novoForm.nome}
+                    onChange={e => setNovoForm(f => ({ ...f, nome: e.target.value }))} />
+                </div>
+                <div style={S.field}>
+                  <label style={S.label}>E-mail</label>
+                  <input style={S.input} type="email" placeholder="joao@empresa.com" value={novoForm.email}
+                    onChange={e => setNovoForm(f => ({ ...f, email: e.target.value }))} />
+                </div>
+                <div style={S.field}>
+                  <label style={S.label}>Senha</label>
+                  <input style={S.input} type="password" placeholder="mínimo 6 caracteres" value={novoForm.senha}
+                    onChange={e => setNovoForm(f => ({ ...f, senha: e.target.value }))} />
+                </div>
+                <div style={S.field}>
+                  <label style={S.label}>Cargo</label>
+                  <select style={{ ...S.input, cursor: "pointer" }} value={novoForm.role}
+                    onChange={e => setNovoForm(f => ({ ...f, role: e.target.value }))}>
+                    <option value="RIGGER">Rigger</option>
+                    <option value="GERENTE_OPERACOES">Gerente de Operações</option>
+                    {isSuperAdmin && <option value="ADMIN_EMPRESA">Admin Empresa</option>}
+                  </select>
+                </div>
+              </div>
+              {erroEq && <div style={{ ...S.errorBox, marginTop: 12 }}>{erroEq}</div>}
+              {sucEq && <div style={{ ...S.successBox, marginTop: 12 }}>{sucEq}</div>}
+              <button style={{ ...S.btn(true), marginTop: 16 }} onClick={criarFuncionario}>
+                Criar Usuário
+              </button>
+            </div>
+
+            {/* Lista de usuários */}
+            <div style={{ fontSize: 11, color: "#475569", letterSpacing: "2px", textTransform: "uppercase", marginBottom: 16 }}>
+              Membros da equipe
+            </div>
+            {loadingEq && <div style={{ color: "#64748b", textAlign: "center", padding: 40 }}>Carregando...</div>}
+            {!loadingEq && equipe.length === 0 && (
+              <div style={{ ...S.normaBox, textAlign: "center", padding: 36 }}>
+                Nenhum membro cadastrado ainda.
+              </div>
+            )}
+            {equipe.map(f => (
+              <div key={f.id} style={{ background: "#0f0f1a", border: `1px solid ${f.ativo ? "#1e2a3a" : "#2d0000"}`, borderRadius: 12, padding: 18, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: f.ativo ? "#e2e8f0" : "#475569", fontSize: 14 }}>{f.nome}</div>
+                  <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>{f.email}</div>
+                  <div style={{ marginTop: 6, display: "flex", gap: 8, alignItems: "center" }}>
+                    <span style={{ background: "#1e2a3a", color: "#38bdf8", fontSize: 11, padding: "2px 8px", borderRadius: 4 }}>
+                      {roleLabel(f.role)}
+                    </span>
+                    {!f.ativo && (
+                      <span style={{ background: "#2d0000", color: "#ef4444", fontSize: 11, padding: "2px 8px", borderRadius: 4 }}>
+                        Inativo
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => alternarAtivo(f.id, f.ativo)}
+                  style={{ fontSize: 12, padding: "8px 16px", borderRadius: 8, border: "1px solid", cursor: "pointer",
+                    background: f.ativo ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)",
+                    borderColor: f.ativo ? "#ef444444" : "#22c55e44",
+                    color: f.ativo ? "#ef4444" : "#22c55e" }}>
+                  {f.ativo ? "Desativar" : "Reativar"}
+                </button>
+              </div>
+            ))}
+          </>
+        )}
 
         <div style={{ ...S.normaBox, textAlign: "center", marginTop: 32 }}>
           v2.0.0 — RiggingCheck Fullstack &nbsp;·&nbsp; React + Java Spring Boot + PostgreSQL

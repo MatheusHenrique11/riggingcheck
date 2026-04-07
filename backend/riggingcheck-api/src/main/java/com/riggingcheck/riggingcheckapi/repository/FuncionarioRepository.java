@@ -14,4 +14,5 @@ public interface FuncionarioRepository extends JpaRepository<Funcionario, UUID> 
     Optional<Funcionario> findByEmail(String email);
     List<Funcionario> findByEmpresaIdAndAtivoTrue(UUID empresaId);
     List<Funcionario> findByEmpresaIdAndRole(UUID empresaId, RoleEnum role);
+    List<Funcionario> findByEmpresaIdOrderByCriadoEmDesc(UUID empresaId);
 }
