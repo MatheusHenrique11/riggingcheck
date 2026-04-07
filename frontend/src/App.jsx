@@ -315,6 +315,13 @@ const riskColor = (level) => {
   return { color: "#ef4444", bg: "#2d0000" };
 };
 
+const riskLabel = (level) => {
+  if (level === "SAFE") return "Prosseguir";
+  if (level === "WARNING") return "Analisar";
+  if (level === "DANGER") return "Parar";
+  return level;
+};
+
 const roleLabel = (role) => {
   const map = {
     SUPER_ADMIN: "Super Admin",
@@ -529,7 +536,7 @@ function CapacityModule({ onApproved }) {
               <div>Margem disponível: <strong style={{ color: "#e2e8f0" }}>{result.availableMargin?.toFixed(0)} kg</strong></div>
             </div>
           </div>
-          <div style={S.riskBadge(risk.color)}>{result.riskLevel}</div>
+          <div style={S.riskBadge(risk.color)}>{riskLabel(result.riskLevel)}</div>
         </div>
       )}
       {result && !result.approved && (
@@ -628,7 +635,7 @@ function SlingModule({ onCompleted }) {
             )}
             {result.angleWarning && <div style={{ color: "#f59e0b" }}>⚠️ Ângulo crítico!</div>}
           </div>
-          <div style={S.riskBadge(risk.color)}>{result.riskLevel}</div>
+          <div style={S.riskBadge(risk.color)}>{riskLabel(result.riskLevel)}</div>
         </div>
       )}
       {result && result.riskLevel !== "DANGER" && (
@@ -683,13 +690,13 @@ function ChecklistModule({ capacityData, slingData }) {
   // Polling a cada 5s enquanto PENDENTE
   useEffect(() => {
     if (!polling || !solicitacao) return;
-    if (solicitacao.status !== "PENDENTE") { setPolling(false); return; }
+    if (solicitacao.status !== "ANALISAR") { setPolling(false); return; }
     const timer = setInterval(async () => {
       try {
         const res = await authFetch(`${API}/api/liberacoes/${solicitacao.id}`);
         const data = await res.json();
         setSolicitacao(data);
-        if (data.status !== "PENDENTE") setPolling(false);
+        if (data.status !== "ANALISAR") setPolling(false);
       } catch { /* ignora erros de rede no polling */ }
     }, 5000);
     return () => clearInterval(timer);
@@ -707,7 +714,7 @@ function ChecklistModule({ capacityData, slingData }) {
       {solicitacao ? (
         // ── STATUS DA SOLICITAÇÃO ──
         <div>
-          {solicitacao.status === "PENDENTE" && (
+          {solicitacao.status === "ANALISAR" && (
             <div style={{ ...S.warnBox, textAlign: "center", padding: 28 }}>
               <div style={{ fontSize: 28, marginBottom: 12 }}>⏳</div>
               <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Aguardando autorização do administrador</div>
@@ -715,7 +722,7 @@ function ChecklistModule({ capacityData, slingData }) {
               <div style={{ color: "#64748b", fontSize: 11, marginTop: 8 }}>Verificando automaticamente a cada 5 segundos...</div>
             </div>
           )}
-          {solicitacao.status === "APROVADO" && (
+          {solicitacao.status === "PROSSEGUIR" && (
             <div style={{ background: "#052e16", border: "1px solid #22c55e44", borderRadius: 12, padding: 28, textAlign: "center" }}>
               <div style={{ fontSize: 36, marginBottom: 12 }}>✅</div>
               <div style={{ fontWeight: 800, fontSize: 16, color: "#22c55e", marginBottom: 6 }}>IÇAMENTO AUTORIZADO</div>
@@ -725,7 +732,7 @@ function ChecklistModule({ capacityData, slingData }) {
               <div style={{ color: "#475569", fontSize: 11, marginTop: 8 }}>{new Date(solicitacao.resolvidoEm).toLocaleString("pt-BR")}</div>
             </div>
           )}
-          {solicitacao.status === "NEGADO" && (
+          {solicitacao.status === "PARAR" && (
             <div style={{ ...S.errorBox, textAlign: "center", padding: 28 }}>
               <div style={{ fontSize: 36, marginBottom: 12 }}>🚫</div>
               <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 6 }}>IÇAMENTO NÃO AUTORIZADO</div>
@@ -810,11 +817,11 @@ const IS_ADMIN = (role) =>
 
 const IS_SUPER = (role) => role === "SUPER_ADMIN";
 
-const statusColor = (s) => s === "APROVADO" ? "#22c55e" : s === "NEGADO" ? "#ef4444" : "#f59e0b";
+const statusColor = (s) => s === "PROSSEGUIR" ? "#22c55e" : s === "PARAR" ? "#ef4444" : "#f59e0b";
 
 // ── ADMIN DASHBOARD (página separada) ────────────────────────────────────────────
 function AdminDashboard({ onVoltar, isMobile }) {
-  const [statusFiltro, setStatusFiltro] = useState("PENDENTE");
+  const [statusFiltro, setStatusFiltro] = useState("ANALISAR");
   const [lista, setLista] = useState([]);
   const [loading, setLoading] = useState(true);
   const [obs, setObs] = useState({});
@@ -862,8 +869,8 @@ function AdminDashboard({ onVoltar, isMobile }) {
         <div style={{ fontSize: 12, lineHeight: 1.8, color: "#94a3b8" }}>
           <div>Guindaste: <strong style={{ color: "#e2e8f0" }}>{sol.capGuindasteKg?.toLocaleString("pt-BR")} kg</strong></div>
           <div>Carga total: <strong style={{ color: "#e2e8f0" }}>{sol.capTotalKg?.toFixed(0)} kg</strong></div>
-          <div>Uso: <strong style={{ color: statusColor(sol.capRisco === "SAFE" ? "APROVADO" : sol.capRisco === "WARNING" ? "PENDENTE" : "NEGADO") }}>{sol.capUsoPercent?.toFixed(1)}%</strong></div>
-          <div>Risco: <strong style={{ color: statusColor(sol.capRisco === "SAFE" ? "APROVADO" : sol.capRisco === "WARNING" ? "PENDENTE" : "NEGADO") }}>{sol.capRisco}</strong></div>
+          <div>Uso: <strong style={{ color: riskColor(sol.capRisco).color }}>{sol.capUsoPercent?.toFixed(1)}%</strong></div>
+          <div>Risco: <strong style={{ color: riskColor(sol.capRisco).color }}>{riskLabel(sol.capRisco)}</strong></div>
         </div>
       </div>
       <div>
@@ -872,7 +879,7 @@ function AdminDashboard({ onVoltar, isMobile }) {
           <div>Pernas: <strong style={{ color: "#e2e8f0" }}>{sol.eslNumPernas}</strong></div>
           <div>Ângulo: <strong style={{ color: sol.eslAnguloAviso ? "#f59e0b" : "#e2e8f0" }}>{sol.eslAnguloGraus}°{sol.eslAnguloAviso ? " ⚠️" : ""}</strong></div>
           <div>Tensão/perna: <strong style={{ color: "#e2e8f0" }}>{sol.eslTensaoPorPernaKg?.toFixed(0)} kg</strong></div>
-          <div>Risco: <strong style={{ color: statusColor(sol.eslRisco === "SAFE" ? "APROVADO" : sol.eslRisco === "WARNING" ? "PENDENTE" : "NEGADO") }}>{sol.eslRisco}</strong></div>
+          <div>Risco: <strong style={{ color: riskColor(sol.eslRisco).color }}>{riskLabel(sol.eslRisco)}</strong></div>
         </div>
       </div>
     </div>
@@ -897,7 +904,7 @@ function AdminDashboard({ onVoltar, isMobile }) {
         </div>
         {/* Filtro de status */}
         <div style={S.tabs(isMobile)}>
-          {["PENDENTE", "APROVADO", "NEGADO", "TODOS"].map(s => (
+          {["ANALISAR", "PROSSEGUIR", "PARAR", "TODOS"].map(s => (
             <button key={s} style={S.tab(statusFiltro === s, isMobile)} onClick={() => setStatusFiltro(s)}>{s}</button>
           ))}
           <button onClick={() => carregar(statusFiltro)} style={{ ...S.tab(false, isMobile), marginLeft: 8 }}>↻</button>
@@ -946,8 +953,8 @@ function AdminDashboard({ onVoltar, isMobile }) {
                 {/* Dados técnicos */}
                 {cardTecnico(sol)}
 
-                {/* Ações (só para PENDENTE) */}
-                {sol.status === "PENDENTE" && (
+                {/* Ações (só para ANALISAR) */}
+                {sol.status === "ANALISAR" && (
                   <div style={{ marginTop: 16 }}>
                     <input
                       style={{ ...S.input, fontSize: 12, padding: "8px 12px", width: "100%", boxSizing: "border-box" }}

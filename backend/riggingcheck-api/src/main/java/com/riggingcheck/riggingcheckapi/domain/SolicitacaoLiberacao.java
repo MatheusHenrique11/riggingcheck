@@ -30,7 +30,7 @@ public class SolicitacaoLiberacao {
     private UUID solicitadoPorId;
 
     @Column(name = "status", nullable = false)
-    private String status; // PENDENTE, APROVADO, NEGADO
+    private String status; // ANALISAR, PROSSEGUIR, PARAR
 
     // ── Dados de Capacidade ──────────────────────────────────────────────────────
     @Column(name = "cap_guindaste_kg")
@@ -89,6 +89,6 @@ public class SolicitacaoLiberacao {
     @PrePersist
     protected void onCreate() {
         criadoEm = LocalDateTime.now();
-        status = "PENDENTE";
+        status = "ANALISAR";
     }
 }

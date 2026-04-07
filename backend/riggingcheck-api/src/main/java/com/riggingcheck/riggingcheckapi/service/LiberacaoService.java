@@ -105,12 +105,12 @@ public class LiberacaoService {
 
     @Transactional
     public LiberacaoResponse aprovar(UUID id, ResolverLiberacaoRequest request, String emailAdmin) {
-        return resolver(id, "APROVADO", request.getObservacao(), emailAdmin);
+        return resolver(id, "PROSSEGUIR", request.getObservacao(), emailAdmin);
     }
 
     @Transactional
     public LiberacaoResponse negar(UUID id, ResolverLiberacaoRequest request, String emailAdmin) {
-        return resolver(id, "NEGADO", request.getObservacao(), emailAdmin);
+        return resolver(id, "PARAR", request.getObservacao(), emailAdmin);
     }
 
     private LiberacaoResponse resolver(UUID id, String novoStatus, String observacao, String emailAdmin) {
@@ -127,7 +127,7 @@ public class LiberacaoService {
             throw new RuntimeException("Acesso negado");
         }
 
-        if (!"PENDENTE".equals(sol.getStatus())) {
+        if (!"ANALISAR".equals(sol.getStatus())) {
             throw new RuntimeException("Solicitação já foi resolvida");
         }
 

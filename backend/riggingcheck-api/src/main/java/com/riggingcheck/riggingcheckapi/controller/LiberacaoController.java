@@ -34,7 +34,7 @@ public class LiberacaoController {
     // Admin lista solicitações — ?status=PENDENTE|APROVADO|NEGADO|TODOS
     @GetMapping
     public ResponseEntity<List<LiberacaoResponse>> listar(
-            @RequestParam(defaultValue = "PENDENTE") String status,
+            @RequestParam(defaultValue = "ANALISAR") String status,
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(liberacaoService.listar(status, userDetails.getUsername()));
     }
