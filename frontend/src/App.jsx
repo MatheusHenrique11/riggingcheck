@@ -1,4 +1,14 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+
+function useIsMobile() {
+  const [mobile, setMobile] = useState(() => window.innerWidth < 640);
+  useEffect(() => {
+    const fn = () => setMobile(window.innerWidth < 640);
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
+  }, []);
+  return mobile;
+}
 
 const API = import.meta.env.VITE_API_URL ?? "https://riggingcheck-production.up.railway.app";
 
@@ -90,16 +100,16 @@ const S = {
     alignItems: "center",
     justifyContent: "center",
     background: "linear-gradient(135deg, #0a0a0f 0%, #0f0f1a 100%)",
-    padding: 24,
+    padding: 16,
   },
-  loginCard: {
+  loginCard: (mobile) => ({
     background: "#0f0f1a",
     border: "1px solid #1e1e35",
     borderRadius: 16,
-    padding: "48px 40px",
+    padding: mobile ? "32px 20px" : "48px 40px",
     width: "100%",
     maxWidth: 420,
-  },
+  }),
   loginLogo: { textAlign: "center", marginBottom: 36 },
   loginIcon: {
     width: 56, height: 56,
@@ -126,13 +136,20 @@ const S = {
     transition: "all 0.2s",
   }),
   // HEADER
-  header: {
+  header: (mobile) => ({
     background: "linear-gradient(135deg, #0f0f1a 0%, #1a1020 100%)",
     borderBottom: "1px solid #2d2d4a",
-    padding: "24px 40px 20px",
+    padding: mobile ? "14px 16px 12px" : "24px 40px 20px",
     position: "sticky", top: 0, zIndex: 100,
-  },
-  headerTop: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 },
+  }),
+  headerTop: (mobile) => ({
+    display: "flex",
+    alignItems: mobile ? "flex-start" : "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: mobile ? 8 : 0,
+    marginBottom: 12,
+  }),
   logo: { display: "flex", alignItems: "center", gap: 14 },
   logoIcon: {
     width: 42, height: 42,
@@ -140,40 +157,57 @@ const S = {
     borderRadius: 8, display: "flex", alignItems: "center",
     justifyContent: "center", fontSize: 22,
     boxShadow: "0 0 20px rgba(245,158,11,0.3)",
+    flexShrink: 0,
   },
-  logoText: {
-    fontSize: 22, fontWeight: 700, letterSpacing: "-0.5px",
+  logoText: (mobile) => ({
+    fontSize: mobile ? 18 : 22, fontWeight: 700, letterSpacing: "-0.5px",
     background: "linear-gradient(90deg, #f59e0b, #fb923c)",
     WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-  },
-  logoSub: { fontSize: 11, color: "#64748b", letterSpacing: "2px", textTransform: "uppercase" },
-  userInfo: { display: "flex", alignItems: "center", gap: 12 },
-  userBadge: {
+  }),
+  logoSub: (mobile) => ({
+    fontSize: 10, color: "#64748b", letterSpacing: "2px", textTransform: "uppercase",
+    display: mobile ? "none" : "block",
+  }),
+  userInfo: (mobile) => ({
+    display: "flex", alignItems: "center",
+    gap: mobile ? 6 : 12,
+    flexShrink: 0,
+  }),
+  userBadge: (mobile) => ({
     background: "rgba(245,158,11,0.1)", border: "1px solid #f59e0b44",
-    borderRadius: 8, padding: "6px 14px", fontSize: 11,
+    borderRadius: 8, padding: mobile ? "5px 8px" : "6px 14px", fontSize: 11,
     color: "#f59e0b", letterSpacing: "1px",
-  },
-  roleBadge: {
+    maxWidth: mobile ? 110 : "none",
+    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+    display: mobile ? "none" : "block",
+  }),
+  roleBadge: (mobile) => ({
     background: "rgba(34,197,94,0.1)", border: "1px solid #22c55e44",
-    borderRadius: 6, padding: "4px 10px", fontSize: 10,
+    borderRadius: 6, padding: mobile ? "4px 8px" : "4px 10px", fontSize: 10,
     color: "#22c55e", letterSpacing: "1px", textTransform: "uppercase",
-  },
-  logoutBtn: {
+    whiteSpace: "nowrap",
+  }),
+  logoutBtn: (mobile) => ({
     background: "rgba(239,68,68,0.1)", border: "1px solid #ef444444",
-    borderRadius: 6, padding: "6px 14px", fontSize: 11,
+    borderRadius: 6, padding: mobile ? "6px 10px" : "6px 14px", fontSize: 11,
     color: "#ef4444", letterSpacing: "1px", cursor: "pointer",
     fontFamily: "inherit", textTransform: "uppercase",
-    transition: "all 0.2s",
-  },
-  tabs: { display: "flex", gap: 4 },
-  tab: (active) => ({
-    padding: "8px 20px", borderRadius: 6, border: "1px solid",
+    transition: "all 0.2s", whiteSpace: "nowrap", flexShrink: 0,
+  }),
+  tabs: (mobile) => ({
+    display: "flex", gap: 4,
+    overflowX: "auto", WebkitOverflowScrolling: "touch",
+    paddingBottom: mobile ? 4 : 0,
+    scrollbarWidth: "none",
+  }),
+  tab: (active, mobile) => ({
+    padding: mobile ? "8px 12px" : "8px 20px", borderRadius: 6, border: "1px solid",
     borderColor: active ? "#f59e0b" : "#2d2d4a",
     background: active ? "rgba(245,158,11,0.12)" : "transparent",
     color: active ? "#f59e0b" : "#64748b",
-    fontSize: 12, letterSpacing: "1px", textTransform: "uppercase",
+    fontSize: mobile ? 11 : 12, letterSpacing: "1px", textTransform: "uppercase",
     cursor: "pointer", fontFamily: "inherit", fontWeight: active ? 700 : 400,
-    transition: "all 0.2s",
+    transition: "all 0.2s", whiteSpace: "nowrap", flexShrink: 0,
   }),
   // SHARED
   container: { maxWidth: 860, margin: "0 auto", padding: "40px 24px" },
@@ -293,6 +327,7 @@ const roleLabel = (role) => {
 
 // ── LOGIN SCREEN ─────────────────────────────────────────────────────────────────
 function LoginScreen({ onAuth }) {
+  const isMobile = useIsMobile();
   const [mode, setMode] = useState("login"); // "login" | "register"
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -344,7 +379,7 @@ function LoginScreen({ onAuth }) {
 
   return (
     <div style={S.loginWrap}>
-      <div style={S.loginCard}>
+      <div style={S.loginCard(isMobile)}>
         <div style={S.loginLogo}>
           <div style={S.loginIcon}>🏗</div>
           <div style={S.loginTitle}>RiggingCheck</div>
@@ -647,6 +682,7 @@ function ChecklistModule() {
 
 // ── ROOT ─────────────────────────────────────────────────────────────────────────
 export default function App() {
+  const isMobile = useIsMobile();
   const [authenticated, setAuthenticated] = useState(() => !!getToken());
   const [tab, setTab] = useState(0);
   const user = getUser();
@@ -668,28 +704,28 @@ export default function App() {
 
   return (
     <div style={S.app}>
-      <div style={S.header}>
-        <div style={S.headerTop}>
+      <div style={S.header(isMobile)}>
+        <div style={S.headerTop(isMobile)}>
           <div style={S.logo}>
             <div style={S.logoIcon}>🏗</div>
             <div>
-              <div style={S.logoText}>RiggingCheck</div>
-              <div style={S.logoSub}>Verificador de Segurança em Içamento</div>
+              <div style={S.logoText(isMobile)}>RiggingCheck</div>
+              <div style={S.logoSub(isMobile)}>Verificador de Segurança em Içamento</div>
             </div>
           </div>
-          <div style={S.userInfo}>
+          <div style={S.userInfo(isMobile)}>
             {user && (
               <>
-                <div style={S.roleBadge}>{roleLabel(user.role)}</div>
-                <div style={S.userBadge}>{user.userName}</div>
+                <div style={S.roleBadge(isMobile)}>{roleLabel(user.role)}</div>
+                <div style={S.userBadge(isMobile)}>{user.userName}</div>
               </>
             )}
-            <button style={S.logoutBtn} onClick={handleLogout}>Sair</button>
+            <button style={S.logoutBtn(isMobile)} onClick={handleLogout}>Sair</button>
           </div>
         </div>
-        <div style={S.tabs}>
+        <div style={S.tabs(isMobile)}>
           {tabs.map((t, i) => (
-            <button key={i} style={S.tab(tab === i)} onClick={() => setTab(i)}>{t.label}</button>
+            <button key={i} style={S.tab(tab === i, isMobile)} onClick={() => setTab(i)}>{t.label}</button>
           ))}
         </div>
       </div>
