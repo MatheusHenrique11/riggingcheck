@@ -1,0 +1,70 @@
+package com.riggingcheck.riggingcheckapi.controller;
+
+import com.riggingcheck.riggingcheckapi.dto.LiberacaoRequest;
+import com.riggingcheck.riggingcheckapi.dto.LiberacaoResponse;
+import com.riggingcheck.riggingcheckapi.dto.ResolverLiberacaoRequest;
+import com.riggingcheck.riggingcheckapi.service.LiberacaoService;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/liberacoes")
+public class LiberacaoController {
+
+    private final LiberacaoService liberacaoService;
+
+    public LiberacaoController(LiberacaoService liberacaoService) {
+        this.liberacaoService = liberacaoService;
+    }
+
+    // Rigger solicita liberação após concluir o checklist
+    @PostMapping
+    public ResponseEntity<LiberacaoResponse> solicitar(
+            @Valid @RequestBody LiberacaoRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(liberacaoService.solicitar(request, userDetails.getUsername()));
+    }
+
+    // Admin lista solicitações pendentes da empresa
+    @GetMapping("/pendentes")
+    public ResponseEntity<List<LiberacaoResponse>> listarPendentes(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(liberacaoService.listarPendentes(userDetails.getUsername()));
+    }
+
+    // Rigger consulta status da sua solicitação
+    @GetMapping("/{id}")
+    public ResponseEntity<LiberacaoResponse> buscar(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(liberacaoService.buscar(id, userDetails.getUsername()));
+    }
+
+    // Admin aprova
+    @PostMapping("/{id}/aprovar")
+    public ResponseEntity<LiberacaoResponse> aprovar(
+            @PathVariable UUID id,
+            @RequestBody(required = false) ResolverLiberacaoRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(liberacaoService.aprovar(id,
+                request != null ? request : new ResolverLiberacaoRequest(),
+                userDetails.getUsername()));
+    }
+
+    // Admin nega
+    @PostMapping("/{id}/negar")
+    public ResponseEntity<LiberacaoResponse> negar(
+            @PathVariable UUID id,
+            @RequestBody(required = false) ResolverLiberacaoRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(liberacaoService.negar(id,
+                request != null ? request : new ResolverLiberacaoRequest(),
+                userDetails.getUsername()));
+    }
+}

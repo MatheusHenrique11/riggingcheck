@@ -452,7 +452,7 @@ function LoginScreen({ onAuth }) {
 }
 
 // ── MODULE 1: CAPACITY ───────────────────────────────────────────────────────────
-function CapacityModule() {
+function CapacityModule({ onApproved }) {
   const [form, setForm] = useState({ craneCapacity: "", loadWeight: "", riggingWeight: "50" });
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -469,7 +469,9 @@ function CapacityModule() {
           riggingWeight: parseFloat(form.riggingWeight) || 0,
         }),
       });
-      setResult(await res.json());
+      const data = await res.json();
+      setResult(data);
+      if (data.approved) onApproved?.();
     } catch {
       setError("Não foi possível conectar à API.");
     }
@@ -526,12 +528,15 @@ function CapacityModule() {
       {result && !result.approved && (
         <div style={S.warnBox}>⚠️ <strong>OPERAÇÃO NÃO PERMITIDA.</strong> Reduza a carga ou reposicione o guindaste.</div>
       )}
+      {result?.approved && (
+        <div style={S.successBox}>✅ Capacidade aprovada — prossiga para o cálculo de eslingas.</div>
+      )}
     </div>
   );
 }
 
 // ── MODULE 2: SLING ──────────────────────────────────────────────────────────────
-function SlingModule() {
+function SlingModule({ onCompleted }) {
   const [form, setForm] = useState({ loadWeight: "", numberOfLegs: "2", angleFromHorizontal: "45", wll: "" });
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -549,7 +554,9 @@ function SlingModule() {
           wll: form.wll ? parseFloat(form.wll) : null,
         }),
       });
-      setResult(await res.json());
+      const data = await res.json();
+      setResult(data);
+      if (data.riskLevel !== "DANGER") onCompleted?.();
     } catch {
       setError("Não foi possível conectar à API.");
     }
@@ -610,6 +617,9 @@ function SlingModule() {
           <div style={S.riskBadge(risk.color)}>{result.riskLevel}</div>
         </div>
       )}
+      {result && result.riskLevel !== "DANGER" && (
+        <div style={S.successBox}>✅ Cálculo concluído — prossiga para o checklist NR-11.</div>
+      )}
     </div>
   );
 }
@@ -620,73 +630,250 @@ function ChecklistModule() {
   const [checked, setChecked] = useState({});
   const [operator, setOperator] = useState("");
   const [jobId, setJobId] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [solicitacao, setSolicitacao] = useState(null); // { id, status, aprovadoPorNome }
+  const [polling, setPolling] = useState(false);
+
   const done = Object.values(checked).filter(Boolean).length;
   const pct = Math.round((done / total) * 100);
   const allDone = done === total;
 
+  const solicitarLiberacao = async () => {
+    if (!jobId.trim() || !operator.trim()) {
+      setError("Preencha o número da OS e o nome do Rigger.");
+      return;
+    }
+    setLoading(true); setError(null);
+    try {
+      const res = await authFetch(`${API}/api/liberacoes`, {
+        method: "POST",
+        body: JSON.stringify({ operacaoOs: jobId.trim(), riggerNome: operator.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Erro ao enviar solicitação."); return; }
+      setSolicitacao(data);
+      setPolling(true);
+    } catch {
+      setError("Não foi possível conectar à API.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Polling a cada 5s enquanto PENDENTE
+  useEffect(() => {
+    if (!polling || !solicitacao) return;
+    if (solicitacao.status !== "PENDENTE") { setPolling(false); return; }
+    const timer = setInterval(async () => {
+      try {
+        const res = await authFetch(`${API}/api/liberacoes/${solicitacao.id}`);
+        const data = await res.json();
+        setSolicitacao(data);
+        if (data.status !== "PENDENTE") setPolling(false);
+      } catch { /* ignora erros de rede no polling */ }
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [polling, solicitacao]);
+
+  const resetar = () => {
+    setChecked({}); setOperator(""); setJobId("");
+    setSolicitacao(null); setPolling(false); setError(null);
+  };
+
   return (
     <div style={S.card}>
       <div style={S.cardTitle}>📋 &nbsp;Checklist de Içamento — NR-11 / ABNT</div>
-      <div style={S.grid()}>
-        <div style={S.field}>
-          <label style={S.label}>Operação / OS nº</label>
-          <input style={S.input} placeholder="ex: OS-2024-089" value={jobId} onChange={e => setJobId(e.target.value)} />
-        </div>
-        <div style={S.field}>
-          <label style={S.label}>Rigger Responsável</label>
-          <input style={S.input} placeholder="Nome completo" value={operator} onChange={e => setOperator(e.target.value)} />
-        </div>
-      </div>
-      <hr style={S.divider} />
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <div style={{ fontSize: 13 }}>
-          <span style={{ color: allDone ? "#22c55e" : "#f59e0b", fontWeight: 700 }}>{done}</span>
-          <span style={{ color: "#64748b" }}> / {total} itens verificados</span>
-        </div>
-        <div style={S.riskBadge(allDone ? "#22c55e" : "#f59e0b")}>{pct}%</div>
-      </div>
-      <div style={S.progressBar}>
-        <div style={S.progressFill(pct, allDone ? "#22c55e" : "#f59e0b")} />
-      </div>
-      {CHECKLIST.map((cat, ci) => (
-        <div key={ci}>
-          <div style={S.catTitle}>▸ {cat.category}
-            <span style={{ color: "#475569", fontWeight: 400 }}>
-              ({cat.items.filter((_, ii) => checked[`${ci}-${ii}`]).length}/{cat.items.length})
-            </span>
+
+      {solicitacao ? (
+        // ── STATUS DA SOLICITAÇÃO ──
+        <div>
+          {solicitacao.status === "PENDENTE" && (
+            <div style={{ ...S.warnBox, textAlign: "center", padding: 28 }}>
+              <div style={{ fontSize: 28, marginBottom: 12 }}>⏳</div>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Aguardando autorização do administrador</div>
+              <div style={{ color: "#94a3b8", fontSize: 12 }}>OS: {solicitacao.operacaoOs} · Rigger: {solicitacao.riggerNome}</div>
+              <div style={{ color: "#64748b", fontSize: 11, marginTop: 8 }}>Verificando automaticamente a cada 5 segundos...</div>
+            </div>
+          )}
+          {solicitacao.status === "APROVADO" && (
+            <div style={{ background: "#052e16", border: "1px solid #22c55e44", borderRadius: 12, padding: 28, textAlign: "center" }}>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>✅</div>
+              <div style={{ fontWeight: 800, fontSize: 16, color: "#22c55e", marginBottom: 6 }}>IÇAMENTO AUTORIZADO</div>
+              <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>OS: {solicitacao.operacaoOs} · Rigger: {solicitacao.riggerNome}</div>
+              <div style={{ color: "#22c55e", fontSize: 12 }}>Autorizado por: <strong>{solicitacao.aprovadoPorNome}</strong></div>
+              {solicitacao.observacao && <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 8 }}>"{solicitacao.observacao}"</div>}
+              <div style={{ color: "#475569", fontSize: 11, marginTop: 8 }}>{new Date(solicitacao.resolvidoEm).toLocaleString("pt-BR")}</div>
+            </div>
+          )}
+          {solicitacao.status === "NEGADO" && (
+            <div style={{ ...S.errorBox, textAlign: "center", padding: 28 }}>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>🚫</div>
+              <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 6 }}>IÇAMENTO NÃO AUTORIZADO</div>
+              <div style={{ fontSize: 12, marginBottom: 4 }}>OS: {solicitacao.operacaoOs} · Rigger: {solicitacao.riggerNome}</div>
+              <div style={{ fontSize: 12 }}>Negado por: <strong>{solicitacao.aprovadoPorNome}</strong></div>
+              {solicitacao.observacao && <div style={{ fontSize: 12, marginTop: 8 }}>Motivo: "{solicitacao.observacao}"</div>}
+            </div>
+          )}
+          <div style={{ marginTop: 20, display: "flex", gap: 12 }}>
+            <button style={{ ...S.btn(false), background: "#1e1e35", color: "#64748b" }} onClick={resetar}>
+              Nova Operação
+            </button>
           </div>
-          {cat.items.map((item, ii) => {
-            const key = `${ci}-${ii}`;
-            const isChecked = !!checked[key];
-            return (
-              <div key={ii} style={S.checkRow(isChecked)} onClick={() => setChecked(p => ({ ...p, [key]: !p[key] }))}>
-                <div style={S.checkbox(isChecked)}>
-                  {isChecked && <span style={{ color: "#000", fontSize: 13, fontWeight: 900 }}>✓</span>}
-                </div>
-                <span style={{ fontSize: 13, lineHeight: 1.5, userSelect: "none" }}>{item}</span>
-              </div>
-            );
-          })}
         </div>
-      ))}
-      <div style={{ marginTop: 28, display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <button style={S.btn(!allDone)} disabled={!allDone}
-          onClick={() => alert(`✅ Içamento liberado!\nOS: ${jobId || "—"}\nRigger: ${operator || "—"}\nData: ${new Date().toLocaleString("pt-BR")}`)}>
-          {allDone ? "✅ Emitir Liberação" : `Aguardando ${total - done} item(s)`}
-        </button>
-        <button style={{ ...S.btn(false), background: "#1e1e35", color: "#64748b" }}
-          onClick={() => setChecked({})}>Reiniciar</button>
-      </div>
+      ) : (
+        // ── CHECKLIST ──
+        <>
+          <div style={S.grid()}>
+            <div style={S.field}>
+              <label style={S.label}>Operação / OS nº</label>
+              <input style={S.input} placeholder="ex: OS-2024-089" value={jobId} onChange={e => setJobId(e.target.value)} />
+            </div>
+            <div style={S.field}>
+              <label style={S.label}>Rigger Responsável</label>
+              <input style={S.input} placeholder="Nome completo" value={operator} onChange={e => setOperator(e.target.value)} />
+            </div>
+          </div>
+          <hr style={S.divider} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <div style={{ fontSize: 13 }}>
+              <span style={{ color: allDone ? "#22c55e" : "#f59e0b", fontWeight: 700 }}>{done}</span>
+              <span style={{ color: "#64748b" }}> / {total} itens verificados</span>
+            </div>
+            <div style={S.riskBadge(allDone ? "#22c55e" : "#f59e0b")}>{pct}%</div>
+          </div>
+          <div style={S.progressBar}>
+            <div style={S.progressFill(pct, allDone ? "#22c55e" : "#f59e0b")} />
+          </div>
+          {CHECKLIST.map((cat, ci) => (
+            <div key={ci}>
+              <div style={S.catTitle}>▸ {cat.category}
+                <span style={{ color: "#475569", fontWeight: 400 }}>
+                  ({cat.items.filter((_, ii) => checked[`${ci}-${ii}`]).length}/{cat.items.length})
+                </span>
+              </div>
+              {cat.items.map((item, ii) => {
+                const key = `${ci}-${ii}`;
+                const isChecked = !!checked[key];
+                return (
+                  <div key={ii} style={S.checkRow(isChecked)} onClick={() => setChecked(p => ({ ...p, [key]: !p[key] }))}>
+                    <div style={S.checkbox(isChecked)}>
+                      {isChecked && <span style={{ color: "#000", fontSize: 13, fontWeight: 900 }}>✓</span>}
+                    </div>
+                    <span style={{ fontSize: 13, lineHeight: 1.5, userSelect: "none" }}>{item}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+          {error && <div style={S.errorBox}>{error}</div>}
+          <div style={{ marginTop: 28, display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <button style={S.btn(!allDone || loading)} disabled={!allDone || loading} onClick={solicitarLiberacao}>
+              {!allDone ? `Aguardando ${total - done} item(s)` : loading ? "Enviando..." : "🔒 Solicitar Liberação"}
+            </button>
+            <button style={{ ...S.btn(false), background: "#1e1e35", color: "#64748b" }} onClick={resetar}>
+              Reiniciar
+            </button>
+          </div>
+          {allDone && !solicitacao && (
+            <div style={S.normaBox}>
+              ℹ️ Após solicitar, o administrador receberá a notificação e poderá autorizar ou negar o içamento.
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
+
+// ── ADMIN PANEL ──────────────────────────────────────────────────────────────────
+function AdminPanel() {
+  const [pendentes, setPendentes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [obs, setObs] = useState({});
+
+  const carregar = useCallback(async () => {
+    try {
+      const res = await authFetch(`${API}/api/liberacoes/pendentes`);
+      if (res.ok) setPendentes(await res.json());
+    } catch { /* ignora */ }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { carregar(); }, [carregar]);
+
+  const resolver = async (id, acao) => {
+    try {
+      const res = await authFetch(`${API}/api/liberacoes/${id}/${acao}`, {
+        method: "POST",
+        body: JSON.stringify({ observacao: obs[id] || "" }),
+      });
+      if (res.ok) { setPendentes(p => p.filter(s => s.id !== id)); setObs(o => { const n = {...o}; delete n[id]; return n; }); }
+    } catch { /* ignora */ }
+  };
+
+  return (
+    <div style={S.card}>
+      <div style={{ ...S.cardTitle, justifyContent: "space-between" }}>
+        <span>🔑 &nbsp;Liberações Pendentes</span>
+        <button onClick={carregar} style={{ ...S.logoutBtn(false), fontSize: 10 }}>↻ Atualizar</button>
+      </div>
+      {loading && <div style={{ color: "#64748b", fontSize: 13 }}>Carregando...</div>}
+      {!loading && pendentes.length === 0 && (
+        <div style={{ ...S.normaBox, textAlign: "center" }}>
+          Nenhuma solicitação pendente no momento.
+        </div>
+      )}
+      {pendentes.map(sol => (
+        <div key={sol.id} style={{ background: "#070710", border: "1px solid #2d2d4a", borderRadius: 10, padding: 20, marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
+            <div>
+              <div style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 14 }}>OS: {sol.operacaoOs}</div>
+              <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>Rigger: {sol.riggerNome}</div>
+              <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>
+                {new Date(sol.criadoEm).toLocaleString("pt-BR")}
+              </div>
+            </div>
+            <div style={S.riskBadge("#f59e0b")}>PENDENTE</div>
+          </div>
+          <div style={{ marginTop: 14 }}>
+            <input
+              style={{ ...S.input, fontSize: 12, padding: "8px 12px" }}
+              placeholder="Observação (opcional)"
+              value={obs[sol.id] || ""}
+              onChange={e => setObs(o => ({ ...o, [sol.id]: e.target.value }))}
+            />
+          </div>
+          <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+            <button
+              style={{ ...S.btn(false), background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#000", padding: "10px 20px" }}
+              onClick={() => resolver(sol.id, "aprovar")}>
+              ✅ Autorizar
+            </button>
+            <button
+              style={{ ...S.btn(false), background: "rgba(239,68,68,0.15)", border: "1px solid #ef444488", color: "#ef4444", padding: "10px 20px" }}
+              onClick={() => resolver(sol.id, "negar")}>
+              🚫 Negar
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const IS_ADMIN = (role) =>
+  ["ADMIN_EMPRESA", "GERENTE_OPERACOES", "SUPER_ADMIN"].includes(role);
 
 // ── ROOT ─────────────────────────────────────────────────────────────────────────
 export default function App() {
   const isMobile = useIsMobile();
   const [authenticated, setAuthenticated] = useState(() => !!getToken());
   const [tab, setTab] = useState(0);
+  const [capacityOk, setCapacityOk] = useState(false);
+  const [slingOk, setSlingOk] = useState(false);
   const user = getUser();
+  const isAdmin = IS_ADMIN(user?.role);
 
   const handleLogout = useCallback(() => {
     clearAuth();
@@ -698,10 +885,33 @@ export default function App() {
   }
 
   const tabs = [
-    { label: "⚖ Capacidade", component: <CapacityModule /> },
-    { label: "📐 Eslingas", component: <SlingModule /> },
-    { label: "📋 Checklist NR-11", component: <ChecklistModule /> },
+    {
+      label: "⚖ Capacidade",
+      locked: false,
+      component: <CapacityModule onApproved={() => setCapacityOk(true)} />,
+    },
+    {
+      label: "📐 Eslingas",
+      locked: !capacityOk,
+      lockMsg: "Conclua a verificação de capacidade primeiro",
+      component: <SlingModule onCompleted={() => setSlingOk(true)} />,
+    },
+    {
+      label: "📋 Checklist NR-11",
+      locked: !slingOk,
+      lockMsg: "Conclua o cálculo de eslingas primeiro",
+      component: <ChecklistModule />,
+    },
+    ...(isAdmin ? [{
+      label: "🔑 Pendentes",
+      locked: false,
+      component: <AdminPanel />,
+    }] : []),
   ];
+
+  const handleTabClick = (i) => {
+    if (!tabs[i].locked) setTab(i);
+  };
 
   return (
     <div style={S.app}>
@@ -726,14 +936,29 @@ export default function App() {
         </div>
         <div style={S.tabs(isMobile)}>
           {tabs.map((t, i) => (
-            <button key={i} style={S.tab(tab === i, isMobile)} onClick={() => setTab(i)}>{t.label}</button>
+            <button
+              key={i}
+              style={{
+                ...S.tab(tab === i, isMobile),
+                ...(t.locked ? { opacity: 0.35, cursor: "not-allowed" } : {}),
+              }}
+              onClick={() => handleTabClick(i)}
+              title={t.locked ? t.lockMsg : ""}
+            >
+              {t.locked ? "🔒 " : ""}{t.label}
+            </button>
           ))}
         </div>
       </div>
       <div style={S.container}>
-        {tabs[tab].component}
+        {tabs[tab].locked ? (
+          <div style={{ ...S.warnBox, textAlign: "center", padding: 36 }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>🔒</div>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>{tabs[tab].lockMsg}</div>
+          </div>
+        ) : tabs[tab].component}
         <div style={{ ...S.normaBox, textAlign: "center", marginTop: 32 }}>
-          v1.5.0 — RiggingCheck Fullstack &nbsp;·&nbsp; React + Java Spring Boot + PostgreSQL
+          v2.0.0 — RiggingCheck Fullstack &nbsp;·&nbsp; React + Java Spring Boot + PostgreSQL
           <br />
           <span style={{ color: "#475569" }}>NR-11 · ABNT NBR 11900 · ABNT NBR 13541 · ISO 4308-1</span>
         </div>
