@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const API = "https://riggingcheck-production.up.railway.app";
+const API = import.meta.env.VITE_API_URL ?? "https://riggingcheck-production.up.railway.app";
 
 // ── CHECKLIST DATA (NR-11 / ABNT NBR 11900) ────────────────────────────────────
 const CHECKLIST = [

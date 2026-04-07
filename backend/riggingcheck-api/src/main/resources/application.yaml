@@ -1,3 +1,29 @@
 spring:
   application:
     name: riggingcheck-api
+  profiles:
+    active: h2
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+  h2:
+    console:
+      enabled: false
+  datasource:
+    url: jdbc:h2:mem:riggingcheck
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION_MS:86400000}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
+logging:
+  level:
+    org.springframework.security: INFO
+    com.riggingcheck: INFO
