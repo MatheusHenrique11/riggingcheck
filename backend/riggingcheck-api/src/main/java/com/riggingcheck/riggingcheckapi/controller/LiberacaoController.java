@@ -23,7 +23,7 @@ public class LiberacaoController {
         this.liberacaoService = liberacaoService;
     }
 
-    // Rigger solicita liberação após concluir o checklist
+    // Rigger solicita liberação
     @PostMapping
     public ResponseEntity<LiberacaoResponse> solicitar(
             @Valid @RequestBody LiberacaoRequest request,
@@ -31,14 +31,15 @@ public class LiberacaoController {
         return ResponseEntity.ok(liberacaoService.solicitar(request, userDetails.getUsername()));
     }
 
-    // Admin lista solicitações pendentes da empresa
-    @GetMapping("/pendentes")
-    public ResponseEntity<List<LiberacaoResponse>> listarPendentes(
+    // Admin lista solicitações — ?status=PENDENTE|APROVADO|NEGADO|TODOS
+    @GetMapping
+    public ResponseEntity<List<LiberacaoResponse>> listar(
+            @RequestParam(defaultValue = "PENDENTE") String status,
             @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(liberacaoService.listarPendentes(userDetails.getUsername()));
+        return ResponseEntity.ok(liberacaoService.listar(status, userDetails.getUsername()));
     }
 
-    // Rigger consulta status da sua solicitação
+    // Rigger ou admin consulta uma solicitação específica (polling)
     @GetMapping("/{id}")
     public ResponseEntity<LiberacaoResponse> buscar(
             @PathVariable UUID id,

@@ -11,4 +11,10 @@ public interface SolicitacaoLiberacaoRepository extends JpaRepository<Solicitaca
     List<SolicitacaoLiberacao> findByEmpresaIdAndStatusOrderByCriadoEmDesc(UUID empresaId, String status);
 
     List<SolicitacaoLiberacao> findByEmpresaIdOrderByCriadoEmDesc(UUID empresaId);
+
+    // SUPER_ADMIN: todas as empresas filtradas por status
+    List<SolicitacaoLiberacao> findByStatusOrderByCriadoEmDesc(String status);
+
+    // SUPER_ADMIN: todas as empresas, todos os status
+    List<SolicitacaoLiberacao> findAllByOrderByCriadoEmDesc();
 }

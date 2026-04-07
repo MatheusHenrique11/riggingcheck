@@ -471,7 +471,14 @@ function CapacityModule({ onApproved }) {
       });
       const data = await res.json();
       setResult(data);
-      if (data.approved) onApproved?.();
+      if (data.approved) onApproved?.({
+        capGuindasteKg: parseFloat(form.craneCapacity),
+        capCargaKg: parseFloat(form.loadWeight),
+        capAparelhoKg: parseFloat(form.riggingWeight) || 0,
+        capTotalKg: data.totalLoad,
+        capUsoPercent: data.usagePercent,
+        capRisco: data.riskLevel,
+      });
     } catch {
       setError("Não foi possível conectar à API.");
     }
@@ -556,7 +563,14 @@ function SlingModule({ onCompleted }) {
       });
       const data = await res.json();
       setResult(data);
-      if (data.riskLevel !== "DANGER") onCompleted?.();
+      if (data.riskLevel !== "DANGER") onCompleted?.({
+        eslNumPernas: parseInt(form.numberOfLegs),
+        eslAnguloGraus: parseFloat(form.angleFromHorizontal),
+        eslTensaoPorPernaKg: data.tensionPerLeg,
+        eslFatorCarga: data.loadFactor,
+        eslRisco: data.riskLevel,
+        eslAnguloAviso: data.angleWarning ?? false,
+      });
     } catch {
       setError("Não foi possível conectar à API.");
     }
@@ -625,7 +639,7 @@ function SlingModule({ onCompleted }) {
 }
 
 // ── MODULE 3: CHECKLIST ──────────────────────────────────────────────────────────
-function ChecklistModule() {
+function ChecklistModule({ capacityData, slingData }) {
   const total = CHECKLIST.reduce((s, c) => s + c.items.length, 0);
   const [checked, setChecked] = useState({});
   const [operator, setOperator] = useState("");
@@ -648,7 +662,12 @@ function ChecklistModule() {
     try {
       const res = await authFetch(`${API}/api/liberacoes`, {
         method: "POST",
-        body: JSON.stringify({ operacaoOs: jobId.trim(), riggerNome: operator.trim() }),
+        body: JSON.stringify({
+          operacaoOs: jobId.trim(),
+          riggerNome: operator.trim(),
+          dadosCapacidade: capacityData,
+          dadosEslinga: slingData,
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Erro ao enviar solicitação."); return; }
@@ -786,21 +805,32 @@ function ChecklistModule() {
   );
 }
 
-// ── ADMIN PANEL ──────────────────────────────────────────────────────────────────
-function AdminPanel() {
-  const [pendentes, setPendentes] = useState([]);
+const IS_ADMIN = (role) =>
+  ["ADMIN_EMPRESA", "GERENTE_OPERACOES", "SUPER_ADMIN"].includes(role);
+
+const IS_SUPER = (role) => role === "SUPER_ADMIN";
+
+const statusColor = (s) => s === "APROVADO" ? "#22c55e" : s === "NEGADO" ? "#ef4444" : "#f59e0b";
+
+// ── ADMIN DASHBOARD (página separada) ────────────────────────────────────────────
+function AdminDashboard({ onVoltar, isMobile }) {
+  const [statusFiltro, setStatusFiltro] = useState("PENDENTE");
+  const [lista, setLista] = useState([]);
   const [loading, setLoading] = useState(true);
   const [obs, setObs] = useState({});
+  const user = getUser();
+  const isSuperAdmin = IS_SUPER(user?.role);
 
-  const carregar = useCallback(async () => {
+  const carregar = useCallback(async (s) => {
+    setLoading(true);
     try {
-      const res = await authFetch(`${API}/api/liberacoes/pendentes`);
-      if (res.ok) setPendentes(await res.json());
+      const res = await authFetch(`${API}/api/liberacoes?status=${s}`);
+      if (res.ok) setLista(await res.json());
     } catch { /* ignora */ }
     setLoading(false);
   }, []);
 
-  useEffect(() => { carregar(); }, [carregar]);
+  useEffect(() => { carregar(statusFiltro); }, [carregar, statusFiltro]);
 
   const resolver = async (id, acao) => {
     try {
@@ -808,70 +838,160 @@ function AdminPanel() {
         method: "POST",
         body: JSON.stringify({ observacao: obs[id] || "" }),
       });
-      if (res.ok) { setPendentes(p => p.filter(s => s.id !== id)); setObs(o => { const n = {...o}; delete n[id]; return n; }); }
+      if (res.ok) {
+        setLista(p => p.filter(s => s.id !== id));
+        setObs(o => { const n = { ...o }; delete n[id]; return n; });
+      }
     } catch { /* ignora */ }
   };
 
-  return (
-    <div style={S.card}>
-      <div style={{ ...S.cardTitle, justifyContent: "space-between" }}>
-        <span>🔑 &nbsp;Liberações Pendentes</span>
-        <button onClick={carregar} style={{ ...S.logoutBtn(false), fontSize: 10 }}>↻ Atualizar</button>
+  // Agrupa por empresa para SUPER_ADMIN
+  const grupos = isSuperAdmin
+    ? lista.reduce((acc, sol) => {
+        const key = sol.empresaNome || "Sem empresa";
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(sol);
+        return acc;
+      }, {})
+    : { [user?.empresaName || "Minha Empresa"]: lista };
+
+  const cardTecnico = (sol) => (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 14, background: "#0a0a0f", borderRadius: 8, padding: 14 }}>
+      <div>
+        <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Capacidade</div>
+        <div style={{ fontSize: 12, lineHeight: 1.8, color: "#94a3b8" }}>
+          <div>Guindaste: <strong style={{ color: "#e2e8f0" }}>{sol.capGuindasteKg?.toLocaleString("pt-BR")} kg</strong></div>
+          <div>Carga total: <strong style={{ color: "#e2e8f0" }}>{sol.capTotalKg?.toFixed(0)} kg</strong></div>
+          <div>Uso: <strong style={{ color: statusColor(sol.capRisco === "SAFE" ? "APROVADO" : sol.capRisco === "WARNING" ? "PENDENTE" : "NEGADO") }}>{sol.capUsoPercent?.toFixed(1)}%</strong></div>
+          <div>Risco: <strong style={{ color: statusColor(sol.capRisco === "SAFE" ? "APROVADO" : sol.capRisco === "WARNING" ? "PENDENTE" : "NEGADO") }}>{sol.capRisco}</strong></div>
+        </div>
       </div>
-      {loading && <div style={{ color: "#64748b", fontSize: 13 }}>Carregando...</div>}
-      {!loading && pendentes.length === 0 && (
-        <div style={{ ...S.normaBox, textAlign: "center" }}>
-          Nenhuma solicitação pendente no momento.
+      <div>
+        <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Eslinga</div>
+        <div style={{ fontSize: 12, lineHeight: 1.8, color: "#94a3b8" }}>
+          <div>Pernas: <strong style={{ color: "#e2e8f0" }}>{sol.eslNumPernas}</strong></div>
+          <div>Ângulo: <strong style={{ color: sol.eslAnguloAviso ? "#f59e0b" : "#e2e8f0" }}>{sol.eslAnguloGraus}°{sol.eslAnguloAviso ? " ⚠️" : ""}</strong></div>
+          <div>Tensão/perna: <strong style={{ color: "#e2e8f0" }}>{sol.eslTensaoPorPernaKg?.toFixed(0)} kg</strong></div>
+          <div>Risco: <strong style={{ color: statusColor(sol.eslRisco === "SAFE" ? "APROVADO" : sol.eslRisco === "WARNING" ? "PENDENTE" : "NEGADO") }}>{sol.eslRisco}</strong></div>
         </div>
-      )}
-      {pendentes.map(sol => (
-        <div key={sol.id} style={{ background: "#070710", border: "1px solid #2d2d4a", borderRadius: 10, padding: 20, marginBottom: 14 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={S.app}>
+      {/* Header do painel admin */}
+      <div style={S.header(isMobile)}>
+        <div style={S.headerTop(isMobile)}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <button onClick={onVoltar} style={{ ...S.logoutBtn(isMobile), borderColor: "#f59e0b44", color: "#f59e0b" }}>← Voltar</button>
             <div>
-              <div style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 14 }}>OS: {sol.operacaoOs}</div>
-              <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>Rigger: {sol.riggerNome}</div>
-              <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>
-                {new Date(sol.criadoEm).toLocaleString("pt-BR")}
-              </div>
+              <div style={S.logoText(isMobile)}>Painel Administrativo</div>
+              <div style={S.logoSub(isMobile)}>Gerenciamento de Solicitações</div>
             </div>
-            <div style={S.riskBadge("#f59e0b")}>PENDENTE</div>
           </div>
-          <div style={{ marginTop: 14 }}>
-            <input
-              style={{ ...S.input, fontSize: 12, padding: "8px 12px" }}
-              placeholder="Observação (opcional)"
-              value={obs[sol.id] || ""}
-              onChange={e => setObs(o => ({ ...o, [sol.id]: e.target.value }))}
-            />
-          </div>
-          <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-            <button
-              style={{ ...S.btn(false), background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#000", padding: "10px 20px" }}
-              onClick={() => resolver(sol.id, "aprovar")}>
-              ✅ Autorizar
-            </button>
-            <button
-              style={{ ...S.btn(false), background: "rgba(239,68,68,0.15)", border: "1px solid #ef444488", color: "#ef4444", padding: "10px 20px" }}
-              onClick={() => resolver(sol.id, "negar")}>
-              🚫 Negar
-            </button>
+          <div style={S.userInfo(isMobile)}>
+            <div style={S.roleBadge(isMobile)}>{roleLabel(user?.role)}</div>
+            <div style={S.userBadge(isMobile)}>{user?.userName}</div>
           </div>
         </div>
-      ))}
+        {/* Filtro de status */}
+        <div style={S.tabs(isMobile)}>
+          {["PENDENTE", "APROVADO", "NEGADO", "TODOS"].map(s => (
+            <button key={s} style={S.tab(statusFiltro === s, isMobile)} onClick={() => setStatusFiltro(s)}>{s}</button>
+          ))}
+          <button onClick={() => carregar(statusFiltro)} style={{ ...S.tab(false, isMobile), marginLeft: 8 }}>↻</button>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 24px" }}>
+        {loading && <div style={{ color: "#64748b", textAlign: "center", padding: 40 }}>Carregando...</div>}
+
+        {!loading && lista.length === 0 && (
+          <div style={{ ...S.normaBox, textAlign: "center", padding: 36 }}>
+            Nenhuma solicitação com status "{statusFiltro}".
+          </div>
+        )}
+
+        {!loading && Object.entries(grupos).map(([empresa, solicitacoes]) => (
+          <div key={empresa}>
+            {isSuperAdmin && (
+              <div style={{ fontSize: 11, color: "#f59e0b", letterSpacing: "2px", textTransform: "uppercase", marginBottom: 12, marginTop: 24, display: "flex", alignItems: "center", gap: 8 }}>
+                🏢 {empresa}
+                <span style={{ color: "#475569", fontWeight: 400 }}>({solicitacoes.length} solicitação{solicitacoes.length !== 1 ? "ões" : ""})</span>
+              </div>
+            )}
+            {solicitacoes.map(sol => (
+              <div key={sol.id} style={{ background: "#0f0f1a", border: `1px solid ${statusColor(sol.status)}22`, borderRadius: 12, padding: 24, marginBottom: 16 }}>
+                {/* Cabeçalho do card */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 15 }}>OS: {sol.operacaoOs}</div>
+                    <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 4 }}>Rigger: {sol.riggerNome}</div>
+                    <div style={{ color: "#475569", fontSize: 11, marginTop: 4 }}>
+                      Solicitado em: {new Date(sol.criadoEm).toLocaleString("pt-BR")}
+                    </div>
+                    {sol.resolvidoEm && (
+                      <div style={{ color: "#475569", fontSize: 11 }}>
+                        Resolvido em: {new Date(sol.resolvidoEm).toLocaleString("pt-BR")} por {sol.aprovadoPorNome}
+                      </div>
+                    )}
+                    {sol.observacao && (
+                      <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>Obs: "{sol.observacao}"</div>
+                    )}
+                  </div>
+                  <div style={S.riskBadge(statusColor(sol.status))}>{sol.status}</div>
+                </div>
+
+                {/* Dados técnicos */}
+                {cardTecnico(sol)}
+
+                {/* Ações (só para PENDENTE) */}
+                {sol.status === "PENDENTE" && (
+                  <div style={{ marginTop: 16 }}>
+                    <input
+                      style={{ ...S.input, fontSize: 12, padding: "8px 12px", width: "100%", boxSizing: "border-box" }}
+                      placeholder="Observação (opcional)"
+                      value={obs[sol.id] || ""}
+                      onChange={e => setObs(o => ({ ...o, [sol.id]: e.target.value }))}
+                    />
+                    <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+                      <button
+                        style={{ ...S.btn(false), background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#000", padding: "10px 24px" }}
+                        onClick={() => resolver(sol.id, "aprovar")}>
+                        ✅ Autorizar Içamento
+                      </button>
+                      <button
+                        style={{ ...S.btn(false), background: "rgba(239,68,68,0.12)", border: "1px solid #ef444466", color: "#ef4444", padding: "10px 24px" }}
+                        onClick={() => resolver(sol.id, "negar")}>
+                        🚫 Negar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ))}
+
+        <div style={{ ...S.normaBox, textAlign: "center", marginTop: 32 }}>
+          v2.0.0 — RiggingCheck Fullstack &nbsp;·&nbsp; React + Java Spring Boot + PostgreSQL
+        </div>
+      </div>
     </div>
   );
 }
-
-const IS_ADMIN = (role) =>
-  ["ADMIN_EMPRESA", "GERENTE_OPERACOES", "SUPER_ADMIN"].includes(role);
 
 // ── ROOT ─────────────────────────────────────────────────────────────────────────
 export default function App() {
   const isMobile = useIsMobile();
   const [authenticated, setAuthenticated] = useState(() => !!getToken());
+  const [view, setView] = useState("app"); // "app" | "admin"
   const [tab, setTab] = useState(0);
   const [capacityOk, setCapacityOk] = useState(false);
   const [slingOk, setSlingOk] = useState(false);
+  const [capacityData, setCapacityData] = useState(null);
+  const [slingData, setSlingData] = useState(null);
   const user = getUser();
   const isAdmin = IS_ADMIN(user?.role);
 
@@ -884,34 +1004,31 @@ export default function App() {
     return <LoginScreen onAuth={() => setAuthenticated(true)} />;
   }
 
+  if (view === "admin") {
+    return <AdminDashboard onVoltar={() => setView("app")} isMobile={isMobile} />;
+  }
+
   const tabs = [
     {
       label: "⚖ Capacidade",
       locked: false,
-      component: <CapacityModule onApproved={() => setCapacityOk(true)} />,
+      component: <CapacityModule onApproved={(data) => { setCapacityData(data); setCapacityOk(true); }} />,
     },
     {
       label: "📐 Eslingas",
       locked: !capacityOk,
       lockMsg: "Conclua a verificação de capacidade primeiro",
-      component: <SlingModule onCompleted={() => setSlingOk(true)} />,
+      component: <SlingModule onCompleted={(data) => { setSlingData(data); setSlingOk(true); }} />,
     },
     {
       label: "📋 Checklist NR-11",
       locked: !slingOk,
       lockMsg: "Conclua o cálculo de eslingas primeiro",
-      component: <ChecklistModule />,
+      component: <ChecklistModule capacityData={capacityData} slingData={slingData} />,
     },
-    ...(isAdmin ? [{
-      label: "🔑 Pendentes",
-      locked: false,
-      component: <AdminPanel />,
-    }] : []),
   ];
 
-  const handleTabClick = (i) => {
-    if (!tabs[i].locked) setTab(i);
-  };
+  const handleTabClick = (i) => { if (!tabs[i].locked) setTab(i); };
 
   return (
     <div style={S.app}>
@@ -931,6 +1048,11 @@ export default function App() {
                 <div style={S.userBadge(isMobile)}>{user.userName}</div>
               </>
             )}
+            {isAdmin && (
+              <button style={{ ...S.logoutBtn(isMobile), borderColor: "#f59e0b44", color: "#f59e0b" }} onClick={() => setView("admin")}>
+                {isMobile ? "🔑" : "🔑 Painel Admin"}
+              </button>
+            )}
             <button style={S.logoutBtn(isMobile)} onClick={handleLogout}>Sair</button>
           </div>
         </div>
@@ -938,10 +1060,7 @@ export default function App() {
           {tabs.map((t, i) => (
             <button
               key={i}
-              style={{
-                ...S.tab(tab === i, isMobile),
-                ...(t.locked ? { opacity: 0.35, cursor: "not-allowed" } : {}),
-              }}
+              style={{ ...S.tab(tab === i, isMobile), ...(t.locked ? { opacity: 0.35, cursor: "not-allowed" } : {}) }}
               onClick={() => handleTabClick(i)}
               title={t.locked ? t.lockMsg : ""}
             >
