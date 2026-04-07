@@ -120,10 +120,11 @@ const S = {
     boxShadow: "0 0 30px rgba(245,158,11,0.3)",
   },
   loginTitle: {
-    fontSize: 26, fontWeight: 700,
+    fontSize: 26, fontWeight: 700, lineHeight: 1.3,
     background: "linear-gradient(90deg, #f59e0b, #fb923c)",
     WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
-    marginBottom: 4,
+    paddingBottom: 4,
+    marginBottom: 10,
   },
   loginSub: { fontSize: 11, color: "#475569", letterSpacing: "2px", textTransform: "uppercase" },
   loginTabs: { display: "flex", gap: 4, marginBottom: 28, background: "#070710", borderRadius: 8, padding: 4 },
