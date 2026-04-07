@@ -58,6 +58,7 @@ public class AuthService {
                 .role(funcionario.getRole())
                 .empresaId(empresa.getId())
                 .empresaName(empresa.getRazaoSocial())
+                .empresaCnpj(empresa.getCnpj())
                 .build();
     }
 

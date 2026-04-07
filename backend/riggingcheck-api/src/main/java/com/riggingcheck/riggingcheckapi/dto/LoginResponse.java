@@ -15,4 +15,5 @@ public class LoginResponse {
     private RoleEnum role;
     private UUID empresaId;
     private String empresaName;
+    private String empresaCnpj;
 }
