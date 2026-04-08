@@ -24,6 +24,9 @@ const clearAuth = () => {
   localStorage.removeItem("rc_user");
 };
 
+// Rotas de cálculo nunca devem causar logout (erros de input retornam 400/400)
+const CALC_ROUTES = ["/api/capacity/", "/api/sling/"];
+
 const authFetch = async (url, options = {}) => {
   const token = getToken();
   const res = await fetch(url, {
@@ -34,7 +37,8 @@ const authFetch = async (url, options = {}) => {
       ...(options.headers || {}),
     },
   });
-  if (res.status === 401 || res.status === 403) {
+  const isCalcRoute = CALC_ROUTES.some(r => url.includes(r));
+  if ((res.status === 401 || res.status === 403) && !isCalcRoute) {
     clearAuth();
     window.location.reload();
   }
@@ -466,17 +470,21 @@ function CapacityModule({ onApproved }) {
   const [error, setError] = useState(null);
 
   const calculate = async () => {
+    const craneCapacity = parseFloat(form.craneCapacity);
+    const loadWeight = parseFloat(form.loadWeight);
+    const riggingWeight = parseFloat(form.riggingWeight) || 0;
+
+    if (!craneCapacity || craneCapacity <= 0) { setError("Informe a capacidade do guindaste (valor positivo)."); return; }
+    if (!loadWeight || loadWeight <= 0) { setError("Informe o peso da carga (valor positivo)."); return; }
+
     setLoading(true); setError(null);
     try {
       const res = await authFetch(`${API}/api/capacity/verify`, {
         method: "POST",
-        body: JSON.stringify({
-          craneCapacity: parseFloat(form.craneCapacity),
-          loadWeight: parseFloat(form.loadWeight),
-          riggingWeight: parseFloat(form.riggingWeight) || 0,
-        }),
+        body: JSON.stringify({ craneCapacity, loadWeight, riggingWeight }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(data.error || "Erro no cálculo."); setLoading(false); return; }
       setResult(data);
       if (data.approved) onApproved?.({
         capGuindasteKg: parseFloat(form.craneCapacity),
@@ -557,18 +565,23 @@ function SlingModule({ onCompleted }) {
   const [error, setError] = useState(null);
 
   const calculate = async () => {
+    const loadWeight = parseFloat(form.loadWeight);
+    const numberOfLegs = parseInt(form.numberOfLegs);
+    const angleFromHorizontal = parseFloat(form.angleFromHorizontal);
+    const wll = form.wll ? parseFloat(form.wll) : null;
+
+    if (!loadWeight || loadWeight <= 0) { setError("Informe o peso da carga (valor positivo)."); return; }
+    if (!angleFromHorizontal || angleFromHorizontal <= 0 || angleFromHorizontal > 90) { setError("Ângulo deve estar entre 1° e 90°."); return; }
+    if (wll !== null && wll <= 0) { setError("WLL deve ser maior que zero."); return; }
+
     setLoading(true); setError(null);
     try {
       const res = await authFetch(`${API}/api/sling/calculate`, {
         method: "POST",
-        body: JSON.stringify({
-          loadWeight: parseFloat(form.loadWeight),
-          numberOfLegs: parseInt(form.numberOfLegs),
-          angleFromHorizontal: parseFloat(form.angleFromHorizontal),
-          wll: form.wll ? parseFloat(form.wll) : null,
-        }),
+        body: JSON.stringify({ loadWeight, numberOfLegs, angleFromHorizontal, wll }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(data.error || "Erro no cálculo."); setLoading(false); return; }
       setResult(data);
       if (data.riskLevel !== "DANGER") onCompleted?.({
         eslNumPernas: parseInt(form.numberOfLegs),

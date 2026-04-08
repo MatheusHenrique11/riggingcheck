@@ -6,6 +6,13 @@ import org.springframework.stereotype.Service;
 public class CapacityService {
 
     public CapacityResponse verify(CapacityRequest req) {
+        if (req.craneCapacity() <= 0)
+            throw new RuntimeException("Capacidade do guindaste deve ser maior que zero");
+        if (req.loadWeight() < 0)
+            throw new RuntimeException("Peso da carga não pode ser negativo");
+        if (req.riggingWeight() < 0)
+            throw new RuntimeException("Peso do aparelho não pode ser negativo");
+
         double totalLoad = req.loadWeight() + req.riggingWeight();
         double usagePct = (totalLoad / req.craneCapacity()) * 100;
         String risk = usagePct < 70 ? "SAFE" : usagePct < 90 ? "WARNING" : "DANGER";
