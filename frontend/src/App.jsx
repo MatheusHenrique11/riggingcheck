@@ -24,9 +24,6 @@ const clearAuth = () => {
   localStorage.removeItem("rc_user");
 };
 
-// Rotas de cálculo nunca devem causar logout (erros de input retornam 400/400)
-const CALC_ROUTES = ["/api/capacity/", "/api/sling/"];
-
 const authFetch = async (url, options = {}) => {
   const token = getToken();
   const res = await fetch(url, {
@@ -37,10 +34,21 @@ const authFetch = async (url, options = {}) => {
       ...(options.headers || {}),
     },
   });
-  const isCalcRoute = CALC_ROUTES.some(r => url.includes(r));
-  if ((res.status === 401 || res.status === 403) && !isCalcRoute) {
-    clearAuth();
-    window.location.reload();
+  if (res.status === 401 || res.status === 403) {
+    // Verifica se é realmente falha de autenticação (JWT expirado/inválido)
+    // e não um erro de regra de negócio (ex: acesso negado a um recurso específico)
+    const clone = res.clone();
+    const body = await clone.json().catch(() => ({}));
+    const isAuthError = !body.error ||
+      body.error.includes("Credenciais") ||
+      body.error.includes("JWT") ||
+      body.error.includes("token") ||
+      body.error.includes("Token") ||
+      body.error.includes("expirado");
+    if (isAuthError && res.status === 401) {
+      clearAuth();
+      window.dispatchEvent(new Event("rc_session_expired"));
+    }
   }
   return res;
 };
@@ -1297,6 +1305,12 @@ export default function App() {
   const handleLogout = useCallback(() => {
     clearAuth();
     setAuthenticated(false);
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setAuthenticated(false);
+    window.addEventListener("rc_session_expired", handler);
+    return () => window.removeEventListener("rc_session_expired", handler);
   }, []);
 
   if (!authenticated) {
