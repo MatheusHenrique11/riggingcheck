@@ -338,15 +338,17 @@ const roleLabel = (role) => {
 // ── LOGIN SCREEN ─────────────────────────────────────────────────────────────────
 function LoginScreen({ onAuth }) {
   const isMobile = useIsMobile();
-  const [mode, setMode] = useState("login"); // "login" | "register"
+  // "select" | "usuario" | "admin" | "register"
+  const [mode, setMode] = useState("select");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [regForm, setRegForm] = useState({
     razaoSocial: "", cnpj: "", adminName: "", adminEmail: "", adminPassword: "",
   });
+
+  const goTo = (m) => { setMode(m); setError(null); setSuccess(null); };
 
   const handleLogin = async () => {
     setLoading(true); setError(null);
@@ -377,8 +379,9 @@ function LoginScreen({ onAuth }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setError(data.error || "Erro ao cadastrar empresa."); return; }
-      setSuccess("Empresa cadastrada! Faça login com suas credenciais.");
-      setMode("login");
+      setSuccess("Empresa cadastrada! Faça login com as credenciais do administrador.");
+      setRegForm({ razaoSocial: "", cnpj: "", adminName: "", adminEmail: "", adminPassword: "" });
+      goTo("admin");
       setLoginForm({ email: regForm.adminEmail, password: "" });
     } catch {
       setError("Não foi possível conectar ao servidor.");
@@ -387,74 +390,185 @@ function LoginScreen({ onAuth }) {
     }
   };
 
+  const accentUsuario = "#38bdf8";
+  const accentAdmin   = "#f59e0b";
+  const isAdmin = mode === "admin" || mode === "register";
+  const accent  = isAdmin ? accentAdmin : accentUsuario;
+
+  // ── TELA DE SELEÇÃO ──
+  if (mode === "select") {
+    return (
+      <div style={S.loginWrap}>
+        <div style={{ width: "100%", maxWidth: 480, padding: isMobile ? "0 16px" : 0 }}>
+          <div style={{ textAlign: "center", marginBottom: 40 }}>
+            <div style={S.loginIcon}>🏗</div>
+            <div style={S.loginTitle}>RiggingCheck</div>
+            <div style={S.loginSub}>Segurança em Içamento</div>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Card Usuário */}
+            <button onClick={() => goTo("usuario")} style={{
+              background: "#0f0f1a", border: `2px solid ${accentUsuario}44`,
+              borderRadius: 16, padding: "28px 24px", cursor: "pointer",
+              textAlign: "left", transition: "all 0.2s", width: "100%",
+              display: "flex", alignItems: "center", gap: 20,
+            }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = accentUsuario}
+              onMouseLeave={e => e.currentTarget.style.borderColor = `${accentUsuario}44`}
+            >
+              <div style={{
+                width: 56, height: 56, borderRadius: 14, flexShrink: 0,
+                background: `${accentUsuario}18`, border: `1px solid ${accentUsuario}44`,
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26,
+              }}>👷</div>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0", marginBottom: 6 }}>
+                  Operador / Rigger
+                </div>
+                <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5 }}>
+                  Realize verificações de capacidade e eslingas,<br />
+                  e solicite autorização para o içamento.
+                </div>
+              </div>
+              <div style={{ marginLeft: "auto", color: accentUsuario, fontSize: 20 }}>→</div>
+            </button>
+
+            {/* Card Admin */}
+            <button onClick={() => goTo("admin")} style={{
+              background: "#0f0f1a", border: `2px solid ${accentAdmin}44`,
+              borderRadius: 16, padding: "28px 24px", cursor: "pointer",
+              textAlign: "left", transition: "all 0.2s", width: "100%",
+              display: "flex", alignItems: "center", gap: 20,
+            }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = accentAdmin}
+              onMouseLeave={e => e.currentTarget.style.borderColor = `${accentAdmin}44`}
+            >
+              <div style={{
+                width: 56, height: 56, borderRadius: 14, flexShrink: 0,
+                background: `${accentAdmin}18`, border: `1px solid ${accentAdmin}44`,
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26,
+              }}>🔑</div>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0", marginBottom: 6 }}>
+                  Administrador / Líder de Equipe
+                </div>
+                <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5 }}>
+                  Gerencie sua equipe, avalie e aprove<br />
+                  ou reprove solicitações de içamento.
+                </div>
+              </div>
+              <div style={{ marginLeft: "auto", color: accentAdmin, fontSize: 20 }}>→</div>
+            </button>
+          </div>
+
+          <div style={{ ...S.normaBox, marginTop: 28, textAlign: "center" }}>
+            NR-11 · ABNT NBR 11900 · ABNT NBR 13541
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── TELA DE CADASTRO DE EMPRESA ──
+  if (mode === "register") {
+    return (
+      <div style={S.loginWrap}>
+        <div style={S.loginCard(isMobile)}>
+          <button onClick={() => goTo("admin")} style={{
+            background: "none", border: "none", color: "#64748b",
+            cursor: "pointer", fontSize: 13, marginBottom: 20, padding: 0, display: "flex", alignItems: "center", gap: 6,
+          }}>← Voltar</button>
+
+          <div style={{ fontSize: 14, fontWeight: 700, color: accentAdmin, marginBottom: 20, letterSpacing: "1px", textTransform: "uppercase" }}>
+            Cadastrar Nova Empresa
+          </div>
+
+          {[
+            { key: "razaoSocial", label: "Razão Social", placeholder: "Nome da empresa", type: "text" },
+            { key: "cnpj", label: "CNPJ", placeholder: "00.000.000/0001-00", type: "text" },
+            { key: "adminName", label: "Nome do Administrador", placeholder: "Nome completo", type: "text" },
+            { key: "adminEmail", label: "Email do Administrador", placeholder: "admin@empresa.com", type: "email" },
+            { key: "adminPassword", label: "Senha (mín. 6 caracteres)", placeholder: "••••••••", type: "password" },
+          ].map((f, i) => (
+            <div key={f.key} style={{ ...S.field, marginTop: i === 0 ? 0 : 14 }}>
+              <label style={S.label}>{f.label}</label>
+              <input style={S.input} type={f.type} placeholder={f.placeholder}
+                value={regForm[f.key]}
+                onChange={e => setRegForm(p => ({ ...p, [f.key]: e.target.value }))} />
+            </div>
+          ))}
+          {error && <div style={{ ...S.errorBox, marginTop: 12 }}>{error}</div>}
+          {success && <div style={{ ...S.successBox, marginTop: 12 }}>{success}</div>}
+          <button style={{ ...S.btnFull(loading), marginTop: 20, background: `linear-gradient(135deg, ${accentAdmin}, #fb923c)` }}
+            onClick={handleRegister} disabled={loading}>
+            {loading ? "Cadastrando..." : "Cadastrar Empresa"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── TELA DE LOGIN (usuário ou admin) ──
   return (
     <div style={S.loginWrap}>
       <div style={S.loginCard(isMobile)}>
-        <div style={S.loginLogo}>
-          <div style={S.loginIcon}>🏗</div>
-          <div style={S.loginTitle}>RiggingCheck</div>
-          <div style={S.loginSub}>Segurança em Içamento</div>
+        <button onClick={() => goTo("select")} style={{
+          background: "none", border: "none", color: "#64748b",
+          cursor: "pointer", fontSize: 13, marginBottom: 20, padding: 0, display: "flex", alignItems: "center", gap: 6,
+        }}>← Voltar</button>
+
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: 13, margin: "0 auto 14px",
+            background: `${accent}18`, border: `1px solid ${accent}44`,
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24,
+          }}>
+            {isAdmin ? "🔑" : "👷"}
+          </div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0" }}>
+            {isAdmin ? "Acesso Administrativo" : "Acesso do Operador"}
+          </div>
+          <div style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>
+            {isAdmin ? "Gerencie equipe e aprove içamentos" : "Verificações e solicitação de içamento"}
+          </div>
         </div>
 
-        <div style={S.loginTabs}>
-          <button style={S.loginTab(mode === "login")} onClick={() => { setMode("login"); setError(null); }}>
-            Entrar
+        <div style={S.field}>
+          <label style={S.label}>Email</label>
+          <input style={{ ...S.input, borderColor: `${accent}44` }}
+            type="email" placeholder="seu@email.com"
+            value={loginForm.email}
+            onChange={e => setLoginForm(p => ({ ...p, email: e.target.value }))}
+            onKeyDown={e => e.key === "Enter" && handleLogin()} />
+        </div>
+        <div style={{ ...S.field, marginTop: 16 }}>
+          <label style={S.label}>Senha</label>
+          <input style={{ ...S.input, borderColor: `${accent}44` }}
+            type="password" placeholder="••••••••"
+            value={loginForm.password}
+            onChange={e => setLoginForm(p => ({ ...p, password: e.target.value }))}
+            onKeyDown={e => e.key === "Enter" && handleLogin()} />
+        </div>
+
+        {error && <div style={{ ...S.errorBox, marginTop: 12 }}>{error}</div>}
+        {success && <div style={{ ...S.successBox, marginTop: 12 }}>{success}</div>}
+
+        <button style={{ ...S.btnFull(loading), marginTop: 20, background: `linear-gradient(135deg, ${accent}, ${isAdmin ? "#fb923c" : "#0ea5e9"})` }}
+          onClick={handleLogin} disabled={loading}>
+          {loading ? "Entrando..." : "Entrar"}
+        </button>
+
+        {isAdmin && (
+          <button onClick={() => goTo("register")} style={{
+            width: "100%", marginTop: 12, background: "none",
+            border: `1px solid ${accentAdmin}33`, borderRadius: 10,
+            color: accentAdmin, fontSize: 13, padding: "10px 0",
+            cursor: "pointer", fontFamily: "inherit",
+          }}>
+            + Cadastrar nova empresa
           </button>
-          <button style={S.loginTab(mode === "register")} onClick={() => { setMode("register"); setError(null); }}>
-            Cadastrar Empresa
-          </button>
-        </div>
-
-        {mode === "login" && (
-          <>
-            <div style={S.field}>
-              <label style={S.label}>Email</label>
-              <input style={S.input} type="email" placeholder="seu@email.com"
-                value={loginForm.email}
-                onChange={e => setLoginForm(p => ({ ...p, email: e.target.value }))}
-                onKeyDown={e => e.key === "Enter" && handleLogin()} />
-            </div>
-            <div style={{ ...S.field, marginTop: 16 }}>
-              <label style={S.label}>Senha</label>
-              <input style={S.input} type="password" placeholder="••••••••"
-                value={loginForm.password}
-                onChange={e => setLoginForm(p => ({ ...p, password: e.target.value }))}
-                onKeyDown={e => e.key === "Enter" && handleLogin()} />
-            </div>
-            {error && <div style={S.errorBox}>{error}</div>}
-            {success && <div style={S.successBox}>{success}</div>}
-            <button style={S.btnFull(loading)} onClick={handleLogin} disabled={loading}>
-              {loading ? "Entrando..." : "Entrar"}
-            </button>
-          </>
         )}
-
-        {mode === "register" && (
-          <>
-            {[
-              { key: "razaoSocial", label: "Razão Social", placeholder: "Nome da empresa", type: "text" },
-              { key: "cnpj", label: "CNPJ", placeholder: "00.000.000/0001-00", type: "text" },
-              { key: "adminName", label: "Nome do Administrador", placeholder: "Nome completo", type: "text" },
-              { key: "adminEmail", label: "Email do Administrador", placeholder: "admin@empresa.com", type: "email" },
-              { key: "adminPassword", label: "Senha (mín. 8 caracteres)", placeholder: "••••••••", type: "password" },
-            ].map((f, i) => (
-              <div key={f.key} style={{ ...S.field, marginTop: i === 0 ? 0 : 14 }}>
-                <label style={S.label}>{f.label}</label>
-                <input style={S.input} type={f.type} placeholder={f.placeholder}
-                  value={regForm[f.key]}
-                  onChange={e => setRegForm(p => ({ ...p, [f.key]: e.target.value }))} />
-              </div>
-            ))}
-            {error && <div style={S.errorBox}>{error}</div>}
-            <button style={S.btnFull(loading)} onClick={handleRegister} disabled={loading}>
-              {loading ? "Cadastrando..." : "Cadastrar Empresa"}
-            </button>
-          </>
-        )}
-
-        <div style={{ ...S.normaBox, marginTop: 24, textAlign: "center" }}>
-          NR-11 · ABNT NBR 11900 · ABNT NBR 13541
-        </div>
       </div>
     </div>
   );
