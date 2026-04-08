@@ -34,21 +34,11 @@ const authFetch = async (url, options = {}) => {
       ...(options.headers || {}),
     },
   });
-  if (res.status === 401 || res.status === 403) {
-    // Verifica se é realmente falha de autenticação (JWT expirado/inválido)
-    // e não um erro de regra de negócio (ex: acesso negado a um recurso específico)
-    const clone = res.clone();
-    const body = await clone.json().catch(() => ({}));
-    const isAuthError = !body.error ||
-      body.error.includes("Credenciais") ||
-      body.error.includes("JWT") ||
-      body.error.includes("token") ||
-      body.error.includes("Token") ||
-      body.error.includes("expirado");
-    if (isAuthError && res.status === 401) {
-      clearAuth();
-      window.dispatchEvent(new Event("rc_session_expired"));
-    }
+  // 401 = JWT expirado/inválido → desloga sem recarregar a página
+  // 403 = acesso negado a recurso, não é falha de sessão
+  if (res.status === 401) {
+    clearAuth();
+    window.dispatchEvent(new Event("rc_session_expired"));
   }
   return res;
 };
