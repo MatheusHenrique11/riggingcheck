@@ -43,6 +43,9 @@ public class Funcionario {
     @Column(name = "ativo", nullable = false)
     private Boolean ativo = true;
 
+    @Column(name = "chave_api", unique = true)
+    private String chaveApi;
+
     @Column(name = "criado_em", nullable = false)
     private LocalDateTime criadoEm;
 

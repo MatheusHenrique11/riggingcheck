@@ -22,6 +22,9 @@ public class Empresa {
     @Column(name = "marca_dagua_relatorio")
     private String marcaDaguaRelatorio;
 
+    @Column(name = "ativo", nullable = false)
+    private Boolean ativo = true;
+
     @Column(name = "criado_em", nullable = false)
     private LocalDateTime criadoEm;
 

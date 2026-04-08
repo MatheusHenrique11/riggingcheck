@@ -12,6 +12,8 @@ import java.util.UUID;
 @Repository
 public interface FuncionarioRepository extends JpaRepository<Funcionario, UUID> {
     Optional<Funcionario> findByEmail(String email);
+    Optional<Funcionario> findByChaveApi(String chaveApi);
+    List<Funcionario> findByRole(RoleEnum role);
     List<Funcionario> findByEmpresaIdAndAtivoTrue(UUID empresaId);
     List<Funcionario> findByEmpresaIdAndRole(UUID empresaId, RoleEnum role);
     List<Funcionario> findByEmpresaIdOrderByCriadoEmDesc(UUID empresaId);

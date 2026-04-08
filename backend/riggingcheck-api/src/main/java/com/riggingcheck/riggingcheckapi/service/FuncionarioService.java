@@ -20,9 +20,9 @@ public class FuncionarioService {
     private final BCryptPasswordEncoder passwordEncoder;
 
     // Roles que um ADMIN_EMPRESA ou GERENTE_OPERACOES pode criar
-    private static final Set<String> ROLES_PERMITIDAS_ADMIN = Set.of("RIGGER", "GERENTE_OPERACOES");
+    private static final Set<String> ROLES_PERMITIDAS_ADMIN = Set.of("RIGGER", "GERENTE_OPERACOES", "LIDER_EQUIPE");
     // SUPER_ADMIN também pode criar ADMIN_EMPRESA
-    private static final Set<String> ROLES_PERMITIDAS_SUPER = Set.of("RIGGER", "GERENTE_OPERACOES", "ADMIN_EMPRESA");
+    private static final Set<String> ROLES_PERMITIDAS_SUPER = Set.of("RIGGER", "GERENTE_OPERACOES", "LIDER_EQUIPE", "ADMIN_EMPRESA");
 
     public FuncionarioService(FuncionarioRepository funcionarioRepository,
                               BCryptPasswordEncoder passwordEncoder) {
