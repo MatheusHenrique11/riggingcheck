@@ -25,7 +25,7 @@ public class GlobalExceptionHandler {
 
         if (msg.contains("Acesso negado")) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", msg));
+                    .body(Map.of("error", "Acesso negado"));
         }
 
         // Todos os demais RuntimeException → 400 (entrada inválida, regra de negócio)

@@ -4,6 +4,7 @@ import com.riggingcheck.riggingcheckapi.domain.Funcionario;
 import com.riggingcheck.riggingcheckapi.domain.enums.RoleEnum;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +22,14 @@ public class JwtService {
 
     @Value("${jwt.expiration}")
     private long jwtExpirationInMillis;
+
+    @PostConstruct
+    private void validateSecret() {
+        if (jwtSecret == null || jwtSecret.length() < 32) {
+            throw new IllegalStateException(
+                "JWT_SECRET deve ter no mínimo 32 caracteres. Configure a variável de ambiente corretamente.");
+        }
+    }
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
