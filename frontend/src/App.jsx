@@ -941,152 +941,7 @@ const IS_SUPER = (role) => role === "SUPER_ADMIN";
 
 const statusColor = (s) => s === "PROSSEGUIR" ? "#22c55e" : s === "PARAR" ? "#ef4444" : "#f59e0b";
 
-// ── EQUIPE PANEL (para ADMIN_EMPRESA e GERENTE_OPERACOES) ────────────────────────
-function EquipePanel({ onVoltar, isMobile }) {
-  const user = getUser();
-  const [equipe, setEquipe] = useState([]);
-  const [loadingEq, setLoadingEq] = useState(true);
-  const [novoForm, setNovoForm] = useState({ nome: "", email: "", senha: "", role: "RIGGER" });
-  const [erroEq, setErroEq] = useState(null);
-  const [sucEq, setSucEq] = useState(null);
-
-  const carregarEquipe = useCallback(async () => {
-    setLoadingEq(true);
-    try {
-      const res = await authFetch(`${API}/api/funcionarios`);
-      if (res.ok) setEquipe(await res.json());
-    } catch { /* ignora */ }
-    setLoadingEq(false);
-  }, []);
-
-  useEffect(() => { carregarEquipe(); }, [carregarEquipe]);
-
-  const criarFuncionario = async () => {
-    setErroEq(null); setSucEq(null);
-    try {
-      const res = await authFetch(`${API}/api/funcionarios`, {
-        method: "POST",
-        body: JSON.stringify(novoForm),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) { setErroEq(data.error || "Erro ao criar usuário."); return; }
-      setSucEq(`Usuário ${data.nome} criado com sucesso.`);
-      setNovoForm({ nome: "", email: "", senha: "", role: "RIGGER" });
-      carregarEquipe();
-    } catch { setErroEq("Erro de conexão."); }
-  };
-
-  const alternarAtivo = async (id, ativo) => {
-    const acao = ativo ? "desativar" : "reativar";
-    try {
-      const res = await authFetch(`${API}/api/funcionarios/${id}/${acao}`, { method: "POST" });
-      if (res.ok) setEquipe(p => p.map(f => f.id === id ? { ...f, ativo: !ativo } : f));
-    } catch { /* ignora */ }
-  };
-
-  return (
-    <div style={S.app}>
-      <div style={S.header(isMobile)}>
-        <div style={S.headerTop(isMobile)}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <button onClick={onVoltar} style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }}>← Voltar</button>
-            <div>
-              <div style={S.logoText(isMobile)}>{user?.empresaName || "Minha Empresa"}</div>
-              <div style={S.logoSub(isMobile)}>CNPJ: {user?.empresaCnpj || "—"} · Gerenciamento de Equipe</div>
-            </div>
-          </div>
-          <div style={S.userInfo(isMobile)}>
-            <div style={S.roleBadge(isMobile)}>{roleLabel(user?.role)}</div>
-            <div style={S.userBadge(isMobile)}>{user?.userName}</div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 800, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 24px" }}>
-
-        {/* Formulário novo usuário */}
-        <div style={{ background: "#0f0f1a", border: "1px solid #1e2a3a", borderRadius: 12, padding: 24, marginBottom: 32 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#38bdf8", marginBottom: 16, letterSpacing: "1px", textTransform: "uppercase" }}>
-            + Novo Rigger / Membro
-          </div>
-          <div style={S.grid()}>
-            <div style={S.field}>
-              <label style={S.label}>Nome completo</label>
-              <input style={S.input} placeholder="João da Silva" value={novoForm.nome}
-                onChange={e => setNovoForm(f => ({ ...f, nome: e.target.value }))} />
-            </div>
-            <div style={S.field}>
-              <label style={S.label}>E-mail</label>
-              <input style={S.input} type="email" placeholder="joao@empresa.com" value={novoForm.email}
-                onChange={e => setNovoForm(f => ({ ...f, email: e.target.value }))} />
-            </div>
-            <div style={S.field}>
-              <label style={S.label}>Senha de acesso</label>
-              <input style={S.input} type="password" placeholder="mínimo 6 caracteres" value={novoForm.senha}
-                onChange={e => setNovoForm(f => ({ ...f, senha: e.target.value }))} />
-            </div>
-            <div style={S.field}>
-              <label style={S.label}>Cargo</label>
-              <select style={{ ...S.input, cursor: "pointer" }} value={novoForm.role}
-                onChange={e => setNovoForm(f => ({ ...f, role: e.target.value }))}>
-                <option value="RIGGER">Rigger</option>
-                <option value="GERENTE_OPERACOES">Gerente de Operações</option>
-              </select>
-            </div>
-          </div>
-          {erroEq && <div style={{ ...S.errorBox, marginTop: 12 }}>{erroEq}</div>}
-          {sucEq && <div style={{ ...S.successBox, marginTop: 12 }}>{sucEq}</div>}
-          <button style={{ ...S.btn(true), marginTop: 16 }} onClick={criarFuncionario}>
-            Criar Usuário
-          </button>
-        </div>
-
-        {/* Lista de membros */}
-        <div style={{ fontSize: 11, color: "#475569", letterSpacing: "2px", textTransform: "uppercase", marginBottom: 16 }}>
-          Membros da equipe — {user?.empresaName}
-        </div>
-        {loadingEq && <div style={{ color: "#64748b", textAlign: "center", padding: 40 }}>Carregando...</div>}
-        {!loadingEq && equipe.length === 0 && (
-          <div style={{ ...S.normaBox, textAlign: "center", padding: 36 }}>
-            Nenhum membro cadastrado. Crie o primeiro usuário acima.
-          </div>
-        )}
-        {equipe.map(f => (
-          <div key={f.id} style={{ background: "#0f0f1a", border: `1px solid ${f.ativo ? "#1e2a3a" : "#2d0000"}`, borderRadius: 12, padding: 18, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-            <div>
-              <div style={{ fontWeight: 700, color: f.ativo ? "#e2e8f0" : "#475569", fontSize: 14 }}>{f.nome}</div>
-              <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>{f.email}</div>
-              <div style={{ marginTop: 6, display: "flex", gap: 8, alignItems: "center" }}>
-                <span style={{ background: "#1e2a3a", color: "#38bdf8", fontSize: 11, padding: "2px 8px", borderRadius: 4 }}>
-                  {roleLabel(f.role)}
-                </span>
-                {!f.ativo && (
-                  <span style={{ background: "#2d0000", color: "#ef4444", fontSize: 11, padding: "2px 8px", borderRadius: 4 }}>
-                    Inativo
-                  </span>
-                )}
-              </div>
-            </div>
-            <button
-              onClick={() => alternarAtivo(f.id, f.ativo)}
-              style={{ fontSize: 12, padding: "8px 16px", borderRadius: 8, border: "1px solid", cursor: "pointer",
-                background: f.ativo ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)",
-                borderColor: f.ativo ? "#ef444444" : "#22c55e44",
-                color: f.ativo ? "#ef4444" : "#22c55e" }}>
-              {f.ativo ? "Desativar" : "Reativar"}
-            </button>
-          </div>
-        ))}
-
-        <div style={{ ...S.normaBox, textAlign: "center", marginTop: 32 }}>
-          v2.0.0 — RiggingCheck &nbsp;·&nbsp; Área do Administrador de Empresa
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── ADMIN DASHBOARD (página separada — apenas SUPER_ADMIN) ───────────────────────
+// ── ADMIN DASHBOARD (página separada — SUPER_ADMIN e ADMIN_EMPRESA) ─────────────
 function AdminDashboard({ onVoltar, isMobile }) {
   const [painel, setPainel] = useState("solicitacoes"); // "solicitacoes" | "equipe"
 
@@ -1396,7 +1251,7 @@ function AdminDashboard({ onVoltar, isMobile }) {
 export default function App() {
   const isMobile = useIsMobile();
   const [authenticated, setAuthenticated] = useState(() => !!getToken());
-  const [view, setView] = useState("app"); // "app" | "admin" | "equipe"
+  const [view, setView] = useState("app"); // "app" | "admin"
   const [tab, setTab] = useState(0);
   const [capacityOk, setCapacityOk] = useState(false);
   const [slingOk, setSlingOk] = useState(false);
@@ -1421,12 +1276,8 @@ export default function App() {
     return <LoginScreen onAuth={() => setAuthenticated(true)} />;
   }
 
-  if (view === "admin" && isSuperAdmin) {
+  if (view === "admin" && (isSuperAdmin || isEmpresaAdmin)) {
     return <AdminDashboard onVoltar={() => setView("app")} isMobile={isMobile} />;
-  }
-
-  if (view === "equipe" && isEmpresaAdmin) {
-    return <EquipePanel onVoltar={() => setView("app")} isMobile={isMobile} />;
   }
 
   const tabs = [
@@ -1469,14 +1320,9 @@ export default function App() {
                 <div style={S.userBadge(isMobile)}>{user.userName}</div>
               </>
             )}
-            {isSuperAdmin && (
+            {(isSuperAdmin || isEmpresaAdmin) && (
               <button style={{ ...S.logoutBtn(isMobile), borderColor: "#f59e0b44", color: "#f59e0b" }} onClick={() => setView("admin")}>
                 {isMobile ? "🔑" : "🔑 Painel Admin"}
-              </button>
-            )}
-            {isEmpresaAdmin && (
-              <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => setView("equipe")}>
-                {isMobile ? "👥" : "👥 Gerenciar Equipe"}
               </button>
             )}
             <button style={S.logoutBtn(isMobile)} onClick={handleLogout}>Sair</button>
