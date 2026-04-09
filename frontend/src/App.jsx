@@ -497,11 +497,6 @@ function LoginScreen({ onAuth }) {
           {loading ? "Entrando..." : "Entrar"}
         </button>
 
-        {isAdmin && (
-          <div style={{ marginTop: 16, textAlign: "center", fontSize: 11, color: "#334155" }}>
-            Para cadastrar uma nova empresa, contate o administrador do sistema.
-          </div>
-        )}
       </div>
     </div>
   );
@@ -1184,21 +1179,26 @@ function AdminDashboard({ onVoltar, isMobile }) {
 // ── SUPER ADMIN DASHBOARD (SaaS — apenas SUPER_ADMIN) ───────────────────────────
 function SuperAdminDashboard({ onVoltar, isMobile }) {
   const user = getUser();
-  const [painel, setPainel] = useState("empresas"); // "empresas" | "seguranca"
+  const [painel, setPainel] = useState("visao-geral");
+  const C = "#a78bfa"; // cor SaaS
 
-  // ── Empresas ──
-  const [empresas, setEmpresas] = useState([]);
+  // ── Estado global ──
+  const [empresas, setEmpresas]     = useState([]);
   const [loadingEmp, setLoadingEmp] = useState(true);
+
+  // ── Cadastro ──
   const [novaEmp, setNovaEmp] = useState({ razaoSocial: "", cnpj: "", adminNome: "", adminEmail: "", adminSenha: "" });
   const [erroEmp, setErroEmp] = useState(null);
-  const [sucEmp, setSucEmp] = useState(null);
+  const [sucEmp, setSucEmp]   = useState(null);
   const [criando, setCriando] = useState(false);
-  const [formAberto, setFormAberto] = useState(false);
 
   // ── Segurança ──
-  const [chave, setChave] = useState("");
+  const [chave, setChave]             = useState("");
   const [loadingChave, setLoadingChave] = useState(false);
-  const [chaveGerada, setChaveGerada] = useState(false);
+  const [chaveGerada, setChaveGerada]   = useState(false);
+
+  // ── Detalhe da empresa selecionada ──
+  const [empresaSel, setEmpresaSel] = useState(null);
 
   const carregarEmpresas = useCallback(async () => {
     setLoadingEmp(true);
@@ -1223,24 +1223,23 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
     setErroEmp(null); setSucEmp(null); setCriando(true);
     try {
       const res = await authFetch(`${API}/api/admin/empresas`, {
-        method: "POST",
-        body: JSON.stringify(novaEmp),
+        method: "POST", body: JSON.stringify(novaEmp),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setErroEmp(data.error || "Erro ao cadastrar empresa."); setCriando(false); return; }
       setSucEmp(`Empresa "${data.razaoSocial}" cadastrada com sucesso!`);
       setNovaEmp({ razaoSocial: "", cnpj: "", adminNome: "", adminEmail: "", adminSenha: "" });
-      setFormAberto(false);
       carregarEmpresas();
+      setPainel("empresas");
     } catch { setErroEmp("Erro de conexão."); }
     setCriando(false);
   };
 
   const alternarEmpresa = async (id, ativo) => {
-    const acao = ativo ? "desativar" : "ativar";
     try {
-      await authFetch(`${API}/api/admin/empresas/${id}/${acao}`, { method: "POST" });
+      await authFetch(`${API}/api/admin/empresas/${id}/${ativo ? "desativar" : "ativar"}`, { method: "POST" });
       setEmpresas(p => p.map(e => e.id === id ? { ...e, ativo: !ativo } : e));
+      if (empresaSel?.id === id) setEmpresaSel(p => ({ ...p, ativo: !ativo }));
     } catch { /* ignora */ }
   };
 
@@ -1253,207 +1252,445 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
     setLoadingChave(false);
   };
 
-  const colorSaaS = "#a78bfa";
+  // ── métricas gerais ──
+  const totalEmpresas   = empresas.length;
+  const empAtivas       = empresas.filter(e => e.ativo !== false).length;
+  const empInativas     = totalEmpresas - empAtivas;
+  const totalFunc       = empresas.reduce((s, e) => s + (e.totalFuncionarios || 0), 0);
+
+  const StatCard = ({ label, value, color, sub }) => (
+    <div style={{
+      background: "#0f0f1a", border: `1px solid ${color}22`,
+      borderRadius: 12, padding: "20px 24px", flex: "1 1 160px",
+    }}>
+      <div style={{ fontSize: 28, fontWeight: 800, color }}>{value}</div>
+      <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>{label}</div>
+      {sub && <div style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>{sub}</div>}
+    </div>
+  );
+
+  const TABS = [
+    ["visao-geral", "📊 Visão Geral"],
+    ["empresas",    "🏢 Empresas"],
+    ["cadastrar",   "➕ Nova Empresa"],
+    ["seguranca",   "🔐 Segurança"],
+  ];
 
   return (
     <div style={S.app}>
+      {/* ── Header ── */}
       <div style={S.header(isMobile)}>
         <div style={S.headerTop(isMobile)}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <button onClick={onVoltar} style={{ ...S.logoutBtn(isMobile), borderColor: `${colorSaaS}44`, color: colorSaaS }}>← Voltar</button>
+            <button onClick={onVoltar} style={{ ...S.logoutBtn(isMobile), borderColor: `${C}44`, color: C }}>← Sair</button>
             <div>
-              <div style={{ ...S.logoText(isMobile), color: colorSaaS }}>RiggingCheck SaaS</div>
-              <div style={S.logoSub(isMobile)}>Painel de Administração do Sistema</div>
+              <div style={{ fontSize: isMobile ? 14 : 18, fontWeight: 800, color: C, letterSpacing: "0.5px" }}>
+                RiggingCheck
+                <span style={{ color: "#64748b", fontWeight: 400 }}> / SaaS</span>
+              </div>
+              <div style={S.logoSub(isMobile)}>Painel de Controle do Sistema</div>
             </div>
           </div>
           <div style={S.userInfo(isMobile)}>
-            <div style={{ ...S.roleBadge(isMobile), borderColor: `${colorSaaS}44`, color: colorSaaS }}>SUPER ADMIN</div>
+            <div style={{ fontSize: 10, padding: "3px 10px", borderRadius: 6, border: `1px solid ${C}44`, color: C, fontWeight: 700, letterSpacing: "1px" }}>
+              SUPER ADMIN
+            </div>
             <div style={S.userBadge(isMobile)}>{user?.userName}</div>
           </div>
         </div>
-
         <div style={S.tabs(isMobile)}>
-          {[["empresas", "🏢 Empresas"], ["seguranca", "🔐 Segurança"]].map(([id, label]) => (
-            <button key={id} style={S.tab(painel === id, isMobile)} onClick={() => setPainel(id)}>{label}</button>
+          {TABS.map(([id, label]) => (
+            <button key={id} style={{
+              ...S.tab(painel === id, isMobile),
+              ...(id === "cadastrar" ? { color: painel === id ? "#fff" : C, borderColor: painel === id ? C : `${C}33` } : {}),
+            }} onClick={() => { setPainel(id); setEmpresaSel(null); setSucEmp(null); setErroEmp(null); }}>
+              {label}
+            </button>
           ))}
         </div>
       </div>
 
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 24px" }}>
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: isMobile ? "24px 16px" : "36px 24px" }}>
 
-        {/* ── PAINEL EMPRESAS ── */}
-        {painel === "empresas" && (
+        {/* ══════════════ VISÃO GERAL ══════════════ */}
+        {painel === "visao-geral" && (
           <>
-            {/* Cabeçalho */}
+            {/* Stats */}
+            <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 32 }}>
+              <StatCard label="Total de Empresas"   value={totalEmpresas} color={C}         sub={`${empAtivas} ativa${empAtivas!==1?"s":""}`} />
+              <StatCard label="Empresas Ativas"     value={empAtivas}     color="#22c55e"    sub="em operação" />
+              <StatCard label="Empresas Inativas"   value={empInativas}   color="#ef4444"    sub="suspensas" />
+              <StatCard label="Funcionários Ativos" value={totalFunc}     color="#38bdf8"    sub="em todas as empresas" />
+            </div>
+
+            {/* Atividade recente */}
+            <div style={{ fontSize: 11, color: "#475569", letterSpacing: "2px", textTransform: "uppercase", marginBottom: 16 }}>
+              Últimas empresas cadastradas
+            </div>
+
+            {loadingEmp && <div style={{ color: "#64748b", textAlign: "center", padding: 40 }}>Carregando...</div>}
+
+            {!loadingEmp && empresas.length === 0 && (
+              <div style={{ ...S.normaBox, textAlign: "center", padding: 40 }}>
+                Nenhuma empresa cadastrada ainda.{" "}
+                <span style={{ color: C, cursor: "pointer" }} onClick={() => setPainel("cadastrar")}>
+                  Cadastrar agora →
+                </span>
+              </div>
+            )}
+
+            {empresas.slice(0, 5).map(emp => (
+              <div
+                key={emp.id}
+                onClick={() => { setEmpresaSel(emp); setPainel("empresas"); }}
+                style={{
+                  background: "#0f0f1a", border: `1px solid ${emp.ativo !== false ? "#1e2a3a" : "#2d0000"}`,
+                  borderRadius: 10, padding: "14px 18px", marginBottom: 10, cursor: "pointer",
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  gap: 12, transition: "border-color 0.2s",
+                }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = `${C}55`}
+                onMouseLeave={e => e.currentTarget.style.borderColor = emp.ativo !== false ? "#1e2a3a" : "#2d0000"}
+              >
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: emp.ativo !== false ? "#e2e8f0" : "#475569" }}>
+                    {emp.razaoSocial}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#475569", marginTop: 3 }}>
+                    CNPJ {emp.cnpj} · Admin: {emp.adminNome}
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 11, color: "#64748b" }}>
+                    👥 {emp.totalFuncionarios}
+                  </span>
+                  <span style={{
+                    fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 700,
+                    background: emp.ativo !== false ? "#052e16" : "#2d0000",
+                    color: emp.ativo !== false ? "#22c55e" : "#ef4444",
+                  }}>
+                    {emp.ativo !== false ? "ATIVA" : "INATIVA"}
+                  </span>
+                </div>
+              </div>
+            ))}
+
+            {empresas.length > 5 && (
+              <button
+                onClick={() => setPainel("empresas")}
+                style={{ ...S.btn(false), background: "transparent", border: `1px solid ${C}33`, color: C, width: "100%", marginTop: 4 }}>
+                Ver todas as {empresas.length} empresas →
+              </button>
+            )}
+
+            {/* Ação rápida */}
+            <div style={{ marginTop: 32, display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <button
+                onClick={() => setPainel("cadastrar")}
+                style={{ ...S.btn(false), background: `linear-gradient(135deg, ${C}, #7c3aed)`, color: "#fff", flex: "1 1 200px" }}>
+                ➕ Cadastrar Nova Empresa
+              </button>
+              <button
+                onClick={() => setPainel("seguranca")}
+                style={{ ...S.btn(false), background: "transparent", border: `1px solid #334155`, color: "#94a3b8", flex: "1 1 200px" }}>
+                🔐 Gerenciar Segurança
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ══════════════ LISTA DE EMPRESAS ══════════════ */}
+        {painel === "empresas" && !empresaSel && (
+          <>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: colorSaaS, letterSpacing: "1px", textTransform: "uppercase" }}>
-                  Empresas Cadastradas
+                <div style={{ fontSize: 13, fontWeight: 700, color: C, letterSpacing: "1px", textTransform: "uppercase" }}>
+                  Todas as Empresas
                 </div>
                 <div style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>
-                  {empresas.length} empresa{empresas.length !== 1 ? "s" : ""} · {empresas.filter(e => e.ativo).length} ativa{empresas.filter(e => e.ativo).length !== 1 ? "s" : ""}
+                  {totalEmpresas} empresa{totalEmpresas !== 1 ? "s" : ""} · {empAtivas} ativa{empAtivas !== 1 ? "s" : ""}
                 </div>
               </div>
               <button
-                onClick={() => { setFormAberto(f => !f); setErroEmp(null); setSucEmp(null); }}
-                style={{ ...S.btn(false), background: `linear-gradient(135deg, ${colorSaaS}, #7c3aed)`, color: "#fff", padding: "10px 20px" }}>
-                {formAberto ? "✕ Cancelar" : "+ Nova Empresa"}
+                onClick={() => setPainel("cadastrar")}
+                style={{ ...S.btn(false), background: `linear-gradient(135deg, ${C}, #7c3aed)`, color: "#fff", padding: "10px 20px" }}>
+                ➕ Nova Empresa
               </button>
             </div>
 
-            {sucEmp && <div style={{ ...S.successBox, marginBottom: 20 }}>{sucEmp}</div>}
-
-            {/* Formulário nova empresa */}
-            {formAberto && (
-              <div style={{ background: "#0f0f1a", border: `1px solid ${colorSaaS}33`, borderRadius: 12, padding: 24, marginBottom: 28 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: colorSaaS, marginBottom: 16, letterSpacing: "1px", textTransform: "uppercase" }}>
-                  Dados da Nova Empresa
-                </div>
-                <div style={S.grid()}>
-                  {[
-                    { key: "razaoSocial", label: "Razão Social", ph: "Nome da empresa Ltda", type: "text" },
-                    { key: "cnpj", label: "CNPJ", ph: "00.000.000/0001-00", type: "text" },
-                    { key: "adminNome", label: "Nome do Admin", ph: "Nome completo", type: "text" },
-                    { key: "adminEmail", label: "E-mail do Admin", ph: "admin@empresa.com", type: "email" },
-                    { key: "adminSenha", label: "Senha inicial (mín. 8 chars)", ph: "••••••••", type: "password" },
-                  ].map(f => (
-                    <div key={f.key} style={S.field}>
-                      <label style={S.label}>{f.label}</label>
-                      <input style={{ ...S.input, borderColor: `${colorSaaS}33` }} type={f.type} placeholder={f.ph}
-                        value={novaEmp[f.key]}
-                        onChange={e => setNovaEmp(p => ({ ...p, [f.key]: e.target.value }))} />
-                    </div>
-                  ))}
-                </div>
-                {erroEmp && <div style={{ ...S.errorBox, marginTop: 12 }}>{erroEmp}</div>}
-                <button style={{ ...S.btn(criando), marginTop: 16, background: `linear-gradient(135deg, ${colorSaaS}, #7c3aed)`, color: "#fff" }}
-                  onClick={criarEmpresa} disabled={criando}>
-                  {criando ? "Cadastrando..." : "Cadastrar Empresa"}
-                </button>
-              </div>
-            )}
-
-            {/* Lista de empresas */}
             {loadingEmp && <div style={{ color: "#64748b", textAlign: "center", padding: 40 }}>Carregando...</div>}
             {!loadingEmp && empresas.length === 0 && (
               <div style={{ ...S.normaBox, textAlign: "center", padding: 40 }}>
-                Nenhuma empresa cadastrada. Clique em "+ Nova Empresa" para começar.
+                Nenhuma empresa cadastrada.
               </div>
             )}
+
             {empresas.map(emp => (
               <div key={emp.id} style={{
                 background: "#0f0f1a",
-                border: `1px solid ${emp.ativo ? "#1e2a3a" : "#2d0000"}`,
+                border: `1px solid ${emp.ativo !== false ? "#1e2a3a" : "#2d0000"}`,
                 borderRadius: 12, padding: 20, marginBottom: 14,
-                display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-                flexWrap: "wrap", gap: 14,
               }}>
-                <div style={{ flex: 1, minWidth: 200 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
-                    <div style={{ fontWeight: 700, color: emp.ativo ? "#e2e8f0" : "#475569", fontSize: 15 }}>
-                      {emp.razaoSocial}
+                {/* Linha principal */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+                  <div style={{ flex: 1, minWidth: 200 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
+                      <div style={{ fontWeight: 700, color: emp.ativo !== false ? "#e2e8f0" : "#475569", fontSize: 15 }}>
+                        {emp.razaoSocial}
+                      </div>
+                      <span style={{
+                        fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 700,
+                        background: emp.ativo !== false ? "#052e16" : "#2d0000",
+                        color: emp.ativo !== false ? "#22c55e" : "#ef4444",
+                      }}>
+                        {emp.ativo !== false ? "ATIVA" : "INATIVA"}
+                      </span>
                     </div>
-                    <span style={{
-                      fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 700,
-                      background: emp.ativo ? "#052e16" : "#2d0000",
-                      color: emp.ativo ? "#22c55e" : "#ef4444",
-                    }}>
-                      {emp.ativo ? "ATIVA" : "INATIVA"}
-                    </span>
+                    <div style={{ fontSize: 12, color: "#64748b", marginBottom: 2 }}>CNPJ: {emp.cnpj}</div>
+                    <div style={{ fontSize: 12, color: "#475569" }}>
+                      Admin: <span style={{ color: "#94a3b8" }}>{emp.adminNome}</span>
+                      {" · "}<span style={{ color: "#64748b" }}>{emp.adminEmail}</span>
+                    </div>
                   </div>
-                  <div style={{ fontSize: 12, color: "#64748b", marginBottom: 2 }}>CNPJ: {emp.cnpj}</div>
-                  <div style={{ fontSize: 12, color: "#475569", marginBottom: 2 }}>Admin: {emp.adminNome} · {emp.adminEmail}</div>
-                  <div style={{ display: "flex", gap: 12, marginTop: 8, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 11, color: "#64748b" }}>
-                      👥 {emp.totalFuncionarios} funcionário{emp.totalFuncionarios !== 1 ? "s" : ""} ativos
-                    </span>
-                    <span style={{ fontSize: 11, color: "#334155" }}>
-                      📅 {emp.criadoEm ? new Date(emp.criadoEm).toLocaleDateString("pt-BR") : "—"}
-                    </span>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <button
+                      onClick={() => { setEmpresaSel(emp); }}
+                      style={{ fontSize: 12, padding: "8px 14px", borderRadius: 8, border: `1px solid ${C}33`, cursor: "pointer", background: `${C}0f`, color: C }}>
+                      Ver detalhes
+                    </button>
+                    <button
+                      onClick={() => alternarEmpresa(emp.id, emp.ativo !== false)}
+                      style={{
+                        fontSize: 12, padding: "8px 14px", borderRadius: 8, border: "1px solid", cursor: "pointer",
+                        background: emp.ativo !== false ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)",
+                        borderColor: emp.ativo !== false ? "#ef444444" : "#22c55e44",
+                        color: emp.ativo !== false ? "#ef4444" : "#22c55e",
+                      }}>
+                      {emp.ativo !== false ? "Desativar" : "Reativar"}
+                    </button>
                   </div>
                 </div>
-                <button
-                  onClick={() => alternarEmpresa(emp.id, emp.ativo)}
-                  style={{
-                    fontSize: 12, padding: "8px 16px", borderRadius: 8, border: "1px solid",
-                    cursor: "pointer", whiteSpace: "nowrap",
-                    background: emp.ativo ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)",
-                    borderColor: emp.ativo ? "#ef444444" : "#22c55e44",
-                    color: emp.ativo ? "#ef4444" : "#22c55e",
-                  }}>
-                  {emp.ativo ? "Desativar" : "Reativar"}
-                </button>
+
+                {/* Métricas da empresa */}
+                <div style={{
+                  marginTop: 14, display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10,
+                }}>
+                  {[
+                    { label: "Funcionários", value: emp.totalFuncionarios, color: "#38bdf8" },
+                    { label: "Cadastrada em", value: emp.criadoEm ? new Date(emp.criadoEm).toLocaleDateString("pt-BR") : "—", color: "#64748b" },
+                    { label: "Status", value: emp.ativo !== false ? "Operacional" : "Suspensa", color: emp.ativo !== false ? "#22c55e" : "#ef4444" },
+                  ].map(({ label, value, color }) => (
+                    <div key={label} style={{ background: "#0a0a0f", borderRadius: 8, padding: "10px 12px" }}>
+                      <div style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 4 }}>{label}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color }}>{value}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </>
         )}
 
-        {/* ── PAINEL SEGURANÇA ── */}
+        {/* ══════════════ DETALHE DA EMPRESA ══════════════ */}
+        {painel === "empresas" && empresaSel && (
+          <>
+            <button
+              onClick={() => setEmpresaSel(null)}
+              style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 13, marginBottom: 20, padding: 0, display: "flex", alignItems: "center", gap: 6 }}>
+              ← Voltar para lista
+            </button>
+
+            <div style={{ background: "#0f0f1a", border: `1px solid ${empresaSel.ativo !== false ? C + "33" : "#2d0000"}`, borderRadius: 14, padding: 28, marginBottom: 20 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16, marginBottom: 24 }}>
+                <div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: "#e2e8f0", marginBottom: 6 }}>{empresaSel.razaoSocial}</div>
+                  <div style={{ fontSize: 13, color: "#64748b" }}>CNPJ: {empresaSel.cnpj}</div>
+                </div>
+                <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                  <span style={{
+                    fontSize: 11, padding: "4px 12px", borderRadius: 6, fontWeight: 700,
+                    background: empresaSel.ativo !== false ? "#052e16" : "#2d0000",
+                    color: empresaSel.ativo !== false ? "#22c55e" : "#ef4444",
+                  }}>
+                    {empresaSel.ativo !== false ? "EMPRESA ATIVA" : "EMPRESA INATIVA"}
+                  </span>
+                  <button
+                    onClick={() => alternarEmpresa(empresaSel.id, empresaSel.ativo !== false)}
+                    style={{
+                      fontSize: 12, padding: "8px 16px", borderRadius: 8, border: "1px solid", cursor: "pointer",
+                      background: empresaSel.ativo !== false ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)",
+                      borderColor: empresaSel.ativo !== false ? "#ef444444" : "#22c55e44",
+                      color: empresaSel.ativo !== false ? "#ef4444" : "#22c55e",
+                    }}>
+                    {empresaSel.ativo !== false ? "Desativar empresa" : "Reativar empresa"}
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
+                {[
+                  { label: "Administrador", value: empresaSel.adminNome },
+                  { label: "E-mail do Admin", value: empresaSel.adminEmail },
+                  { label: "Funcionários Ativos", value: empresaSel.totalFuncionarios },
+                  { label: "Data de Cadastro", value: empresaSel.criadoEm ? new Date(empresaSel.criadoEm).toLocaleString("pt-BR") : "—" },
+                ].map(({ label, value }) => (
+                  <div key={label} style={{ background: "#0a0a0f", borderRadius: 8, padding: "12px 14px" }}>
+                    <div style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 6 }}>{label}</div>
+                    <div style={{ fontSize: 13, color: "#94a3b8" }}>{value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ ...S.normaBox, fontSize: 12, textAlign: "center" }}>
+              ℹ️ Para gerenciar funcionários desta empresa, o administrador deve acessar o Painel Admin com suas credenciais.
+            </div>
+          </>
+        )}
+
+        {/* ══════════════ CADASTRAR EMPRESA ══════════════ */}
+        {painel === "cadastrar" && (
+          <>
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C, letterSpacing: "1px", textTransform: "uppercase" }}>
+                Cadastrar Nova Empresa
+              </div>
+              <div style={{ fontSize: 12, color: "#475569", marginTop: 6 }}>
+                Preencha os dados abaixo. Um administrador será criado automaticamente para a empresa.
+              </div>
+            </div>
+
+            <div style={{ background: "#0f0f1a", border: `1px solid ${C}22`, borderRadius: 14, padding: isMobile ? 20 : 32 }}>
+              <div style={{ fontSize: 11, color: C, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", marginBottom: 20 }}>
+                Dados da Empresa
+              </div>
+              <div style={S.grid()}>
+                <div style={S.field}>
+                  <label style={S.label}>Razão Social</label>
+                  <input style={{ ...S.input, borderColor: `${C}33` }} placeholder="Nome da Empresa Ltda"
+                    value={novaEmp.razaoSocial} onChange={e => setNovaEmp(p => ({ ...p, razaoSocial: e.target.value }))} />
+                </div>
+                <div style={S.field}>
+                  <label style={S.label}>CNPJ</label>
+                  <input style={{ ...S.input, borderColor: `${C}33` }} placeholder="00.000.000/0001-00"
+                    value={novaEmp.cnpj} onChange={e => setNovaEmp(p => ({ ...p, cnpj: e.target.value }))} />
+                </div>
+              </div>
+
+              <div style={{ fontSize: 11, color: "#475569", fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", margin: "24px 0 16px" }}>
+                Administrador da Empresa
+              </div>
+              <div style={S.grid()}>
+                <div style={S.field}>
+                  <label style={S.label}>Nome Completo</label>
+                  <input style={{ ...S.input, borderColor: `${C}33` }} placeholder="Nome do responsável"
+                    value={novaEmp.adminNome} onChange={e => setNovaEmp(p => ({ ...p, adminNome: e.target.value }))} />
+                </div>
+                <div style={S.field}>
+                  <label style={S.label}>E-mail</label>
+                  <input style={{ ...S.input, borderColor: `${C}33` }} type="email" placeholder="admin@empresa.com"
+                    value={novaEmp.adminEmail} onChange={e => setNovaEmp(p => ({ ...p, adminEmail: e.target.value }))} />
+                </div>
+                <div style={S.field}>
+                  <label style={S.label}>Senha Inicial (mín. 8 caracteres)</label>
+                  <input style={{ ...S.input, borderColor: `${C}33` }} type="password" placeholder="••••••••"
+                    value={novaEmp.adminSenha} onChange={e => setNovaEmp(p => ({ ...p, adminSenha: e.target.value }))} />
+                </div>
+              </div>
+
+              {erroEmp && <div style={{ ...S.errorBox, marginTop: 20 }}>{erroEmp}</div>}
+              {sucEmp  && <div style={{ ...S.successBox, marginTop: 20 }}>{sucEmp}</div>}
+
+              <div style={{ marginTop: 24, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <button
+                  style={{ ...S.btn(criando), background: `linear-gradient(135deg, ${C}, #7c3aed)`, color: "#fff", flex: "1 1 160px" }}
+                  onClick={criarEmpresa} disabled={criando}>
+                  {criando ? "Cadastrando..." : "Cadastrar Empresa"}
+                </button>
+                <button
+                  style={{ ...S.btn(false), background: "transparent", border: "1px solid #1e2a3a", color: "#64748b", flex: "1 1 120px" }}
+                  onClick={() => { setNovaEmp({ razaoSocial: "", cnpj: "", adminNome: "", adminEmail: "", adminSenha: "" }); setErroEmp(null); setSucEmp(null); }}>
+                  Limpar
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ══════════════ SEGURANÇA ══════════════ */}
         {painel === "seguranca" && (
           <>
-            <div style={{ background: "#0f0f1a", border: `1px solid ${colorSaaS}33`, borderRadius: 12, padding: 32, marginBottom: 24 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: colorSaaS, letterSpacing: "1px", textTransform: "uppercase", marginBottom: 8 }}>
-                🔐 Chave de Segurança do SaaS Admin
+            {/* Chave de API */}
+            <div style={{ background: "#0f0f1a", border: `1px solid ${C}33`, borderRadius: 14, padding: 32, marginBottom: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C, letterSpacing: "1px", textTransform: "uppercase", marginBottom: 8 }}>
+                🔐 Chave de Segurança SaaS
               </div>
-              <div style={{ fontSize: 12, color: "#475569", marginBottom: 24, lineHeight: 1.7 }}>
-                Esta chave identifica de forma única este painel de administração. Use-a para integrações,
-                suporte técnico ou auditorias. Guarde em local seguro.
+              <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.8, marginBottom: 24 }}>
+                Chave única que identifica este painel. Use em integrações, chamados de suporte e auditorias de segurança.
+                Guarde em local seguro — nunca compartilhe publicamente.
               </div>
 
               {chave ? (
                 <div style={{ marginBottom: 20 }}>
-                  <div style={{ fontSize: 11, color: "#64748b", marginBottom: 8, textTransform: "uppercase", letterSpacing: "1px" }}>
-                    Chave atual
-                  </div>
+                  <div style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 8 }}>Chave Atual</div>
                   <div style={{
-                    background: "#060610", border: `1px solid ${colorSaaS}44`, borderRadius: 8,
-                    padding: "14px 16px", fontFamily: "monospace", fontSize: 15, letterSpacing: "2px",
-                    color: colorSaaS, wordBreak: "break-all",
+                    background: "#060610", border: `1px solid ${C}44`, borderRadius: 8,
+                    padding: "16px 20px", fontFamily: "monospace", fontSize: 16, letterSpacing: "3px",
+                    color: C, wordBreak: "break-all",
                   }}>
                     {chave}
                   </div>
                   {chaveGerada && (
                     <div style={{ ...S.warnBox, marginTop: 12, fontSize: 12 }}>
-                      ⚠️ Copie e guarde esta chave agora — ela não será exibida novamente após sair da página.
+                      ⚠️ Copie esta chave agora — ao sair da página ela ficará parcialmente oculta.
                     </div>
                   )}
                 </div>
               ) : (
                 <div style={{ ...S.normaBox, marginBottom: 20, textAlign: "center" }}>
-                  Nenhuma chave gerada ainda.
+                  Nenhuma chave gerada. Clique abaixo para gerar.
                 </div>
               )}
 
-              <button
-                onClick={gerarChave}
-                disabled={loadingChave}
-                style={{ ...S.btn(loadingChave), background: `linear-gradient(135deg, ${colorSaaS}, #7c3aed)`, color: "#fff" }}>
-                {loadingChave ? "Gerando..." : chave ? "↻ Regenerar Chave" : "Gerar Chave de Segurança"}
-              </button>
-
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <button
+                  onClick={gerarChave} disabled={loadingChave}
+                  style={{ ...S.btn(loadingChave), background: `linear-gradient(135deg, ${C}, #7c3aed)`, color: "#fff" }}>
+                  {loadingChave ? "Gerando..." : chave ? "↻ Regenerar Chave" : "Gerar Chave de Segurança"}
+                </button>
+              </div>
               {chave && (
-                <div style={{ marginTop: 12, fontSize: 11, color: "#475569" }}>
-                  ⚠️ Regenerar a chave invalida a chave anterior permanentemente.
+                <div style={{ marginTop: 10, fontSize: 11, color: "#475569" }}>
+                  ⚠️ Regenerar invalida permanentemente a chave anterior.
                 </div>
               )}
             </div>
 
-            <div style={{ background: "#0f0f1a", border: "1px solid #1e2a3a", borderRadius: 12, padding: 24 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "#94a3b8", marginBottom: 16, textTransform: "uppercase", letterSpacing: "1px" }}>
+            {/* Info do sistema */}
+            <div style={{ background: "#0f0f1a", border: "1px solid #1e2a3a", borderRadius: 14, padding: 28 }}>
+              <div style={{ fontSize: 11, color: "#475569", fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", marginBottom: 20 }}>
                 Informações do Sistema
               </div>
-              <div style={{ fontSize: 13, color: "#64748b", lineHeight: 2 }}>
-                <div>Usuário: <span style={{ color: "#94a3b8" }}>{user?.userName}</span></div>
-                <div>E-mail: <span style={{ color: "#94a3b8" }}>{user?.email || "—"}</span></div>
-                <div>Role: <span style={{ color: colorSaaS, fontWeight: 700 }}>SUPER_ADMIN</span></div>
-                <div>Versão: <span style={{ color: "#94a3b8" }}>v2.1.0 — RiggingCheck SaaS</span></div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
+                {[
+                  { label: "Administrador",     value: user?.userName },
+                  { label: "Role",              value: "SUPER_ADMIN", color: C },
+                  { label: "Empresas cadastradas", value: totalEmpresas },
+                  { label: "Versão",            value: "v2.1.0 — RiggingCheck SaaS" },
+                ].map(({ label, value, color }) => (
+                  <div key={label} style={{ background: "#0a0a0f", borderRadius: 8, padding: "12px 14px" }}>
+                    <div style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 6 }}>{label}</div>
+                    <div style={{ fontSize: 13, color: color || "#94a3b8", fontWeight: color ? 700 : 400 }}>{value}</div>
+                  </div>
+                ))}
               </div>
             </div>
           </>
         )}
 
         <div style={{ ...S.normaBox, textAlign: "center", marginTop: 32 }}>
-          v2.1.0 — RiggingCheck SaaS &nbsp;·&nbsp; Painel Super Admin
+          RiggingCheck SaaS &nbsp;·&nbsp; v2.1.0 &nbsp;·&nbsp; Painel Super Admin
         </div>
       </div>
     </div>
