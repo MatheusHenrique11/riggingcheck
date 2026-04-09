@@ -1,23 +1,23 @@
 package com.riggingcheck.riggingcheckapi.service;
 
+import com.riggingcheck.riggingcheckapi.dto.SlingCalculateRequest;
+import com.riggingcheck.riggingcheckapi.dto.SlingCalculateResponse;
+import com.riggingcheck.riggingcheckapi.exception.RegraDeNegocioException;
 import org.springframework.stereotype.Service;
 
 @Service
 public class SlingService {
 
-    public SlingResponse calculate(SlingRequest req) {
-        if (req.loadWeight() <= 0)
-            throw new RuntimeException("Peso da carga deve ser maior que zero");
-        if (req.numberOfLegs() <= 0)
-            throw new RuntimeException("Número de pernas deve ser maior que zero");
-        if (req.angleFromHorizontal() <= 0 || req.angleFromHorizontal() > 90)
-            throw new RuntimeException("Ângulo deve estar entre 1° e 90°");
-        if (req.wll() != null && req.wll() <= 0)
-            throw new RuntimeException("WLL deve ser maior que zero");
+    // Limiar mínimo de sin(ângulo) para evitar divisão por zero/Infinity
+    private static final double SIN_MINIMO = 0.001;
+
+    public SlingCalculateResponse calculate(SlingCalculateRequest req) {
+        if (req.wll() != null && req.wll() <= 0) {
+            throw new RegraDeNegocioException("WLL deve ser maior que zero");
+        }
 
         double angleRad = Math.toRadians(req.angleFromHorizontal());
-        double sinAngle = Math.sin(angleRad);
-        if (sinAngle < 0.001) sinAngle = 0.001; // segurança: evita Infinity
+        double sinAngle = Math.max(Math.sin(angleRad), SIN_MINIMO);
         double loadFactor = 1.0 / sinAngle;
         double tension = (req.loadWeight() / req.numberOfLegs()) * loadFactor;
 
@@ -28,12 +28,6 @@ public class SlingService {
             risk = wllUsage < 70 ? "SAFE" : wllUsage < 90 ? "WARNING" : "DANGER";
         }
 
-        return new SlingResponse(tension, loadFactor, wllUsage, risk,
-                req.angleFromHorizontal() < 45);
+        return new SlingCalculateResponse(tension, loadFactor, wllUsage, risk, req.angleFromHorizontal() < 45);
     }
-
-    public record SlingRequest(double loadWeight, int numberOfLegs,
-                               double angleFromHorizontal, Double wll) {}
-    public record SlingResponse(double tensionPerLeg, double loadFactor,
-                                Double wllUsagePercent, String riskLevel, boolean angleWarning) {}
 }

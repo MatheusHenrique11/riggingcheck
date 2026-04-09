@@ -5,6 +5,9 @@ import com.riggingcheck.riggingcheckapi.domain.Funcionario;
 import com.riggingcheck.riggingcheckapi.domain.enums.RoleEnum;
 import com.riggingcheck.riggingcheckapi.dto.EmpresaAdminRequest;
 import com.riggingcheck.riggingcheckapi.dto.EmpresaAdminResponse;
+import com.riggingcheck.riggingcheckapi.exception.AcessoNegadoException;
+import com.riggingcheck.riggingcheckapi.exception.RegraDeNegocioException;
+import com.riggingcheck.riggingcheckapi.exception.RecursoNaoEncontradoException;
 import com.riggingcheck.riggingcheckapi.repository.EmpresaRepository;
 import com.riggingcheck.riggingcheckapi.repository.FuncionarioRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -16,6 +19,8 @@ import java.util.UUID;
 
 @Service
 public class AdminService {
+
+    private static final String PREFIXO_CHAVE_API = "RC-";
 
     private final EmpresaRepository empresaRepository;
     private final FuncionarioRepository funcionarioRepository;
@@ -39,10 +44,10 @@ public class AdminService {
     @Transactional
     public EmpresaAdminResponse criarEmpresa(EmpresaAdminRequest request) {
         if (empresaRepository.findByCnpj(request.getCnpj()).isPresent()) {
-            throw new RuntimeException("CNPJ já cadastrado");
+            throw new RegraDeNegocioException("CNPJ já cadastrado");
         }
         if (funcionarioRepository.findByEmail(request.getAdminEmail()).isPresent()) {
-            throw new RuntimeException("Email já cadastrado");
+            throw new RegraDeNegocioException("Email já cadastrado");
         }
 
         Empresa empresa = new Empresa();
@@ -66,53 +71,45 @@ public class AdminService {
     @Transactional
     public void alternarStatusEmpresa(UUID empresaId, boolean ativar) {
         Empresa empresa = empresaRepository.findById(empresaId)
-                .orElseThrow(() -> new RuntimeException("Empresa não encontrada"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Empresa"));
 
         empresa.setAtivo(ativar);
         empresaRepository.save(empresa);
 
-        // Ativa/desativa todos os funcionários da empresa
-        List<Funcionario> funcionarios = funcionarioRepository
-                .findByEmpresaIdOrderByCriadoEmDesc(empresaId);
-        funcionarios.forEach(f -> {
-            f.setAtivo(ativar);
-            funcionarioRepository.save(f);
-        });
+        List<Funcionario> funcionarios = funcionarioRepository.findByEmpresaIdOrderByCriadoEmDesc(empresaId);
+        funcionarios.forEach(f -> f.setAtivo(ativar));
+        funcionarioRepository.saveAll(funcionarios);
     }
 
     public String gerarChaveApi(String emailSuperAdmin) {
-        Funcionario superAdmin = funcionarioRepository.findByEmail(emailSuperAdmin)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
-
-        if (superAdmin.getRole() != RoleEnum.SUPER_ADMIN) {
-            throw new RuntimeException("Acesso negado");
-        }
-
-        String novaChave = "RC-" + UUID.randomUUID().toString().toUpperCase().replace("-", "").substring(0, 24);
+        Funcionario superAdmin = buscarSuperAdmin(emailSuperAdmin);
+        String novaChave = PREFIXO_CHAVE_API + UUID.randomUUID().toString().toUpperCase().replace("-", "").substring(0, 24);
         superAdmin.setChaveApi(novaChave);
         funcionarioRepository.save(superAdmin);
         return novaChave;
     }
 
     public String obterChaveApi(String emailSuperAdmin) {
-        Funcionario superAdmin = funcionarioRepository.findByEmail(emailSuperAdmin)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
-
-        if (superAdmin.getRole() != RoleEnum.SUPER_ADMIN) {
-            throw new RuntimeException("Acesso negado");
-        }
-
+        Funcionario superAdmin = buscarSuperAdmin(emailSuperAdmin);
         String chave = superAdmin.getChaveApi();
         return chave != null ? chave : "";
     }
 
+    private Funcionario buscarSuperAdmin(String email) {
+        Funcionario funcionario = funcionarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário"));
+        if (funcionario.getRole() != RoleEnum.SUPER_ADMIN) {
+            throw new AcessoNegadoException();
+        }
+        return funcionario;
+    }
+
     private EmpresaAdminResponse toResponse(Empresa empresa) {
-        // Busca o admin principal da empresa (ADMIN_EMPRESA mais antigo)
         List<Funcionario> admins = funcionarioRepository
                 .findByEmpresaIdAndRole(empresa.getId(), RoleEnum.ADMIN_EMPRESA);
 
-        String adminNome = admins.isEmpty() ? "—" : admins.get(0).getNome();
-        String adminEmail = admins.isEmpty() ? "—" : admins.get(0).getEmail();
+        String adminNome = admins.isEmpty() ? null : admins.get(0).getNome();
+        String adminEmail = admins.isEmpty() ? null : admins.get(0).getEmail();
         long total = empresaRepository.countFuncionariosAtivos(empresa.getId());
 
         return EmpresaAdminResponse.builder()

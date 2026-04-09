@@ -4,6 +4,9 @@ import com.riggingcheck.riggingcheckapi.domain.Funcionario;
 import com.riggingcheck.riggingcheckapi.domain.enums.RoleEnum;
 import com.riggingcheck.riggingcheckapi.dto.FuncionarioRequest;
 import com.riggingcheck.riggingcheckapi.dto.FuncionarioResponse;
+import com.riggingcheck.riggingcheckapi.exception.AcessoNegadoException;
+import com.riggingcheck.riggingcheckapi.exception.RegraDeNegocioException;
+import com.riggingcheck.riggingcheckapi.exception.RecursoNaoEncontradoException;
 import com.riggingcheck.riggingcheckapi.repository.FuncionarioRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -16,13 +19,14 @@ import java.util.UUID;
 @Service
 public class FuncionarioService {
 
+    private static final Set<RoleEnum> ROLES_PERMITIDAS_ADMIN =
+            Set.of(RoleEnum.RIGGER, RoleEnum.GERENTE_OPERACOES, RoleEnum.LIDER_EQUIPE);
+
+    private static final Set<RoleEnum> ROLES_PERMITIDAS_SUPER =
+            Set.of(RoleEnum.RIGGER, RoleEnum.GERENTE_OPERACOES, RoleEnum.LIDER_EQUIPE, RoleEnum.ADMIN_EMPRESA);
+
     private final FuncionarioRepository funcionarioRepository;
     private final BCryptPasswordEncoder passwordEncoder;
-
-    // Roles que um ADMIN_EMPRESA ou GERENTE_OPERACOES pode criar
-    private static final Set<String> ROLES_PERMITIDAS_ADMIN = Set.of("RIGGER", "GERENTE_OPERACOES", "LIDER_EQUIPE");
-    // SUPER_ADMIN também pode criar ADMIN_EMPRESA
-    private static final Set<String> ROLES_PERMITIDAS_SUPER = Set.of("RIGGER", "GERENTE_OPERACOES", "LIDER_EQUIPE", "ADMIN_EMPRESA");
 
     public FuncionarioService(FuncionarioRepository funcionarioRepository,
                               BCryptPasswordEncoder passwordEncoder) {
@@ -32,18 +36,24 @@ public class FuncionarioService {
 
     @Transactional
     public FuncionarioResponse criar(FuncionarioRequest request, String emailAdmin) {
-        Funcionario admin = buscarAdmin(emailAdmin);
+        Funcionario admin = buscarComPermissaoAdmin(emailAdmin);
 
-        String roleStr = request.getRole().toUpperCase();
-        Set<String> rolesPermitidas = admin.getRole() == RoleEnum.SUPER_ADMIN
+        RoleEnum roleRequisitada;
+        try {
+            roleRequisitada = RoleEnum.valueOf(request.getRole().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new RegraDeNegocioException("Cargo inválido: " + request.getRole());
+        }
+
+        Set<RoleEnum> rolesPermitidas = admin.getRole() == RoleEnum.SUPER_ADMIN
                 ? ROLES_PERMITIDAS_SUPER : ROLES_PERMITIDAS_ADMIN;
 
-        if (!rolesPermitidas.contains(roleStr)) {
-            throw new RuntimeException("Cargo inválido ou sem permissão para criar este cargo");
+        if (!rolesPermitidas.contains(roleRequisitada)) {
+            throw new AcessoNegadoException();
         }
 
         if (funcionarioRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new RuntimeException("Email já cadastrado");
+            throw new RegraDeNegocioException("Email já cadastrado");
         }
 
         Funcionario f = new Funcionario();
@@ -51,35 +61,30 @@ public class FuncionarioService {
         f.setNome(request.getNome());
         f.setEmail(request.getEmail());
         f.setPasswordHash(passwordEncoder.encode(request.getSenha()));
-        f.setRole(RoleEnum.valueOf(roleStr));
+        f.setRole(roleRequisitada);
         f.setAtivo(true);
 
         return toResponse(funcionarioRepository.save(f));
     }
 
     public List<FuncionarioResponse> listar(String emailAdmin) {
-        Funcionario admin = buscarAdmin(emailAdmin);
+        Funcionario admin = buscarComPermissaoAdmin(emailAdmin);
         return funcionarioRepository.findByEmpresaIdOrderByCriadoEmDesc(admin.getEmpresaId())
                 .stream()
-                .filter(f -> !f.getId().equals(admin.getId())) // não exibe o próprio admin
+                .filter(f -> !f.getId().equals(admin.getId()))
                 .map(this::toResponse)
                 .toList();
     }
 
     @Transactional
     public void desativar(UUID id, String emailAdmin) {
-        Funcionario admin = buscarAdmin(emailAdmin);
+        Funcionario admin = buscarComPermissaoAdmin(emailAdmin);
+        Funcionario funcionario = buscarPorId(id);
 
-        Funcionario funcionario = funcionarioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Funcionário não encontrado"));
-
-        if (!admin.getRole().equals(RoleEnum.SUPER_ADMIN)
-                && !funcionario.getEmpresaId().equals(admin.getEmpresaId())) {
-            throw new RuntimeException("Acesso negado");
-        }
+        verificarMesmaEmpresa(admin, funcionario);
 
         if (funcionario.getId().equals(admin.getId())) {
-            throw new RuntimeException("Não é possível desativar sua própria conta");
+            throw new RegraDeNegocioException("Não é possível desativar sua própria conta");
         }
 
         funcionario.setAtivo(false);
@@ -88,30 +93,37 @@ public class FuncionarioService {
 
     @Transactional
     public void reativar(UUID id, String emailAdmin) {
-        Funcionario admin = buscarAdmin(emailAdmin);
+        Funcionario admin = buscarComPermissaoAdmin(emailAdmin);
+        Funcionario funcionario = buscarPorId(id);
 
-        Funcionario funcionario = funcionarioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Funcionário não encontrado"));
-
-        if (!admin.getRole().equals(RoleEnum.SUPER_ADMIN)
-                && !funcionario.getEmpresaId().equals(admin.getEmpresaId())) {
-            throw new RuntimeException("Acesso negado");
-        }
+        verificarMesmaEmpresa(admin, funcionario);
 
         funcionario.setAtivo(true);
         funcionarioRepository.save(funcionario);
     }
 
-    private Funcionario buscarAdmin(String email) {
+    private Funcionario buscarComPermissaoAdmin(String email) {
         Funcionario admin = funcionarioRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário"));
 
         if (admin.getRole() != RoleEnum.ADMIN_EMPRESA
                 && admin.getRole() != RoleEnum.GERENTE_OPERACOES
                 && admin.getRole() != RoleEnum.SUPER_ADMIN) {
-            throw new RuntimeException("Acesso negado: apenas administradores podem gerenciar funcionários");
+            throw new AcessoNegadoException();
         }
         return admin;
+    }
+
+    private Funcionario buscarPorId(UUID id) {
+        return funcionarioRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Funcionário"));
+    }
+
+    private void verificarMesmaEmpresa(Funcionario admin, Funcionario funcionario) {
+        if (admin.getRole() != RoleEnum.SUPER_ADMIN
+                && !funcionario.getEmpresaId().equals(admin.getEmpresaId())) {
+            throw new AcessoNegadoException();
+        }
     }
 
     private FuncionarioResponse toResponse(Funcionario f) {

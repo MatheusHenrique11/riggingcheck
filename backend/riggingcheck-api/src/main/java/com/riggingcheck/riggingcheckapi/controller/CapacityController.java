@@ -1,6 +1,10 @@
 package com.riggingcheck.riggingcheckapi.controller;
 
+import com.riggingcheck.riggingcheckapi.dto.CapacityVerifyRequest;
+import com.riggingcheck.riggingcheckapi.dto.CapacityVerifyResponse;
 import com.riggingcheck.riggingcheckapi.service.CapacityService;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -14,7 +18,7 @@ public class CapacityController {
     }
 
     @PostMapping("/verify")
-    public CapacityService.CapacityResponse verify(@RequestBody CapacityService.CapacityRequest req) {
-        return capacityService.verify(req);
+    public ResponseEntity<CapacityVerifyResponse> verify(@Valid @RequestBody CapacityVerifyRequest req) {
+        return ResponseEntity.ok(capacityService.verify(req));
     }
 }

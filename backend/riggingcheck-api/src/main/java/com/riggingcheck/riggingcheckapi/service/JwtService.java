@@ -3,7 +3,6 @@ package com.riggingcheck.riggingcheckapi.service;
 import com.riggingcheck.riggingcheckapi.domain.Funcionario;
 import com.riggingcheck.riggingcheckapi.domain.enums.RoleEnum;
 import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -27,9 +26,16 @@ public class JwtService {
 
     private SecretKey getSigningKey() {
         byte[] raw = jwtSecret.getBytes(StandardCharsets.UTF_8);
-        // Garante mínimo 32 bytes para HMAC-SHA256 sem lançar exceção na inicialização
         byte[] keyBytes = raw.length >= 32 ? raw : Arrays.copyOf(raw, 32);
         return new SecretKeySpec(keyBytes, "HmacSHA256");
+    }
+
+    private Claims parseClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 
     public String generateToken(Funcionario funcionario) {
@@ -40,59 +46,34 @@ public class JwtService {
         claims.put("userName", funcionario.getNome());
 
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + jwtExpirationInMillis);
-
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(funcionario.getEmail())
                 .setIssuedAt(now)
-                .setExpiration(expiryDate)
+                .setExpiration(new Date(now.getTime() + jwtExpirationInMillis))
                 .signWith(getSigningKey())
                 .compact();
     }
 
     public String getEmailFromToken(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-        return claims.getSubject();
+        return parseClaims(token).getSubject();
     }
 
     public UUID getUserIdFromToken(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-        return UUID.fromString(claims.get("userId", String.class));
+        return UUID.fromString(parseClaims(token).get("userId", String.class));
     }
 
     public UUID getEmpresaIdFromToken(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-        return UUID.fromString(claims.get("empresaId", String.class));
+        return UUID.fromString(parseClaims(token).get("empresaId", String.class));
     }
 
     public RoleEnum getRoleFromToken(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-        return RoleEnum.valueOf(claims.get("role", String.class));
+        return RoleEnum.valueOf(parseClaims(token).get("role", String.class));
     }
 
     public boolean validateToken(String token) {
         try {
-            Jwts.parserBuilder()
-                    .setSigningKey(getSigningKey())
-                    .build()
-                    .parseClaimsJws(token);
+            parseClaims(token);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
             return false;

@@ -1,6 +1,10 @@
 package com.riggingcheck.riggingcheckapi.controller;
 
+import com.riggingcheck.riggingcheckapi.dto.SlingCalculateRequest;
+import com.riggingcheck.riggingcheckapi.dto.SlingCalculateResponse;
 import com.riggingcheck.riggingcheckapi.service.SlingService;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -14,7 +18,7 @@ public class SlingController {
     }
 
     @PostMapping("/calculate")
-    public SlingService.SlingResponse calculate(@RequestBody SlingService.SlingRequest req) {
-        return slingService.calculate(req);
+    public ResponseEntity<SlingCalculateResponse> calculate(@Valid @RequestBody SlingCalculateRequest req) {
+        return ResponseEntity.ok(slingService.calculate(req));
     }
 }

@@ -1,5 +1,6 @@
 package com.riggingcheck.riggingcheckapi.domain;
 
+import com.riggingcheck.riggingcheckapi.domain.enums.StatusLiberacao;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
@@ -29,8 +30,9 @@ public class SolicitacaoLiberacao {
     @Column(name = "solicitado_por_id", nullable = false)
     private UUID solicitadoPorId;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private String status; // ANALISAR, PROSSEGUIR, PARAR
+    private StatusLiberacao status;
 
     // ── Dados de Capacidade ──────────────────────────────────────────────────────
     @Column(name = "cap_guindaste_kg")
@@ -89,6 +91,6 @@ public class SolicitacaoLiberacao {
     @PrePersist
     protected void onCreate() {
         criadoEm = LocalDateTime.now();
-        status = "ANALISAR";
+        status = StatusLiberacao.ANALISAR;
     }
 }
