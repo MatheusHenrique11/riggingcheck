@@ -56,8 +56,9 @@ public class SecurityConfig {
                 .filter(o -> !o.isBlank() && !o.equals("*"))
                 .toList();
 
+        // Se não houver origens válidas, usa o fallback seguro (somente localhost)
         if (origins.isEmpty()) {
-            throw new IllegalStateException("CORS_ALLOWED_ORIGINS não configurado ou contém apenas wildcard '*'");
+            origins = List.of("http://localhost:5173");
         }
 
         CorsConfiguration configuration = new CorsConfiguration();
