@@ -48,8 +48,12 @@ public class AuthService {
             throw new RuntimeException("Empresa não encontrada");
         }
 
-        String token = jwtService.generateToken(funcionario);
         Empresa empresa = empresaOpt.get();
+        if (Boolean.FALSE.equals(empresa.getAtivo())) {
+            throw new RuntimeException("Credenciais inválidas");
+        }
+
+        String token = jwtService.generateToken(funcionario);
 
         return LoginResponse.builder()
                 .token(token)

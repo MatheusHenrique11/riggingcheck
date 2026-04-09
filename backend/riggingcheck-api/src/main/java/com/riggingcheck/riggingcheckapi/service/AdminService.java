@@ -119,7 +119,7 @@ public class AdminService {
                 .id(empresa.getId())
                 .razaoSocial(empresa.getRazaoSocial())
                 .cnpj(empresa.getCnpj())
-                .ativo(empresa.getAtivo())
+                .ativo(!Boolean.FALSE.equals(empresa.getAtivo()))
                 .criadoEm(empresa.getCriadoEm())
                 .adminNome(adminNome)
                 .adminEmail(adminEmail)

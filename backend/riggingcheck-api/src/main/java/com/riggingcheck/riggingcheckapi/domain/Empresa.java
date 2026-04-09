@@ -22,7 +22,7 @@ public class Empresa {
     @Column(name = "marca_dagua_relatorio")
     private String marcaDaguaRelatorio;
 
-    @Column(name = "ativo", nullable = false)
+    @Column(name = "ativo")
     private Boolean ativo = true;
 
     @Column(name = "criado_em", nullable = false)
