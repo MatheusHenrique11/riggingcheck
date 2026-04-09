@@ -1,0 +1,8 @@
+[build]
+builder = "nixpacks"
+buildCommand = "cd backend/riggingcheck-api && ./mvnw clean package -DskipTests -q"
+
+[deploy]
+startCommand = "java -jar backend/riggingcheck-api/target/*.jar"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
