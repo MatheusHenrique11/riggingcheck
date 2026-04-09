@@ -6,6 +6,7 @@ import com.riggingcheck.riggingcheckapi.domain.enums.RoleEnum;
 import com.riggingcheck.riggingcheckapi.dto.LoginRequest;
 import com.riggingcheck.riggingcheckapi.dto.LoginResponse;
 import com.riggingcheck.riggingcheckapi.dto.RegisterEmpresaRequest;
+import com.riggingcheck.riggingcheckapi.dto.SetupRequest;
 import com.riggingcheck.riggingcheckapi.repository.EmpresaRepository;
 import com.riggingcheck.riggingcheckapi.repository.FuncionarioRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -64,6 +65,38 @@ public class AuthService {
                 .empresaName(empresa.getRazaoSocial())
                 .empresaCnpj(empresa.getCnpj())
                 .build();
+    }
+
+    /**
+     * Cria o primeiro SUPER_ADMIN do sistema.
+     * Só funciona se ainda não existe nenhum SUPER_ADMIN no banco.
+     * Após o primeiro uso, retorna erro — endpoint de uso único.
+     */
+    @Transactional
+    public void setupSuperAdmin(SetupRequest request) {
+        boolean jaExiste = !funcionarioRepository.findByRole(RoleEnum.SUPER_ADMIN).isEmpty();
+        if (jaExiste) {
+            throw new RuntimeException("Setup já realizado. SUPER_ADMIN já existe.");
+        }
+
+        // SUPER_ADMIN não pertence a nenhuma empresa — usa empresa de sistema
+        Empresa empresaSistema = empresaRepository.findByCnpj("00.000.000/0000-00")
+                .orElseGet(() -> {
+                    Empresa e = new Empresa();
+                    e.setRazaoSocial("RiggingCheck Sistema");
+                    e.setCnpj("00.000.000/0000-00");
+                    e.setAtivo(true);
+                    return empresaRepository.save(e);
+                });
+
+        Funcionario superAdmin = new Funcionario();
+        superAdmin.setEmpresaId(empresaSistema.getId());
+        superAdmin.setNome(request.getNome());
+        superAdmin.setEmail(request.getEmail());
+        superAdmin.setPasswordHash(passwordEncoder.encode(request.getSenha()));
+        superAdmin.setRole(RoleEnum.SUPER_ADMIN);
+        superAdmin.setAtivo(true);
+        funcionarioRepository.save(superAdmin);
     }
 
     @Transactional
