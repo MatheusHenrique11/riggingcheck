@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["jdk21"]
+
+[phases.build]
+cmds = ["cd backend/riggingcheck-api && ./mvnw clean package -DskipTests -q"]
+
+[start]
+cmd = "java -jar backend/riggingcheck-api/target/riggingcheck-api-0.0.1-SNAPSHOT.jar"
