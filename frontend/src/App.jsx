@@ -345,6 +345,7 @@ function LoginScreen({ onAuth, onDemo }) {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
+  const [setupForm, setSetupForm] = useState({ nome: "", email: "", senha: "" });
 
   const goTo = (m) => { setMode(m); setError(null); setSuccess(null); };
 
@@ -367,10 +368,36 @@ function LoginScreen({ onAuth, onDemo }) {
     }
   };
 
+  const handleSetup = async () => {
+    setLoading(true); setError(null); setSuccess(null);
+    try {
+      const res = await fetch(`${API}/api/auth/setup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(setupForm),
+      });
+      if (!res.ok) { 
+        const data = await res.json().catch(()=>({}));
+        setError(data.error || "Erro ao realizar setup. Verifique se já não existe um admin."); 
+        return; 
+      }
+      setSuccess("Super Admin criado sucesso! Você pode realizar o login agora.");
+      setSetupForm({ nome: "", email: "", senha: "" });
+      setTimeout(() => goTo("superadmin"), 1500);
+    } catch {
+      setError("Não foi possível conectar ao servidor.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const accentUsuario = "#38bdf8";
   const accentAdmin   = "#f59e0b";
+  const accentSuperAdmin = "#ef4444";
+  
   const isAdmin = mode === "admin" || mode === "register";
-  const accent  = isAdmin ? accentAdmin : accentUsuario;
+  const isSuperAdmin = mode === "superadmin" || mode === "setup";
+  const accent  = isSuperAdmin ? accentSuperAdmin : (isAdmin ? accentAdmin : accentUsuario);
 
   // ── TELA DE SELEÇÃO ──
   if (mode === "select") {
@@ -440,26 +467,96 @@ function LoginScreen({ onAuth, onDemo }) {
           </div>
 
           {onDemo && (
-            <button
-              onClick={onDemo}
-              style={{
-                marginTop: 12,
-                background: "transparent", border: "1px dashed #334155",
-                borderRadius: 12, padding: "14px 24px", cursor: "pointer",
-                textAlign: "center", transition: "all 0.2s", width: "100%",
-                color: "#64748b", fontSize: 13, fontFamily: "inherit",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "#a78bfa"; e.currentTarget.style.color = "#a78bfa"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "#334155";  e.currentTarget.style.color = "#64748b"; }}
-            >
-              🎮 &nbsp;Ver demonstração das funcionalidades
-            </button>
+            <div style={{ marginTop: 24 }}>
+              <button
+                onClick={onDemo}
+                style={{
+                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", 
+                  border: "none",
+                  borderRadius: 12, padding: "16px 24px", cursor: "pointer",
+                  textAlign: "center", transition: "all 0.2s", width: "100%",
+                  color: "#ffffff", fontSize: 14, fontWeight: "bold", fontFamily: "inherit",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                  boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)"
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; }}
+              >
+                🎮 Testar SaaS (Demonstração sem salvar dados)
+              </button>
+            </div>
           )}
 
           <div style={{ ...S.normaBox, marginTop: 16, textAlign: "center" }}>
             NR-11 · ABNT NBR 11900 · ABNT NBR 13541
           </div>
+
+          <button style={{
+             background: "none", border: "none", color: "#475569", marginTop: 24,
+             cursor: "pointer", fontSize: 11, width: "100%", textTransform: "uppercase", letterSpacing: "1px"
+          }} onClick={() => goTo("superadmin")}>
+            Acesso Root / Sistema
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── TELA DE SETUP (SUPER ADMIN) ──
+  if (mode === "setup") {
+    return (
+      <div style={S.loginWrap}>
+        <div style={S.loginCard(isMobile)}>
+          <button onClick={() => goTo("superadmin")} style={{
+            background: "none", border: "none", color: "#64748b",
+            cursor: "pointer", fontSize: 13, marginBottom: 20, padding: 0, display: "flex", alignItems: "center", gap: 6,
+          }}>← Voltar</button>
+
+          <div style={{ textAlign: "center", marginBottom: 28 }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: 13, margin: "0 auto 14px",
+              background: `${accentSuperAdmin}18`, border: `1px solid ${accentSuperAdmin}44`,
+              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24,
+            }}>
+              ⚙️
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0" }}>
+              Setup Super Admin
+            </div>
+            <div style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>
+              Criar o primeiro administrador root do sistema
+            </div>
+          </div>
+
+          <div style={S.field}>
+            <label style={S.label}>Nome Completo</label>
+            <input style={{ ...S.input, borderColor: `${accentSuperAdmin}44` }}
+              type="text" placeholder="Seu Nome"
+              value={setupForm.nome}
+              onChange={e => setSetupForm(p => ({ ...p, nome: e.target.value }))} />
+          </div>
+          <div style={{ ...S.field, marginTop: 16 }}>
+            <label style={S.label}>Email Mestre</label>
+            <input style={{ ...S.input, borderColor: `${accentSuperAdmin}44` }}
+              type="email" placeholder="root@sistema.com"
+              value={setupForm.email}
+              onChange={e => setSetupForm(p => ({ ...p, email: e.target.value }))} />
+          </div>
+          <div style={{ ...S.field, marginTop: 16 }}>
+            <label style={S.label}>Senha Segura (mín 8)</label>
+            <input style={{ ...S.input, borderColor: `${accentSuperAdmin}44` }}
+              type="password" placeholder="••••••••"
+              value={setupForm.senha}
+              onChange={e => setSetupForm(p => ({ ...p, senha: e.target.value }))} />
+          </div>
+
+          {error && <div style={{ ...S.errorBox, marginTop: 12 }}>{error}</div>}
+          {success && <div style={{ ...S.successBox, marginTop: 12 }}>{success}</div>}
+
+          <button style={{ ...S.btnFull(loading), marginTop: 20, background: `linear-gradient(135deg, ${accentSuperAdmin}, #b91c1c)` }}
+            onClick={handleSetup} disabled={loading}>
+            {loading ? "Criando..." : "Criar Root"}
+          </button>
         </div>
       </div>
     );
@@ -480,13 +577,13 @@ function LoginScreen({ onAuth, onDemo }) {
             background: `${accent}18`, border: `1px solid ${accent}44`,
             display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24,
           }}>
-            {isAdmin ? "🔑" : "👷"}
+            {isSuperAdmin ? "👑" : (isAdmin ? "🔑" : "👷")}
           </div>
           <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0" }}>
-            {isAdmin ? "Acesso Administrativo" : "Acesso do Operador"}
+            {isSuperAdmin ? "Acesso Root" : (isAdmin ? "Acesso Administrativo" : "Acesso do Operador")}
           </div>
           <div style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>
-            {isAdmin ? "Gerencie equipe e aprove içamentos" : "Verificações e solicitação de içamento"}
+            {isSuperAdmin ? "Gerenciamento absoluto (Super Admin)" : (isAdmin ? "Gerencie equipe e aprove içamentos" : "Verificações e solicitação de içamento")}
           </div>
         </div>
 
@@ -510,10 +607,19 @@ function LoginScreen({ onAuth, onDemo }) {
         {error && <div style={{ ...S.errorBox, marginTop: 12 }}>{error}</div>}
         {success && <div style={{ ...S.successBox, marginTop: 12 }}>{success}</div>}
 
-        <button style={{ ...S.btnFull(loading), marginTop: 20, background: `linear-gradient(135deg, ${accent}, ${isAdmin ? "#fb923c" : "#0ea5e9"})` }}
+        <button style={{ ...S.btnFull(loading), marginTop: 20, background: `linear-gradient(135deg, ${accent}, ${isSuperAdmin ? "#b91c1c" : (isAdmin ? "#fb923c" : "#0ea5e9")})` }}
           onClick={handleLogin} disabled={loading}>
           {loading ? "Entrando..." : "Entrar"}
         </button>
+
+        {isSuperAdmin && (
+          <div style={{ textAlign: "center", marginTop: 20 }}>
+            <button style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 12, textDecoration: "underline" }}
+              onClick={() => goTo("setup")}>
+              Primeiro acesso? Finalize o Setup.
+            </button>
+          </div>
+        )}
 
       </div>
     </div>
