@@ -40,4 +40,14 @@ public class AuthController {
         authService.setupSuperAdmin(request);
         return ResponseEntity.ok().build();
     }
+
+    /**
+     * Endpoint temporário para apagar o SUPER_ADMIN (recuperação de acesso).
+     * REMOVER após uso.
+     */
+    @DeleteMapping("/setup")
+    public ResponseEntity<Void> deleteSuperAdmin() {
+        authService.deleteSuperAdmin();
+        return ResponseEntity.ok().build();
+    }
 }

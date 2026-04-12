@@ -99,6 +99,12 @@ public class AuthService {
     }
 
     @Transactional
+    public void deleteSuperAdmin() {
+        funcionarioRepository.findByRole(RoleEnum.SUPER_ADMIN)
+                .forEach(funcionarioRepository::delete);
+    }
+
+    @Transactional
     public void registerEmpresa(RegisterEmpresaRequest request) {
         if (empresaRepository.findByCnpj(request.getCnpj()).isPresent()) {
             throw new RegraDeNegocioException("CNPJ já cadastrado");
