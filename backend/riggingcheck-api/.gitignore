@@ -12,6 +12,7 @@ target/
 .settings
 .springBeans
 .sts4-cache
+.claude/settings.local.json
 
 ### IntelliJ IDEA ###
 .idea
