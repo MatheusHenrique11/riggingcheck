@@ -17,4 +17,8 @@ public class EmpresaAdminResponse {
     private String adminNome;
     private String adminEmail;
     private long totalFuncionarios;
+    private long totalLiberacoes;
+    private long liberacoesAnalisar;
+    private long liberacoesProsseguir;
+    private long liberacoesParar;
 }

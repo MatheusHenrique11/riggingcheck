@@ -1204,19 +1204,29 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
   const [empresas, setEmpresas]     = useState([]);
   const [loadingEmp, setLoadingEmp] = useState(true);
 
-  // ── Cadastro ──
+  // ── Cadastro de empresa ──
   const [novaEmp, setNovaEmp] = useState({ razaoSocial: "", cnpj: "", adminNome: "", adminEmail: "", adminSenha: "" });
   const [erroEmp, setErroEmp] = useState(null);
   const [sucEmp, setSucEmp]   = useState(null);
   const [criando, setCriando] = useState(false);
 
   // ── Segurança ──
-  const [chave, setChave]             = useState("");
+  const [chave, setChave]               = useState("");
   const [loadingChave, setLoadingChave] = useState(false);
   const [chaveGerada, setChaveGerada]   = useState(false);
 
   // ── Detalhe da empresa selecionada ──
-  const [empresaSel, setEmpresaSel] = useState(null);
+  const [empresaSel, setEmpresaSel]     = useState(null);
+  const [detalheTab, setDetalheTab]     = useState("funcionarios");
+
+  // ── Funcionários da empresa selecionada ──
+  const [funcionarios, setFuncionarios]   = useState([]);
+  const [loadingFuncs, setLoadingFuncs]   = useState(false);
+  const [novoFunc, setNovoFunc]           = useState({ nome: "", email: "", senha: "", role: "RIGGER" });
+  const [erroFunc, setErroFunc]           = useState(null);
+  const [sucFunc, setSucFunc]             = useState(null);
+  const [criandoFunc, setCriandoFunc]     = useState(false);
+  const [mostrarFormFunc, setMostrarFormFunc] = useState(false);
 
   const carregarEmpresas = useCallback(async () => {
     setLoadingEmp(true);
@@ -1234,8 +1244,20 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
     } catch { /* ignora */ }
   }, []);
 
+  const carregarFuncionarios = useCallback(async (empresaId) => {
+    setLoadingFuncs(true);
+    try {
+      const res = await authFetch(`${API}/api/admin/empresas/${empresaId}/funcionarios`);
+      if (res.ok) setFuncionarios(await res.json());
+    } catch { /* ignora */ }
+    setLoadingFuncs(false);
+  }, []);
+
   useEffect(() => { carregarEmpresas(); }, [carregarEmpresas]);
   useEffect(() => { if (painel === "seguranca") carregarChave(); }, [painel, carregarChave]);
+  useEffect(() => {
+    if (empresaSel) { carregarFuncionarios(empresaSel.id); setDetalheTab("funcionarios"); setMostrarFormFunc(false); setErroFunc(null); setSucFunc(null); }
+  }, [empresaSel, carregarFuncionarios]);
 
   const criarEmpresa = async () => {
     setErroEmp(null); setSucEmp(null); setCriando(true);
@@ -1270,11 +1292,42 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
     setLoadingChave(false);
   };
 
+  const criarFuncionario = async () => {
+    if (!novoFunc.nome.trim() || !novoFunc.email.trim() || !novoFunc.senha.trim()) {
+      setErroFunc("Preencha nome, e-mail e senha."); return;
+    }
+    setCriandoFunc(true); setErroFunc(null); setSucFunc(null);
+    try {
+      const res = await authFetch(`${API}/api/admin/empresas/${empresaSel.id}/funcionarios`, {
+        method: "POST", body: JSON.stringify(novoFunc),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setErroFunc(data.error || "Erro ao criar funcionário."); setCriandoFunc(false); return; }
+      setSucFunc(`Funcionário "${data.nome}" criado com sucesso!`);
+      setNovoFunc({ nome: "", email: "", senha: "", role: "RIGGER" });
+      setMostrarFormFunc(false);
+      carregarFuncionarios(empresaSel.id);
+      // atualiza contagem na lista de empresas
+      setEmpresas(p => p.map(e => e.id === empresaSel.id ? { ...e, totalFuncionarios: (e.totalFuncionarios || 0) + 1 } : e));
+    } catch { setErroFunc("Erro de conexão."); }
+    setCriandoFunc(false);
+  };
+
+  const alternarStatusFunc = async (func) => {
+    const acao = func.ativo ? "desativar" : "reativar";
+    try {
+      await authFetch(`${API}/api/admin/empresas/${empresaSel.id}/funcionarios/${func.id}/${acao}`, { method: "POST" });
+      setFuncionarios(p => p.map(f => f.id === func.id ? { ...f, ativo: !func.ativo } : f));
+    } catch { /* ignora */ }
+  };
+
   // ── métricas gerais ──
   const totalEmpresas   = empresas.length;
   const empAtivas       = empresas.filter(e => e.ativo !== false).length;
   const empInativas     = totalEmpresas - empAtivas;
   const totalFunc       = empresas.reduce((s, e) => s + (e.totalFuncionarios || 0), 0);
+  const totalLib        = empresas.reduce((s, e) => s + (e.totalLiberacoes || 0), 0);
+  const libPendentes    = empresas.reduce((s, e) => s + (e.liberacoesAnalisar || 0), 0);
 
   const StatCard = ({ label, value, color, sub }) => (
     <div style={{
@@ -1335,10 +1388,11 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
           <>
             {/* Stats */}
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 32 }}>
-              <StatCard label="Total de Empresas"   value={totalEmpresas} color={C}         sub={`${empAtivas} ativa${empAtivas!==1?"s":""}`} />
-              <StatCard label="Empresas Ativas"     value={empAtivas}     color="#22c55e"    sub="em operação" />
-              <StatCard label="Empresas Inativas"   value={empInativas}   color="#ef4444"    sub="suspensas" />
-              <StatCard label="Funcionários Ativos" value={totalFunc}     color="#38bdf8"    sub="em todas as empresas" />
+              <StatCard label="Total de Empresas"    value={totalEmpresas} color={C}          sub={`${empAtivas} ativa${empAtivas!==1?"s":""}`} />
+              <StatCard label="Empresas Ativas"      value={empAtivas}     color="#22c55e"     sub="em operação" />
+              <StatCard label="Empresas Inativas"    value={empInativas}   color="#ef4444"     sub="suspensas" />
+              <StatCard label="Funcionários Ativos"  value={totalFunc}     color="#38bdf8"     sub="em todas as empresas" />
+              <StatCard label="Total Solicitações"   value={totalLib}      color="#f59e0b"     sub={`${libPendentes} pendente${libPendentes!==1?"s":""}`} />
             </div>
 
             {/* Atividade recente */}
@@ -1492,12 +1546,15 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
                 {/* Métricas da empresa */}
                 <div style={{
                   marginTop: 14, display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10,
+                  gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 10,
                 }}>
                   {[
                     { label: "Funcionários", value: emp.totalFuncionarios, color: "#38bdf8" },
+                    { label: "Solicitações", value: emp.totalLiberacoes ?? 0, color: "#f59e0b" },
+                    { label: "Aprovadas", value: emp.liberacoesProsseguir ?? 0, color: "#22c55e" },
+                    { label: "Negadas", value: emp.liberacoesParar ?? 0, color: "#ef4444" },
+                    { label: "Pendentes", value: emp.liberacoesAnalisar ?? 0, color: "#a78bfa" },
                     { label: "Cadastrada em", value: emp.criadoEm ? new Date(emp.criadoEm).toLocaleDateString("pt-BR") : "—", color: "#64748b" },
-                    { label: "Status", value: emp.ativo !== false ? "Operacional" : "Suspensa", color: emp.ativo !== false ? "#22c55e" : "#ef4444" },
                   ].map(({ label, value, color }) => (
                     <div key={label} style={{ background: "#0a0a0f", borderRadius: 8, padding: "10px 12px" }}>
                       <div style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 4 }}>{label}</div>
@@ -1519,51 +1576,175 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
               ← Voltar para lista
             </button>
 
-            <div style={{ background: "#0f0f1a", border: `1px solid ${empresaSel.ativo !== false ? C + "33" : "#2d0000"}`, borderRadius: 14, padding: 28, marginBottom: 20 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16, marginBottom: 24 }}>
+            {/* Header da empresa */}
+            <div style={{ background: "#0f0f1a", border: `1px solid ${empresaSel.ativo !== false ? C + "33" : "#2d0000"}`, borderRadius: 14, padding: 24, marginBottom: 16 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16, marginBottom: 20 }}>
                 <div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: "#e2e8f0", marginBottom: 6 }}>{empresaSel.razaoSocial}</div>
-                  <div style={{ fontSize: 13, color: "#64748b" }}>CNPJ: {empresaSel.cnpj}</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: "#e2e8f0", marginBottom: 4 }}>{empresaSel.razaoSocial}</div>
+                  <div style={{ fontSize: 12, color: "#64748b" }}>CNPJ: {empresaSel.cnpj} · Admin: {empresaSel.adminNome} · {empresaSel.adminEmail}</div>
+                  <div style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>
+                    Cadastrada em: {empresaSel.criadoEm ? new Date(empresaSel.criadoEm).toLocaleString("pt-BR") : "—"}
+                  </div>
                 </div>
                 <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                  <span style={{
-                    fontSize: 11, padding: "4px 12px", borderRadius: 6, fontWeight: 700,
-                    background: empresaSel.ativo !== false ? "#052e16" : "#2d0000",
-                    color: empresaSel.ativo !== false ? "#22c55e" : "#ef4444",
-                  }}>
-                    {empresaSel.ativo !== false ? "EMPRESA ATIVA" : "EMPRESA INATIVA"}
+                  <span style={{ fontSize: 11, padding: "4px 12px", borderRadius: 6, fontWeight: 700, background: empresaSel.ativo !== false ? "#052e16" : "#2d0000", color: empresaSel.ativo !== false ? "#22c55e" : "#ef4444" }}>
+                    {empresaSel.ativo !== false ? "ATIVA" : "INATIVA"}
                   </span>
                   <button
                     onClick={() => alternarEmpresa(empresaSel.id, empresaSel.ativo !== false)}
-                    style={{
-                      fontSize: 12, padding: "8px 16px", borderRadius: 8, border: "1px solid", cursor: "pointer",
-                      background: empresaSel.ativo !== false ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)",
-                      borderColor: empresaSel.ativo !== false ? "#ef444444" : "#22c55e44",
-                      color: empresaSel.ativo !== false ? "#ef4444" : "#22c55e",
-                    }}>
+                    style={{ fontSize: 12, padding: "8px 16px", borderRadius: 8, border: "1px solid", cursor: "pointer", background: empresaSel.ativo !== false ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)", borderColor: empresaSel.ativo !== false ? "#ef444444" : "#22c55e44", color: empresaSel.ativo !== false ? "#ef4444" : "#22c55e" }}>
                     {empresaSel.ativo !== false ? "Desativar empresa" : "Reativar empresa"}
                   </button>
                 </div>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
+              {/* Stats da empresa */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 10 }}>
                 {[
-                  { label: "Administrador", value: empresaSel.adminNome },
-                  { label: "E-mail do Admin", value: empresaSel.adminEmail },
-                  { label: "Funcionários Ativos", value: empresaSel.totalFuncionarios },
-                  { label: "Data de Cadastro", value: empresaSel.criadoEm ? new Date(empresaSel.criadoEm).toLocaleString("pt-BR") : "—" },
-                ].map(({ label, value }) => (
+                  { label: "Funcionários", value: empresaSel.totalFuncionarios ?? 0, color: "#38bdf8" },
+                  { label: "Solicitações", value: empresaSel.totalLiberacoes ?? 0, color: "#f59e0b" },
+                  { label: "Aprovadas", value: empresaSel.liberacoesProsseguir ?? 0, color: "#22c55e" },
+                  { label: "Negadas", value: empresaSel.liberacoesParar ?? 0, color: "#ef4444" },
+                  { label: "Pendentes", value: empresaSel.liberacoesAnalisar ?? 0, color: C },
+                ].map(({ label, value, color }) => (
                   <div key={label} style={{ background: "#0a0a0f", borderRadius: 8, padding: "12px 14px" }}>
-                    <div style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 6 }}>{label}</div>
-                    <div style={{ fontSize: 13, color: "#94a3b8" }}>{value}</div>
+                    <div style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 4 }}>{label}</div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color }}>{value}</div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div style={{ ...S.normaBox, fontSize: 12, textAlign: "center" }}>
-              ℹ️ Para gerenciar funcionários desta empresa, o administrador deve acessar o Painel Admin com suas credenciais.
+            {/* Sub-tabs */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+              <button style={S.tab(detalheTab === "funcionarios", isMobile)} onClick={() => setDetalheTab("funcionarios")}>👥 Funcionários</button>
+              <button style={S.tab(detalheTab === "liberacoes", isMobile)} onClick={() => setDetalheTab("liberacoes")}>📋 Resumo de Solicitações</button>
             </div>
+
+            {/* ── Funcionários ── */}
+            {detalheTab === "funcionarios" && (
+              <>
+                {sucFunc && <div style={{ ...S.successBox, marginBottom: 12 }}>{sucFunc}</div>}
+
+                {/* Botão adicionar */}
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+                  <button
+                    onClick={() => { setMostrarFormFunc(v => !v); setErroFunc(null); setSucFunc(null); }}
+                    style={{ ...S.btn(false), background: `linear-gradient(135deg, ${C}, #7c3aed)`, color: "#fff", padding: "10px 20px" }}>
+                    {mostrarFormFunc ? "✕ Cancelar" : "➕ Novo Funcionário"}
+                  </button>
+                </div>
+
+                {/* Formulário de novo funcionário */}
+                {mostrarFormFunc && (
+                  <div style={{ background: "#0f0f1a", border: `1px solid ${C}33`, borderRadius: 12, padding: 24, marginBottom: 20 }}>
+                    <div style={{ fontSize: 11, color: C, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", marginBottom: 16 }}>Novo Funcionário</div>
+                    <div style={S.grid()}>
+                      <div style={S.field}>
+                        <label style={S.label}>Nome Completo</label>
+                        <input style={{ ...S.input, borderColor: `${C}33` }} placeholder="João da Silva"
+                          value={novoFunc.nome} onChange={e => setNovoFunc(p => ({ ...p, nome: e.target.value }))} />
+                      </div>
+                      <div style={S.field}>
+                        <label style={S.label}>E-mail</label>
+                        <input style={{ ...S.input, borderColor: `${C}33` }} type="email" placeholder="joao@empresa.com"
+                          value={novoFunc.email} onChange={e => setNovoFunc(p => ({ ...p, email: e.target.value }))} />
+                      </div>
+                      <div style={S.field}>
+                        <label style={S.label}>Senha Inicial (mín. 6 caracteres)</label>
+                        <input style={{ ...S.input, borderColor: `${C}33` }} type="password" placeholder="••••••"
+                          value={novoFunc.senha} onChange={e => setNovoFunc(p => ({ ...p, senha: e.target.value }))} />
+                      </div>
+                      <div style={S.field}>
+                        <label style={S.label}>Cargo</label>
+                        <select style={{ ...S.select, borderColor: `${C}33` }}
+                          value={novoFunc.role} onChange={e => setNovoFunc(p => ({ ...p, role: e.target.value }))}>
+                          <option value="RIGGER">Rigger</option>
+                          <option value="LIDER_EQUIPE">Líder de Equipe</option>
+                          <option value="GERENTE_OPERACOES">Gerente de Operações</option>
+                          <option value="ADMIN_EMPRESA">Admin Empresa</option>
+                        </select>
+                      </div>
+                    </div>
+                    {erroFunc && <div style={{ ...S.errorBox, marginTop: 12 }}>{erroFunc}</div>}
+                    <button style={{ ...S.btn(criandoFunc), background: `linear-gradient(135deg, ${C}, #7c3aed)`, color: "#fff", marginTop: 16 }}
+                      onClick={criarFuncionario} disabled={criandoFunc}>
+                      {criandoFunc ? "Criando..." : "Criar Funcionário"}
+                    </button>
+                  </div>
+                )}
+
+                {/* Lista de funcionários */}
+                {loadingFuncs && <div style={{ color: "#64748b", textAlign: "center", padding: 40 }}>Carregando funcionários...</div>}
+                {!loadingFuncs && funcionarios.length === 0 && (
+                  <div style={{ ...S.normaBox, textAlign: "center", padding: 32 }}>Nenhum funcionário cadastrado nesta empresa.</div>
+                )}
+                {funcionarios.map(f => (
+                  <div key={f.id} style={{ background: "#0f0f1a", border: `1px solid ${f.ativo !== false ? "#1e2a3a" : "#2d0000"}`, borderRadius: 10, padding: "14px 18px", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, color: f.ativo !== false ? "#e2e8f0" : "#475569", fontSize: 14 }}>{f.nome}</div>
+                      <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{f.email}</div>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>
+                        <span style={{ background: "#1e2a3a", color: "#38bdf8", fontSize: 11, padding: "2px 8px", borderRadius: 4 }}>
+                          {roleLabel(f.role)}
+                        </span>
+                        <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 700, background: f.ativo !== false ? "#052e16" : "#2d0000", color: f.ativo !== false ? "#22c55e" : "#ef4444" }}>
+                          {f.ativo !== false ? "ATIVO" : "INATIVO"}
+                        </span>
+                        {f.criadoEm && <span style={{ fontSize: 10, color: "#475569" }}>desde {new Date(f.criadoEm).toLocaleDateString("pt-BR")}</span>}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => alternarStatusFunc(f)}
+                      style={{ fontSize: 12, padding: "8px 14px", borderRadius: 8, border: "1px solid", cursor: "pointer", background: f.ativo !== false ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)", borderColor: f.ativo !== false ? "#ef444444" : "#22c55e44", color: f.ativo !== false ? "#ef4444" : "#22c55e" }}>
+                      {f.ativo !== false ? "Desativar" : "Reativar"}
+                    </button>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* ── Resumo de Solicitações ── */}
+            {detalheTab === "liberacoes" && (
+              <div style={{ background: "#0f0f1a", border: "1px solid #1e2a3a", borderRadius: 12, padding: 28 }}>
+                <div style={{ fontSize: 11, color: "#475569", fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", marginBottom: 20 }}>
+                  Histórico de Solicitações — {empresaSel.razaoSocial}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16 }}>
+                  {[
+                    { label: "Total de Solicitações", value: empresaSel.totalLiberacoes ?? 0, color: "#f59e0b", icon: "📋" },
+                    { label: "Içamentos Autorizados", value: empresaSel.liberacoesProsseguir ?? 0, color: "#22c55e", icon: "✅" },
+                    { label: "Içamentos Negados", value: empresaSel.liberacoesParar ?? 0, color: "#ef4444", icon: "🚫" },
+                    { label: "Aguardando Análise", value: empresaSel.liberacoesAnalisar ?? 0, color: C, icon: "⏳" },
+                  ].map(({ label, value, color, icon }) => (
+                    <div key={label} style={{ background: "#0a0a0f", borderRadius: 12, padding: "20px 18px", textAlign: "center" }}>
+                      <div style={{ fontSize: 28, marginBottom: 8 }}>{icon}</div>
+                      <div style={{ fontSize: 32, fontWeight: 800, color, marginBottom: 6 }}>{value}</div>
+                      <div style={{ fontSize: 11, color: "#64748b" }}>{label}</div>
+                    </div>
+                  ))}
+                </div>
+                {(empresaSel.totalLiberacoes ?? 0) > 0 && (
+                  <div style={{ marginTop: 20 }}>
+                    <div style={{ fontSize: 11, color: "#475569", marginBottom: 8 }}>Taxa de aprovação</div>
+                    <div style={S.progressBar}>
+                      <div style={S.progressFill(
+                        ((empresaSel.liberacoesProsseguir ?? 0) / (empresaSel.totalLiberacoes ?? 1)) * 100,
+                        "#22c55e"
+                      )} />
+                    </div>
+                    <div style={{ fontSize: 13, color: "#22c55e", marginTop: 6, fontWeight: 700 }}>
+                      {(((empresaSel.liberacoesProsseguir ?? 0) / (empresaSel.totalLiberacoes ?? 1)) * 100).toFixed(1)}% aprovados
+                    </div>
+                  </div>
+                )}
+                {(empresaSel.totalLiberacoes ?? 0) === 0 && (
+                  <div style={{ ...S.normaBox, textAlign: "center", marginTop: 16 }}>
+                    Nenhuma solicitação registrada ainda nesta empresa.
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
 
