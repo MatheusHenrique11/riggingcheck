@@ -482,7 +482,7 @@ function LoginScreen({ onAuth, onDemo }) {
                 onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; }}
               >
-                🎮 Testar SaaS (Demonstração sem salvar dados)
+                Teste
               </button>
             </div>
           )}
@@ -627,7 +627,7 @@ function LoginScreen({ onAuth, onDemo }) {
 }
 
 // ── MODULE 1: CAPACITY ───────────────────────────────────────────────────────────
-function CapacityModule({ onApproved }) {
+function CapacityModule({ onApproved, isDemo }) {
   const [form, setForm] = useState({ craneCapacity: "", loadWeight: "", riggingWeight: "50" });
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -642,6 +642,26 @@ function CapacityModule({ onApproved }) {
     if (!loadWeight || loadWeight <= 0) { setError("Informe o peso da carga (valor positivo)."); return; }
 
     setLoading(true); setError(null);
+    if (isDemo) {
+      const totalLoad = loadWeight + riggingWeight;
+      const usagePercent = (totalLoad / craneCapacity) * 100;
+      let riskLevel = "SAFE";
+      if (usagePercent > 100) riskLevel = "DANGER";
+      else if (usagePercent > 85) riskLevel = "WARNING";
+
+      setTimeout(() => {
+        setResult({
+          approved: riskLevel !== "DANGER",
+          totalLoad,
+          usagePercent,
+          availableMargin: craneCapacity - totalLoad,
+          riskLevel
+        });
+        setLoading(false);
+      }, 400); // fake delay
+      return;
+    }
+
     try {
       const res = await authFetch(`${API}/api/capacity/verify`, {
         method: "POST",
@@ -722,7 +742,7 @@ function CapacityModule({ onApproved }) {
 }
 
 // ── MODULE 2: SLING ──────────────────────────────────────────────────────────────
-function SlingModule({ onCompleted }) {
+function SlingModule({ onCompleted, isDemo }) {
   const [form, setForm] = useState({ loadWeight: "", numberOfLegs: "2", angleFromHorizontal: "45", wll: "" });
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -739,6 +759,31 @@ function SlingModule({ onCompleted }) {
     if (wll !== null && wll <= 0) { setError("WLL deve ser maior que zero."); return; }
 
     setLoading(true); setError(null);
+    if (isDemo) {
+      const radians = angleFromHorizontal * (Math.PI / 180);
+      const tensionPerLeg = loadWeight / (numberOfLegs * Math.sin(radians));
+      let riskLevel = "SAFE";
+      let angleWarning = false;
+      if (angleFromHorizontal < 30) {
+        riskLevel = "DANGER";
+        angleWarning = true;
+      } else if (angleFromHorizontal < 45) {
+        riskLevel = "WARNING";
+        angleWarning = true;
+      }
+      setTimeout(() => {
+        setResult({
+          tensionPerLeg,
+          loadFactor: 1 / Math.sin(radians),
+          riskLevel,
+          angleWarning,
+          wllUsagePercent: wll ? (tensionPerLeg / wll) * 100 : null
+        });
+        setLoading(false);
+      }, 400);
+      return;
+    }
+
     try {
       const res = await authFetch(`${API}/api/sling/calculate`, {
         method: "POST",
@@ -2352,112 +2397,12 @@ function DemoPage({ onVoltar }) {
 
             {/* ── CAPACIDADE ── */}
             {riggerExTab === "cap" && (
-              <>
-                <div style={S.normaBox}>
-                  📋 <strong style={{ color: "#94a3b8" }}>Como funciona:</strong> O sistema compara a carga total
-                  (carga + aparelho de içamento) com a capacidade nominal do guindaste para o raio de operação.
-                  Acima de 85% é emitido alerta; acima de 100% a operação é bloqueada. (ABNT NBR 11900 / NR-11)
-                </div>
-                <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-                  {CAP_EX.map((ex, i) => {
-                    const risk = riskColor(ex.risk);
-                    return (
-                      <div key={i} style={{ background: "#0f0f1a", border: `1px solid ${risk.color}33`, borderRadius: 12, padding: 24 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>{ex.label}</div>
-                          <div style={S.riskBadge(risk.color)}>{riskLabel(ex.risk)}</div>
-                        </div>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 16 }}>
-                          {[
-                            { l: "Guindaste", v: `${ex.crane.toLocaleString("pt-BR")} kg` },
-                            { l: "Carga",     v: `${ex.load.toLocaleString("pt-BR")} kg` },
-                            { l: "Aparelho",  v: `${ex.rigging} kg` },
-                            { l: "Total",     v: `${ex.total.toLocaleString("pt-BR")} kg` },
-                            { l: "Margem",    v: `${ex.margin > 0 ? "+" : ""}${ex.margin.toLocaleString("pt-BR")} kg` },
-                          ].map(d => (
-                            <div key={d.l}>
-                              <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 4 }}>{d.l}</div>
-                              <div style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0" }}>{d.v}</div>
-                            </div>
-                          ))}
-                        </div>
-                        <div style={{ fontSize: 12, color: "#64748b", marginBottom: 6 }}>Uso da capacidade</div>
-                        <div style={S.progressBar}>
-                          <div style={S.progressFill(ex.pct, risk.color)} />
-                        </div>
-                        <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between" }}>
-                          <span style={{ fontSize: 28, fontWeight: 700, color: risk.color }}>{ex.pct.toFixed(1)}%</span>
-                          {ex.risk === "DANGER" && (
-                            <div style={{ ...S.errorBox, marginTop: 0, padding: "6px 12px", fontSize: 11 }}>
-                              ⛔ Operação bloqueada — carga acima da capacidade nominal
-                            </div>
-                          )}
-                          {ex.risk === "WARNING" && (
-                            <div style={{ ...S.warnBox, marginTop: 0, padding: "6px 12px", fontSize: 11 }}>
-                              ⚠️ Atenção — abaixo de 10% de margem
-                            </div>
-                          )}
-                          {ex.risk === "SAFE" && (
-                            <div style={{ ...S.successBox, marginTop: 0, padding: "6px 12px", fontSize: 11 }}>
-                              ✅ Dentro dos limites seguros
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
+              <CapacityModule isDemo={true} />
             )}
 
             {/* ── LINGADA ── */}
             {riggerExTab === "sling" && (
-              <>
-                <div style={S.normaBox}>
-                  📋 <strong style={{ color: "#94a3b8" }}>Como funciona:</strong> A tensão em cada perna da eslinga
-                  aumenta conforme o ângulo diminui. Fórmula: Tensão = Carga ÷ (n° pernas × sen θ).
-                  Ângulo abaixo de 45° gera aviso; abaixo de 30° a operação é bloqueada. (ABNT NBR 13541)
-                </div>
-                <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 16 }}>
-                  {SLING_EX.map((ex, i) => {
-                    const risk = riskColor(ex.risk);
-                    return (
-                      <div key={i} style={{ background: "#0f0f1a", border: `1px solid ${risk.color}33`, borderRadius: 12, padding: 24 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>{ex.label}</div>
-                          <div style={S.riskBadge(risk.color)}>{riskLabel(ex.risk)}</div>
-                        </div>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 16 }}>
-                          {[
-                            { l: "Carga total",   v: `${ex.load.toLocaleString("pt-BR")} kg` },
-                            { l: "N° de pernas",  v: `${ex.legs} pernas` },
-                            { l: "Ângulo",        v: `${ex.angle}°${ex.warn ? " ⚠️" : ""}` },
-                            { l: "Fator de carga",v: `${ex.factor.toFixed(3)}×` },
-                          ].map(d => (
-                            <div key={d.l}>
-                              <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 4 }}>{d.l}</div>
-                              <div style={{ fontSize: 14, fontWeight: 700, color: ex.warn && d.l === "Ângulo" ? "#f59e0b" : "#e2e8f0" }}>{d.v}</div>
-                            </div>
-                          ))}
-                        </div>
-                        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-                          <div>
-                            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>Tensão por perna</div>
-                            <div style={{ fontSize: 36, fontWeight: 700, color: risk.color, lineHeight: 1 }}>
-                              {ex.tension.toFixed(0)} <span style={{ fontSize: 16 }}>kg</span>
-                            </div>
-                          </div>
-                          <div>
-                            {ex.risk === "DANGER" && <div style={{ ...S.errorBox, marginTop: 0, padding: "8px 14px", fontSize: 11 }}>⛔ Ângulo crítico — operação bloqueada</div>}
-                            {ex.risk === "WARNING" && <div style={{ ...S.warnBox, marginTop: 0, padding: "8px 14px", fontSize: 11 }}>⚠️ Ângulo baixo — aumentar para ≥ 45°</div>}
-                            {ex.risk === "SAFE" && <div style={{ ...S.successBox, marginTop: 0, padding: "8px 14px", fontSize: 11 }}>✅ Ângulo e tensão dentro do limite</div>}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
+              <SlingModule isDemo={true} />
             )}
 
             {/* ── CHECKLIST ── */}
