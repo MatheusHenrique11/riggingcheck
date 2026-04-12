@@ -1746,6 +1746,20 @@ const DEMO_REQUESTS_DATA = [
     eslNumPernas: 2, eslAnguloGraus: 25, eslTensaoPorPernaKg: 5680,
     eslFatorCarga: 2.366, eslRisco: "DANGER", eslAnguloAviso: true,
   },
+  {
+    id: "demo-003",
+    operacaoOs: "OS-DEMO-003",
+    riggerNome: "Maria Costa",
+    status: "ANALISAR",
+    criadoEm: new Date(_dNow - 5 * 60 * 1000).toISOString(),
+    resolvidoEm: null,
+    aprovadoPorNome: null,
+    observacao: null,
+    capGuindasteKg: 8000, capCargaKg: 5200, capAparelhoKg: 60,
+    capTotalKg: 5260, capUsoPercent: 65.75, capRisco: "SAFE",
+    eslNumPernas: 2, eslAnguloGraus: 50, eslTensaoPorPernaKg: 3435,
+    eslFatorCarga: 1.305, eslRisco: "SAFE", eslAnguloAviso: false,
+  },
 ];
 
 const DEMO_USERS_DATA = [
@@ -1757,27 +1771,7 @@ const DEMO_USERS_DATA = [
   { id: "du6", nome: "Pedro Rocha",     email: "pedro@demo.com",    role: "OPERADOR",     ativo: false },
 ];
 
-function demoCalcCap(craneCapacity, loadWeight, riggingWeight) {
-  const totalLoad = loadWeight + riggingWeight;
-  const usagePercent = (totalLoad / craneCapacity) * 100;
-  const riskLevel = usagePercent > 100 ? "DANGER" : usagePercent > 85 ? "WARNING" : "SAFE";
-  return { totalLoad, usagePercent, riskLevel, approved: usagePercent <= 100, availableMargin: craneCapacity - totalLoad };
-}
 
-function demoCalcSling(loadWeight, numberOfLegs, angleFromHorizontal, wll) {
-  const angleRad = (angleFromHorizontal * Math.PI) / 180;
-  const tensionPerLeg = loadWeight / (numberOfLegs * Math.sin(angleRad));
-  const loadFactor = 1 / Math.sin(angleRad);
-  const angleWarning = angleFromHorizontal < 45;
-  let riskLevel = angleFromHorizontal < 30 ? "DANGER" : angleFromHorizontal < 45 ? "WARNING" : "SAFE";
-  let wllUsagePercent = null;
-  if (wll && wll > 0) {
-    wllUsagePercent = (tensionPerLeg / wll) * 100;
-    if (wllUsagePercent > 100) riskLevel = "DANGER";
-    else if (wllUsagePercent > 80 && riskLevel === "SAFE") riskLevel = "WARNING";
-  }
-  return { tensionPerLeg, loadFactor, riskLevel, angleWarning, wllUsagePercent };
-}
 
 function SolTechCard({ sol }) {
   return (
@@ -1817,25 +1811,14 @@ function DemoPage({ onVoltar }) {
   const [novoForm, setNovoForm] = useState({ nome: "", email: "", role: "RIGGER" });
   const [novoMsg, setNovoMsg] = useState(null);
 
-  // ── RIGGER STATE (ephemeral — cleared on unmount automatically) ──
-  const [riggerPainel, setRiggerPainel] = useState("usuarios");
-  const [wfTab, setWfTab] = useState(0);
-  const [capForm, setCapForm] = useState({ craneCapacity: "", loadWeight: "", riggingWeight: "50" });
-  const [capResult, setCapResult] = useState(null);
-  const [capData, setCapData] = useState(null);
-  const [capOk, setCapOk] = useState(false);
-  const [capError, setCapError] = useState(null);
-  const [slingForm, setSlingForm] = useState({ loadWeight: "", numberOfLegs: "2", angleFromHorizontal: "45", wll: "" });
-  const [slingResult, setSlingResult] = useState(null);
-  const [slingData2, setSlingData2] = useState(null);
-  const [slingOk, setSlingOk] = useState(false);
-  const [slingError, setSlingError] = useState(null);
-  const [clChecked, setClChecked] = useState({});
-  const [clOperator, setClOperator] = useState("");
-  const [clJobId, setClJobId] = useState("");
-  const [clError, setClError] = useState(null);
-  const [epRequests, setEpRequests] = useState([]);
-  const [clSubmitted, setClSubmitted] = useState(null);
+  // ── RIGGER DEMO STATE ──
+  const [riggerExTab, setRiggerExTab] = useState("cap");
+  const [demoClChecked, setDemoClChecked] = useState(() => {
+    const pre = {};
+    CHECKLIST[0].items.forEach((_, ii) => { pre[`0-${ii}`] = true; });
+    pre["1-0"] = true; pre["1-1"] = true;
+    return pre;
+  });
 
   // ── ADMIN ACTIONS ──
   const resolverAdmin = (id, acao) => {
@@ -1865,69 +1848,24 @@ function DemoPage({ onVoltar }) {
 
   const toggleUserAtivo = (id) => setEquipe(p => p.map(u => u.id !== id ? u : { ...u, ativo: !u.ativo }));
 
-  // ── RIGGER WORKFLOW ──
-  const calcCap = () => {
-    const crane = parseFloat(capForm.craneCapacity);
-    const load  = parseFloat(capForm.loadWeight);
-    const rig   = parseFloat(capForm.riggingWeight) || 0;
-    if (!crane || crane <= 0) { setCapError("Informe a capacidade do guindaste."); return; }
-    if (!load  || load  <= 0) { setCapError("Informe o peso da carga."); return; }
-    setCapError(null);
-    const r = demoCalcCap(crane, load, rig);
-    setCapResult(r);
-    if (r.approved) {
-      setCapData({ capGuindasteKg: crane, capCargaKg: load, capAparelhoKg: rig, capTotalKg: r.totalLoad, capUsoPercent: r.usagePercent, capRisco: r.riskLevel });
-      setCapOk(true);
-    }
-  };
-
-  const calcSling = () => {
-    const load  = parseFloat(slingForm.loadWeight);
-    const legs  = parseInt(slingForm.numberOfLegs);
-    const angle = parseFloat(slingForm.angleFromHorizontal);
-    const wll   = slingForm.wll ? parseFloat(slingForm.wll) : null;
-    if (!load  || load  <= 0)                       { setSlingError("Informe o peso da carga."); return; }
-    if (!angle || angle <= 0 || angle > 90)         { setSlingError("Ângulo deve estar entre 1° e 90°."); return; }
-    setSlingError(null);
-    const r = demoCalcSling(load, legs, angle, wll);
-    setSlingResult(r);
-    if (r.riskLevel !== "DANGER") {
-      setSlingData2({ eslNumPernas: legs, eslAnguloGraus: angle, eslTensaoPorPernaKg: r.tensionPerLeg, eslFatorCarga: r.loadFactor, eslRisco: r.riskLevel, eslAnguloAviso: r.angleWarning });
-      setSlingOk(true);
-    }
-  };
-
-  const clTotal    = CHECKLIST.reduce((s, c) => s + c.items.length, 0);
-  const clDone     = Object.values(clChecked).filter(Boolean).length;
-  const clPct      = Math.round((clDone / clTotal) * 100);
-  const clAllDone  = clDone === clTotal;
-
-  const submeterDemo = () => {
-    if (!clJobId.trim() || !clOperator.trim()) { setClError("Preencha o número da OS e o nome do Rigger."); return; }
-    setClError(null);
-    const req = {
-      id: `demo-eph-${Date.now()}`,
-      operacaoOs: clJobId,
-      riggerNome: clOperator,
-      status: "ANALISAR",
-      criadoEm: new Date().toISOString(),
-      ...capData,
-      ...slingData2,
-    };
-    setEpRequests(p => [req, ...p]);
-    setClSubmitted(req);
-  };
-
-  const resetWorkflow = () => {
-    setWfTab(0);
-    setCapForm({ craneCapacity: "", loadWeight: "", riggingWeight: "50" });
-    setCapResult(null); setCapData(null); setCapOk(false); setCapError(null);
-    setSlingForm({ loadWeight: "", numberOfLegs: "2", angleFromHorizontal: "45", wll: "" });
-    setSlingResult(null); setSlingData2(null); setSlingOk(false); setSlingError(null);
-    setClChecked({}); setClOperator(""); setClJobId(""); setClSubmitted(null); setClError(null);
-  };
-
   const adminFiltered = adminFiltro === "TODOS" ? adminRequests : adminRequests.filter(r => r.status === adminFiltro);
+
+  // pré-exemplos de capacidade
+  const CAP_EX = [
+    { label: "Cenário 1 — Operação Segura", crane: 10000, load: 6500, rigging: 50, total: 6550, pct: 65.5, margin: 3450, risk: "SAFE" },
+    { label: "Cenário 2 — Atenção Necessária", crane: 8000, load: 7000, rigging: 80, total: 7080, pct: 88.5, margin: 920, risk: "WARNING" },
+    { label: "Cenário 3 — Operação Negada", crane: 5000, load: 5200, rigging: 80, total: 5280, pct: 105.6, margin: -280, risk: "DANGER" },
+  ];
+  // pré-exemplos de lingada
+  const SLING_EX = [
+    { label: "Cenário 1 — Seguro", load: 6550, legs: 2, angle: 60, tension: 3783, factor: 1.155, risk: "SAFE", warn: false },
+    { label: "Cenário 2 — Atenção (ângulo baixo)", load: 7080, legs: 2, angle: 40, tension: 5508, factor: 1.556, risk: "WARNING", warn: true },
+    { label: "Cenário 3 — Perigoso", load: 4800, legs: 2, angle: 25, tension: 5680, factor: 2.366, risk: "DANGER", warn: true },
+  ];
+
+  const demoClTotal = CHECKLIST.reduce((s, c) => s + c.items.length, 0);
+  const demoClDone  = Object.values(demoClChecked).filter(Boolean).length;
+  const demoClPct   = Math.round((demoClDone / demoClTotal) * 100);
 
   const DEMO_BADGE = (
     <span style={{ background: "#7c3aed22", border: "1px solid #a78bfa44", color: "#a78bfa", fontSize: 10, fontWeight: 700, letterSpacing: "2px", padding: "2px 8px", borderRadius: 4, textTransform: "uppercase", marginLeft: 8 }}>
@@ -1958,8 +1896,8 @@ function DemoPage({ onVoltar }) {
           )}
         </div>
         <div style={S.tabs(isMobile)}>
-          <button style={S.tab(mainTab === "admin",  isMobile)} onClick={() => setMainTab("admin")}>🔑 Administrador / Líder</button>
-          <button style={S.tab(mainTab === "rigger", isMobile)} onClick={() => setMainTab("rigger")}>👷 Rigger / Operador</button>
+          <button style={S.tab(mainTab === "admin",  isMobile)} onClick={() => setMainTab("admin")}>🔑 Líder de Equipe</button>
+          <button style={S.tab(mainTab === "rigger", isMobile)} onClick={() => setMainTab("rigger")}>👷 Rigger</button>
         </div>
       </div>
 
@@ -1968,8 +1906,8 @@ function DemoPage({ onVoltar }) {
         {/* Banner aviso */}
         <div style={{ ...S.warnBox, marginBottom: 28 }}>
           {mainTab === "admin"
-            ? "🎭 Demonstração do Painel Administrativo — Aprovar/negar e gerenciar equipe funcionam apenas nesta sessão. Nenhum dado é enviado ao servidor."
-            : "🎭 Demonstração Rigger/Operador — As solicitações geradas existem somente na memória do navegador e serão apagadas ao sair desta página."}
+            ? "🎭 Demonstração — Líder de Equipe: veja solicitações com os 3 status possíveis e aprove/negue em tempo real. Nenhum dado é enviado ao servidor."
+            : "🎭 Demonstração — Rigger: exemplos pré-calculados de capacidade do guindaste, lingada e checklist NR-11. Os cálculos são os mesmos do sistema real."}
         </div>
 
         {/* ════════════════ ADMIN TAB ════════════════ */}
@@ -2118,279 +2056,175 @@ function DemoPage({ onVoltar }) {
         {/* ════════════════ RIGGER TAB ════════════════ */}
         {mainTab === "rigger" && (
           <>
+            {/* sub-tabs */}
             <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-              <button style={S.tab(riggerPainel === "usuarios",  isMobile)} onClick={() => setRiggerPainel("usuarios")}>👥 Usuários Autorizados</button>
-              <button style={S.tab(riggerPainel === "workflow",  isMobile)} onClick={() => setRiggerPainel("workflow")}>⚙️ Nova Operação</button>
+              <button style={S.tab(riggerExTab === "cap",   isMobile)} onClick={() => setRiggerExTab("cap")}>⚖️ Capacidade</button>
+              <button style={S.tab(riggerExTab === "sling", isMobile)} onClick={() => setRiggerExTab("sling")}>📐 Lingada</button>
+              <button style={S.tab(riggerExTab === "check", isMobile)} onClick={() => setRiggerExTab("check")}>📋 Checklist</button>
             </div>
 
-            {/* ── USUÁRIOS AUTORIZADOS ── */}
-            {riggerPainel === "usuarios" && (
+            {/* ── CAPACIDADE ── */}
+            {riggerExTab === "cap" && (
               <>
-                <div style={{ fontSize: 11, color: "#475569", letterSpacing: "2px", textTransform: "uppercase", marginBottom: 16 }}>
-                  Usuários autorizados ({equipe.filter(u => u.ativo).length} ativos de {equipe.length})
+                <div style={S.normaBox}>
+                  📋 <strong style={{ color: "#94a3b8" }}>Como funciona:</strong> O sistema compara a carga total
+                  (carga + aparelho de içamento) com a capacidade nominal do guindaste para o raio de operação.
+                  Acima de 85% é emitido alerta; acima de 100% a operação é bloqueada. (ABNT NBR 11900 / NR-11)
                 </div>
-                {equipe.map(f => (
-                  <div key={f.id} style={{ background: "#0f0f1a", border: `1px solid ${f.ativo ? "#1e2a3a" : "#2d0000"}`, borderRadius: 10, padding: "14px 18px", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-                    <div>
-                      <div style={{ fontWeight: 700, color: f.ativo ? "#e2e8f0" : "#475569", fontSize: 13 }}>{f.nome}</div>
-                      <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>{f.email}</div>
-                    </div>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      <span style={{ background: "#1e2a3a", color: "#38bdf8", fontSize: 11, padding: "2px 8px", borderRadius: 4 }}>
-                        {roleLabel(f.role)}
-                      </span>
-                      <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 700,
-                        background: f.ativo ? "#052e16" : "#2d0000",
-                        color: f.ativo ? "#22c55e" : "#ef4444" }}>
-                        {f.ativo ? "ATIVO" : "INATIVO"}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                <div style={{ ...S.normaBox, marginTop: 8 }}>
-                  ℹ️ Lista gerenciada pelo Administrador na aba ao lado. Usuários adicionados/desativados refletem aqui em tempo real.
+                <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+                  {CAP_EX.map((ex, i) => {
+                    const risk = riskColor(ex.risk);
+                    return (
+                      <div key={i} style={{ background: "#0f0f1a", border: `1px solid ${risk.color}33`, borderRadius: 12, padding: 24 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>{ex.label}</div>
+                          <div style={S.riskBadge(risk.color)}>{riskLabel(ex.risk)}</div>
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 16 }}>
+                          {[
+                            { l: "Guindaste", v: `${ex.crane.toLocaleString("pt-BR")} kg` },
+                            { l: "Carga",     v: `${ex.load.toLocaleString("pt-BR")} kg` },
+                            { l: "Aparelho",  v: `${ex.rigging} kg` },
+                            { l: "Total",     v: `${ex.total.toLocaleString("pt-BR")} kg` },
+                            { l: "Margem",    v: `${ex.margin > 0 ? "+" : ""}${ex.margin.toLocaleString("pt-BR")} kg` },
+                          ].map(d => (
+                            <div key={d.l}>
+                              <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 4 }}>{d.l}</div>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0" }}>{d.v}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ fontSize: 12, color: "#64748b", marginBottom: 6 }}>Uso da capacidade</div>
+                        <div style={S.progressBar}>
+                          <div style={S.progressFill(ex.pct, risk.color)} />
+                        </div>
+                        <div style={{ marginTop: 8, display: "flex", justifyContent: "space-between" }}>
+                          <span style={{ fontSize: 28, fontWeight: 700, color: risk.color }}>{ex.pct.toFixed(1)}%</span>
+                          {ex.risk === "DANGER" && (
+                            <div style={{ ...S.errorBox, marginTop: 0, padding: "6px 12px", fontSize: 11 }}>
+                              ⛔ Operação bloqueada — carga acima da capacidade nominal
+                            </div>
+                          )}
+                          {ex.risk === "WARNING" && (
+                            <div style={{ ...S.warnBox, marginTop: 0, padding: "6px 12px", fontSize: 11 }}>
+                              ⚠️ Atenção — abaixo de 10% de margem
+                            </div>
+                          )}
+                          {ex.risk === "SAFE" && (
+                            <div style={{ ...S.successBox, marginTop: 0, padding: "6px 12px", fontSize: 11 }}>
+                              ✅ Dentro dos limites seguros
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </>
             )}
 
-            {/* ── NOVA OPERAÇÃO (WORKFLOW) ── */}
-            {riggerPainel === "workflow" && (
+            {/* ── LINGADA ── */}
+            {riggerExTab === "sling" && (
               <>
-                {/* Workflow sub-tabs */}
-                <div style={{ ...S.tabs(isMobile), marginBottom: 0 }}>
-                  {[
-                    { label: "⚖️ Capacidade", locked: false },
-                    { label: "📐 Eslingas",   locked: !capOk },
-                    { label: "📋 Checklist",  locked: !slingOk },
-                  ].map((t, i) => (
-                    <button key={i}
-                      style={{ ...S.tab(wfTab === i, isMobile), ...(t.locked ? { opacity: 0.35, cursor: "not-allowed" } : {}) }}
-                      onClick={() => !t.locked && setWfTab(i)}>
-                      {t.locked ? "🔒 " : ""}{t.label}
-                    </button>
-                  ))}
+                <div style={S.normaBox}>
+                  📋 <strong style={{ color: "#94a3b8" }}>Como funciona:</strong> A tensão em cada perna da eslinga
+                  aumenta conforme o ângulo diminui. Fórmula: Tensão = Carga ÷ (n° pernas × sen θ).
+                  Ângulo abaixo de 45° gera aviso; abaixo de 30° a operação é bloqueada. (ABNT NBR 13541)
                 </div>
-
-                {/* TAB 0: CAPACIDADE */}
-                {wfTab === 0 && (
-                  <div style={S.card}>
-                    <div style={S.cardTitle}>⚖️ &nbsp;Verificação de Capacidade</div>
-                    <div style={S.grid()}>
-                      {[
-                        { key: "craneCapacity", label: "Capacidade do Guindaste (kg)", placeholder: "ex: 10000" },
-                        { key: "loadWeight",    label: "Peso da Carga (kg)",           placeholder: "ex: 6500"  },
-                        { key: "riggingWeight", label: "Peso do Aparelho (kg)",        placeholder: "ex: 50"    },
-                      ].map(f => (
-                        <div key={f.key} style={S.field}>
-                          <label style={S.label}>{f.label}</label>
-                          <input style={S.input} type="number" placeholder={f.placeholder}
-                            value={capForm[f.key]} onChange={e => setCapForm(p => ({ ...p, [f.key]: e.target.value }))} />
+                <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+                  {SLING_EX.map((ex, i) => {
+                    const risk = riskColor(ex.risk);
+                    return (
+                      <div key={i} style={{ background: "#0f0f1a", border: `1px solid ${risk.color}33`, borderRadius: 12, padding: 24 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>{ex.label}</div>
+                          <div style={S.riskBadge(risk.color)}>{riskLabel(ex.risk)}</div>
                         </div>
-                      ))}
-                    </div>
-                    <div style={S.normaBox}>
-                      📋 <strong style={{ color: "#94a3b8" }}>ABNT NBR 11900 / NR-11:</strong> Margem mínima recomendada: 10%.
-                    </div>
-                    {capError && <div style={S.errorBox}>{capError}</div>}
-                    <div style={{ marginTop: 20 }}>
-                      <button style={S.btn(false)} onClick={calcCap}>Verificar</button>
-                    </div>
-                    {capResult && (() => {
-                      const risk = riskColor(capResult.riskLevel);
-                      return (
-                        <>
-                          <div style={S.result(risk.color, risk.bg)}>
-                            <div>
-                              <div style={S.bigNum(risk.color)}>{capResult.usagePercent?.toFixed(1)}%</div>
-                              <div style={S.smallLabel}>da capacidade utilizada</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 16 }}>
+                          {[
+                            { l: "Carga total",   v: `${ex.load.toLocaleString("pt-BR")} kg` },
+                            { l: "N° de pernas",  v: `${ex.legs} pernas` },
+                            { l: "Ângulo",        v: `${ex.angle}°${ex.warn ? " ⚠️" : ""}` },
+                            { l: "Fator de carga",v: `${ex.factor.toFixed(3)}×` },
+                          ].map(d => (
+                            <div key={d.l}>
+                              <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 4 }}>{d.l}</div>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: ex.warn && d.l === "Ângulo" ? "#f59e0b" : "#e2e8f0" }}>{d.v}</div>
                             </div>
-                            <div style={{ flex: 1 }}>
-                              <div style={S.progressBar}><div style={S.progressFill(capResult.usagePercent, risk.color)} /></div>
-                              <div style={{ marginTop: 12, fontSize: 13, lineHeight: 1.8 }}>
-                                <div>Carga total: <strong style={{ color: "#e2e8f0" }}>{capResult.totalLoad?.toFixed(0)} kg</strong></div>
-                                <div>Margem disponível: <strong style={{ color: "#e2e8f0" }}>{capResult.availableMargin?.toFixed(0)} kg</strong></div>
-                              </div>
-                            </div>
-                            <div style={S.riskBadge(risk.color)}>{riskLabel(capResult.riskLevel)}</div>
-                          </div>
-                          {capResult.approved
-                            ? <div style={S.successBox}>✅ Capacidade aprovada — prossiga para o cálculo de eslingas.{" "}
-                                <button style={{ background: "none", border: "none", color: "#22c55e", cursor: "pointer", fontSize: 13 }} onClick={() => setWfTab(1)}>Ir para Eslingas →</button>
-                              </div>
-                            : <div style={S.warnBox}>⚠️ <strong>OPERAÇÃO NÃO PERMITIDA.</strong> Reduza a carga ou reposicione o guindaste.</div>
-                          }
-                        </>
-                      );
-                    })()}
-                  </div>
-                )}
-
-                {/* TAB 1: ESLINGAS */}
-                {wfTab === 1 && (
-                  <div style={S.card}>
-                    <div style={S.cardTitle}>📐 &nbsp;Cálculo de Eslingas & Cabos</div>
-                    <div style={S.grid()}>
-                      {[
-                        { key: "loadWeight",         label: "Peso total da carga (kg)",               placeholder: "ex: 5000" },
-                        { key: "angleFromHorizontal", label: "Ângulo da eslinga (° da horizontal)",    placeholder: "ex: 60"   },
-                        { key: "wll",                label: "WLL da eslinga (kg) — opcional",         placeholder: "ex: 3200" },
-                      ].map(f => (
-                        <div key={f.key} style={S.field}>
-                          <label style={S.label}>{f.label}</label>
-                          <input style={S.input} type="number" placeholder={f.placeholder}
-                            value={slingForm[f.key]} onChange={e => setSlingForm(p => ({ ...p, [f.key]: e.target.value }))} />
+                          ))}
                         </div>
-                      ))}
-                      <div style={S.field}>
-                        <label style={S.label}>Número de pernas</label>
-                        <select style={S.select} value={slingForm.numberOfLegs}
-                          onChange={e => setSlingForm(p => ({ ...p, numberOfLegs: e.target.value }))}>
-                          {["1","2","3","4"].map(n => <option key={n} value={n}>{n} perna{n > 1 ? "s" : ""}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                    {parseFloat(slingForm.angleFromHorizontal) < 45 && (
-                      <div style={S.warnBox}>⚠️ Ângulo abaixo de 45° aumenta drasticamente a tensão nas eslingas.</div>
-                    )}
-                    <div style={S.normaBox}>
-                      📋 <strong style={{ color: "#94a3b8" }}>ABNT NBR 13541:</strong> Fator de segurança mínimo: 5:1.
-                    </div>
-                    {slingError && <div style={S.errorBox}>{slingError}</div>}
-                    <div style={{ marginTop: 20 }}>
-                      <button style={S.btn(false)} onClick={calcSling}>Calcular</button>
-                    </div>
-                    {slingResult && (() => {
-                      const risk = riskColor(slingResult.riskLevel);
-                      return (
-                        <>
-                          <div style={S.result(risk.color, risk.bg)}>
-                            <div>
-                              <div style={S.bigNum(risk.color)}>{slingResult.tensionPerLeg?.toFixed(0)}<span style={{ fontSize: 18 }}> kg</span></div>
-                              <div style={S.smallLabel}>tensão por perna</div>
-                            </div>
-                            <div style={{ flex: 1, fontSize: 13, lineHeight: 2 }}>
-                              <div>Fator de carga: <strong style={{ color: "#e2e8f0" }}>{slingResult.loadFactor?.toFixed(3)}×</strong></div>
-                              {slingResult.wllUsagePercent != null && (
-                                <div>Uso do WLL: <strong style={{ color: risk.color }}>{slingResult.wllUsagePercent?.toFixed(1)}%</strong></div>
-                              )}
-                              {slingResult.angleWarning && <div style={{ color: "#f59e0b" }}>⚠️ Ângulo crítico!</div>}
-                            </div>
-                            <div style={S.riskBadge(risk.color)}>{riskLabel(slingResult.riskLevel)}</div>
-                          </div>
-                          {slingResult.riskLevel !== "DANGER"
-                            ? <div style={S.successBox}>✅ Cálculo concluído — prossiga para o checklist NR-11.{" "}
-                                <button style={{ background: "none", border: "none", color: "#22c55e", cursor: "pointer", fontSize: 13 }} onClick={() => setWfTab(2)}>Ir para Checklist →</button>
-                              </div>
-                            : <div style={S.warnBox}>🚫 Risco DANGER detectado. Corrija os parâmetros antes de prosseguir.</div>
-                          }
-                        </>
-                      );
-                    })()}
-                  </div>
-                )}
-
-                {/* TAB 2: CHECKLIST */}
-                {wfTab === 2 && (
-                  <div style={S.card}>
-                    <div style={S.cardTitle}>📋 &nbsp;Checklist de Içamento — NR-11 / ABNT</div>
-                    {clSubmitted ? (
-                      <div>
-                        <div style={{ ...S.warnBox, textAlign: "center", padding: 28 }}>
-                          <div style={{ fontSize: 28, marginBottom: 12 }}>⏳</div>
-                          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Solicitação registrada (demo)</div>
-                          <div style={{ color: "#94a3b8", fontSize: 12 }}>OS: {clSubmitted.operacaoOs} · Rigger: {clSubmitted.riggerNome}</div>
-                          <div style={{ color: "#64748b", fontSize: 11, marginTop: 8 }}>Esta solicitação existe apenas nesta sessão e será apagada ao sair da página.</div>
-                        </div>
-                        <button style={{ ...S.btn(false), background: "#1e1e35", color: "#64748b", marginTop: 20 }} onClick={resetWorkflow}>
-                          Nova Operação
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <div style={S.grid()}>
-                          <div style={S.field}>
-                            <label style={S.label}>Operação / OS nº</label>
-                            <input style={S.input} placeholder="ex: OS-2024-089" value={clJobId} onChange={e => setClJobId(e.target.value)} />
-                          </div>
-                          <div style={S.field}>
-                            <label style={S.label}>Rigger Responsável</label>
-                            <input style={S.input} placeholder="Nome completo" value={clOperator} onChange={e => setClOperator(e.target.value)} />
-                          </div>
-                        </div>
-                        <hr style={S.divider} />
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                          <div style={{ fontSize: 13 }}>
-                            <span style={{ color: clAllDone ? "#22c55e" : "#f59e0b", fontWeight: 700 }}>{clDone}</span>
-                            <span style={{ color: "#64748b" }}> / {clTotal} itens verificados</span>
-                          </div>
-                          <div style={S.riskBadge(clAllDone ? "#22c55e" : "#f59e0b")}>{clPct}%</div>
-                        </div>
-                        <div style={S.progressBar}><div style={S.progressFill(clPct, clAllDone ? "#22c55e" : "#f59e0b")} /></div>
-                        {CHECKLIST.map((cat, ci) => (
-                          <div key={ci}>
-                            <div style={S.catTitle}>▸ {cat.category}
-                              <span style={{ color: "#475569", fontWeight: 400 }}>
-                                ({cat.items.filter((_, ii) => clChecked[`${ci}-${ii}`]).length}/{cat.items.length})
-                              </span>
-                            </div>
-                            {cat.items.map((item, ii) => {
-                              const key = `${ci}-${ii}`;
-                              const isChecked = !!clChecked[key];
-                              return (
-                                <div key={ii} style={S.checkRow(isChecked)} onClick={() => setClChecked(p => ({ ...p, [key]: !p[key] }))}>
-                                  <div style={S.checkbox(isChecked)}>
-                                    {isChecked && <span style={{ color: "#000", fontSize: 13, fontWeight: 900 }}>✓</span>}
-                                  </div>
-                                  <span style={{ fontSize: 13, lineHeight: 1.5, userSelect: "none" }}>{item}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ))}
-                        {clError && <div style={S.errorBox}>{clError}</div>}
-                        <div style={{ marginTop: 28, display: "flex", gap: 12, flexWrap: "wrap" }}>
-                          <button style={S.btn(!clAllDone)} disabled={!clAllDone} onClick={submeterDemo}>
-                            {!clAllDone ? `Aguardando ${clTotal - clDone} item(s)` : "🔒 Solicitar Liberação (Demo)"}
-                          </button>
-                          <button style={{ ...S.btn(false), background: "#1e1e35", color: "#64748b" }} onClick={resetWorkflow}>
-                            Reiniciar
-                          </button>
-                        </div>
-                        {clAllDone && (
-                          <div style={{ ...S.normaBox, marginTop: 16 }}>
-                            ℹ️ A solicitação será adicionada apenas à memória desta sessão de demo — não é enviada à API.
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {/* Solicitações efêmeras da sessão */}
-                {epRequests.length > 0 && (
-                  <div style={{ marginTop: 32 }}>
-                    <div style={{ fontSize: 11, color: "#f59e0b", letterSpacing: "2px", textTransform: "uppercase", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-                      ⏱️ Solicitações desta sessão
-                      <span style={{ fontSize: 10, color: "#475569", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(apagadas ao sair)</span>
-                    </div>
-                    {epRequests.map(r => (
-                      <div key={r.id} style={{ background: "#0f0f1a", border: "1px solid #f59e0b33", borderRadius: 12, padding: 20, marginBottom: 12 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+                        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
                           <div>
-                            <div style={{ fontWeight: 700, color: "#e2e8f0" }}>OS: {r.operacaoOs}</div>
-                            <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 2 }}>Rigger: {r.riggerNome}</div>
-                            <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>
-                              Criado em: {new Date(r.criadoEm).toLocaleString("pt-BR")}
+                            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 4 }}>Tensão por perna</div>
+                            <div style={{ fontSize: 36, fontWeight: 700, color: risk.color, lineHeight: 1 }}>
+                              {ex.tension.toFixed(0)} <span style={{ fontSize: 16 }}>kg</span>
                             </div>
                           </div>
-                          <div style={S.riskBadge(statusColor(r.status))}>{r.status}</div>
+                          <div>
+                            {ex.risk === "DANGER" && <div style={{ ...S.errorBox, marginTop: 0, padding: "8px 14px", fontSize: 11 }}>⛔ Ângulo crítico — operação bloqueada</div>}
+                            {ex.risk === "WARNING" && <div style={{ ...S.warnBox, marginTop: 0, padding: "8px 14px", fontSize: 11 }}>⚠️ Ângulo baixo — aumentar para ≥ 45°</div>}
+                            {ex.risk === "SAFE" && <div style={{ ...S.successBox, marginTop: 0, padding: "8px 14px", fontSize: 11 }}>✅ Ângulo e tensão dentro do limite</div>}
+                          </div>
                         </div>
-                        <SolTechCard sol={r} />
                       </div>
-                    ))}
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* ── CHECKLIST ── */}
+            {riggerExTab === "check" && (
+              <div style={S.card}>
+                <div style={S.cardTitle}>📋 &nbsp;Checklist de Içamento — NR-11 / ABNT</div>
+                <div style={S.normaBox}>
+                  📋 <strong style={{ color: "#94a3b8" }}>Como funciona:</strong> Todos os {CHECKLIST.reduce((s,c) => s + c.items.length, 0)} itens devem ser marcados antes
+                  de solicitar a liberação ao Líder de Equipe. Clique nos itens abaixo para simular a marcação.
+                </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, marginTop: 20 }}>
+                  <div style={{ fontSize: 13 }}>
+                    <span style={{ color: demoClDone === demoClTotal ? "#22c55e" : "#f59e0b", fontWeight: 700 }}>{demoClDone}</span>
+                    <span style={{ color: "#64748b" }}> / {demoClTotal} itens verificados</span>
+                  </div>
+                  <div style={S.riskBadge(demoClDone === demoClTotal ? "#22c55e" : "#f59e0b")}>{demoClPct}%</div>
+                </div>
+                <div style={S.progressBar}>
+                  <div style={S.progressFill(demoClPct, demoClDone === demoClTotal ? "#22c55e" : "#f59e0b")} />
+                </div>
+                {CHECKLIST.map((cat, ci) => (
+                  <div key={ci}>
+                    <div style={S.catTitle}>▸ {cat.category}
+                      <span style={{ color: "#475569", fontWeight: 400 }}>
+                        ({cat.items.filter((_, ii) => demoClChecked[`${ci}-${ii}`]).length}/{cat.items.length})
+                      </span>
+                    </div>
+                    {cat.items.map((item, ii) => {
+                      const key = `${ci}-${ii}`;
+                      const isChecked = !!demoClChecked[key];
+                      return (
+                        <div key={ii} style={S.checkRow(isChecked)} onClick={() => setDemoClChecked(p => ({ ...p, [key]: !p[key] }))}>
+                          <div style={S.checkbox(isChecked)}>
+                            {isChecked && <span style={{ color: "#000", fontSize: 13, fontWeight: 900 }}>✓</span>}
+                          </div>
+                          <span style={{ fontSize: 13, lineHeight: 1.5, userSelect: "none" }}>{item}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+                <div style={{ marginTop: 28 }}>
+                  <button style={S.btn(demoClDone < demoClTotal)} disabled={demoClDone < demoClTotal}>
+                    {demoClDone < demoClTotal
+                      ? `🔒 Aguardando ${demoClTotal - demoClDone} item(s)`
+                      : "✅ Checklist completo — pronto para solicitar liberação"}
+                  </button>
+                </div>
+                {demoClDone === demoClTotal && (
+                  <div style={{ ...S.successBox, marginTop: 16 }}>
+                    No sistema real, ao clicar em "Solicitar Liberação" o Líder de Equipe recebe a notificação e pode aprovar ou negar.
                   </div>
                 )}
-              </>
+              </div>
             )}
           </>
         )}
