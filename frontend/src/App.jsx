@@ -337,7 +337,7 @@ const roleLabel = (role) => {
 };
 
 // ── LOGIN SCREEN ─────────────────────────────────────────────────────────────────
-function LoginScreen({ onAuth }) {
+function LoginScreen({ onAuth, onDemo }) {
   const isMobile = useIsMobile();
   // "select" | "usuario" | "admin"
   const [mode, setMode] = useState("select");
@@ -439,7 +439,25 @@ function LoginScreen({ onAuth }) {
             </button>
           </div>
 
-          <div style={{ ...S.normaBox, marginTop: 28, textAlign: "center" }}>
+          {onDemo && (
+            <button
+              onClick={onDemo}
+              style={{
+                marginTop: 12,
+                background: "transparent", border: "1px dashed #334155",
+                borderRadius: 12, padding: "14px 24px", cursor: "pointer",
+                textAlign: "center", transition: "all 0.2s", width: "100%",
+                color: "#64748b", fontSize: 13, fontFamily: "inherit",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = "#a78bfa"; e.currentTarget.style.color = "#a78bfa"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = "#334155";  e.currentTarget.style.color = "#64748b"; }}
+            >
+              🎮 &nbsp;Ver demonstração das funcionalidades
+            </button>
+          )}
+
+          <div style={{ ...S.normaBox, marginTop: 16, textAlign: "center" }}>
             NR-11 · ABNT NBR 11900 · ABNT NBR 13541
           </div>
         </div>
@@ -1697,11 +1715,701 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
   );
 }
 
+// ── DEMO PAGE ─────────────────────────────────────────────────────────────────────
+const _dNow = Date.now();
+const DEMO_REQUESTS_DATA = [
+  {
+    id: "demo-001",
+    operacaoOs: "OS-DEMO-001",
+    riggerNome: "Carlos Andrade",
+    status: "PROSSEGUIR",
+    criadoEm: new Date(_dNow - 25 * 60 * 1000).toISOString(),
+    resolvidoEm: new Date(_dNow - 18 * 60 * 1000).toISOString(),
+    aprovadoPorNome: "Ana Lima",
+    observacao: "Operação dentro dos parâmetros de segurança. Prossiga com atenção.",
+    capGuindasteKg: 10000, capCargaKg: 6500, capAparelhoKg: 50,
+    capTotalKg: 6550, capUsoPercent: 65.5, capRisco: "SAFE",
+    eslNumPernas: 2, eslAnguloGraus: 60, eslTensaoPorPernaKg: 3775,
+    eslFatorCarga: 1.155, eslRisco: "SAFE", eslAnguloAviso: false,
+  },
+  {
+    id: "demo-002",
+    operacaoOs: "OS-DEMO-002",
+    riggerNome: "Roberto Santos",
+    status: "PARAR",
+    criadoEm: new Date(_dNow - 45 * 60 * 1000).toISOString(),
+    resolvidoEm: new Date(_dNow - 38 * 60 * 1000).toISOString(),
+    aprovadoPorNome: "Carlos Mendes",
+    observacao: "Carga excede 85% da capacidade. Ângulo de eslinga crítico (25°). Operação negada.",
+    capGuindasteKg: 5000, capCargaKg: 4800, capAparelhoKg: 80,
+    capTotalKg: 4880, capUsoPercent: 97.6, capRisco: "DANGER",
+    eslNumPernas: 2, eslAnguloGraus: 25, eslTensaoPorPernaKg: 5680,
+    eslFatorCarga: 2.366, eslRisco: "DANGER", eslAnguloAviso: true,
+  },
+];
+
+const DEMO_USERS_DATA = [
+  { id: "du1", nome: "Carlos Andrade",  email: "carlos@demo.com",   role: "RIGGER",       ativo: true  },
+  { id: "du2", nome: "Roberto Santos",  email: "roberto@demo.com",  role: "RIGGER",       ativo: true  },
+  { id: "du3", nome: "Maria Costa",     email: "maria@demo.com",    role: "OPERADOR",     ativo: true  },
+  { id: "du4", nome: "João Silva",      email: "joao@demo.com",     role: "OPERADOR",     ativo: true  },
+  { id: "du5", nome: "Ana Lima",        email: "ana@demo.com",      role: "LIDER_EQUIPE", ativo: true  },
+  { id: "du6", nome: "Pedro Rocha",     email: "pedro@demo.com",    role: "OPERADOR",     ativo: false },
+];
+
+function demoCalcCap(craneCapacity, loadWeight, riggingWeight) {
+  const totalLoad = loadWeight + riggingWeight;
+  const usagePercent = (totalLoad / craneCapacity) * 100;
+  const riskLevel = usagePercent > 100 ? "DANGER" : usagePercent > 85 ? "WARNING" : "SAFE";
+  return { totalLoad, usagePercent, riskLevel, approved: usagePercent <= 100, availableMargin: craneCapacity - totalLoad };
+}
+
+function demoCalcSling(loadWeight, numberOfLegs, angleFromHorizontal, wll) {
+  const angleRad = (angleFromHorizontal * Math.PI) / 180;
+  const tensionPerLeg = loadWeight / (numberOfLegs * Math.sin(angleRad));
+  const loadFactor = 1 / Math.sin(angleRad);
+  const angleWarning = angleFromHorizontal < 45;
+  let riskLevel = angleFromHorizontal < 30 ? "DANGER" : angleFromHorizontal < 45 ? "WARNING" : "SAFE";
+  let wllUsagePercent = null;
+  if (wll && wll > 0) {
+    wllUsagePercent = (tensionPerLeg / wll) * 100;
+    if (wllUsagePercent > 100) riskLevel = "DANGER";
+    else if (wllUsagePercent > 80 && riskLevel === "SAFE") riskLevel = "WARNING";
+  }
+  return { tensionPerLeg, loadFactor, riskLevel, angleWarning, wllUsagePercent };
+}
+
+function SolTechCard({ sol }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 14, background: "#0a0a0f", borderRadius: 8, padding: 14 }}>
+      <div>
+        <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Capacidade</div>
+        <div style={{ fontSize: 12, lineHeight: 1.8, color: "#94a3b8" }}>
+          <div>Guindaste: <strong style={{ color: "#e2e8f0" }}>{sol.capGuindasteKg?.toLocaleString("pt-BR")} kg</strong></div>
+          <div>Carga total: <strong style={{ color: "#e2e8f0" }}>{sol.capTotalKg?.toFixed(0)} kg</strong></div>
+          <div>Uso: <strong style={{ color: riskColor(sol.capRisco).color }}>{sol.capUsoPercent?.toFixed(1)}%</strong></div>
+          <div>Risco: <strong style={{ color: riskColor(sol.capRisco).color }}>{riskLabel(sol.capRisco)}</strong></div>
+        </div>
+      </div>
+      <div>
+        <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Eslinga</div>
+        <div style={{ fontSize: 12, lineHeight: 1.8, color: "#94a3b8" }}>
+          <div>Pernas: <strong style={{ color: "#e2e8f0" }}>{sol.eslNumPernas}</strong></div>
+          <div>Ângulo: <strong style={{ color: sol.eslAnguloAviso ? "#f59e0b" : "#e2e8f0" }}>{sol.eslAnguloGraus}°{sol.eslAnguloAviso ? " ⚠️" : ""}</strong></div>
+          <div>Tensão/perna: <strong style={{ color: "#e2e8f0" }}>{sol.eslTensaoPorPernaKg?.toFixed(0)} kg</strong></div>
+          <div>Risco: <strong style={{ color: riskColor(sol.eslRisco).color }}>{riskLabel(sol.eslRisco)}</strong></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DemoPage({ onVoltar }) {
+  const isMobile = useIsMobile();
+  const [mainTab, setMainTab] = useState("admin");
+
+  // ── ADMIN STATE ──
+  const [adminPainel, setAdminPainel] = useState("solicitacoes");
+  const [adminRequests, setAdminRequests] = useState(() => DEMO_REQUESTS_DATA.map(r => ({ ...r })));
+  const [adminFiltro, setAdminFiltro] = useState("TODOS");
+  const [adminObs, setAdminObs] = useState({});
+  const [equipe, setEquipe] = useState(() => DEMO_USERS_DATA.map(u => ({ ...u })));
+  const [novoForm, setNovoForm] = useState({ nome: "", email: "", role: "RIGGER" });
+  const [novoMsg, setNovoMsg] = useState(null);
+
+  // ── RIGGER STATE (ephemeral — cleared on unmount automatically) ──
+  const [riggerPainel, setRiggerPainel] = useState("usuarios");
+  const [wfTab, setWfTab] = useState(0);
+  const [capForm, setCapForm] = useState({ craneCapacity: "", loadWeight: "", riggingWeight: "50" });
+  const [capResult, setCapResult] = useState(null);
+  const [capData, setCapData] = useState(null);
+  const [capOk, setCapOk] = useState(false);
+  const [capError, setCapError] = useState(null);
+  const [slingForm, setSlingForm] = useState({ loadWeight: "", numberOfLegs: "2", angleFromHorizontal: "45", wll: "" });
+  const [slingResult, setSlingResult] = useState(null);
+  const [slingData2, setSlingData2] = useState(null);
+  const [slingOk, setSlingOk] = useState(false);
+  const [slingError, setSlingError] = useState(null);
+  const [clChecked, setClChecked] = useState({});
+  const [clOperator, setClOperator] = useState("");
+  const [clJobId, setClJobId] = useState("");
+  const [clError, setClError] = useState(null);
+  const [epRequests, setEpRequests] = useState([]);
+  const [clSubmitted, setClSubmitted] = useState(null);
+
+  // ── ADMIN ACTIONS ──
+  const resolverAdmin = (id, acao) => {
+    setAdminRequests(prev => prev.map(r => r.id !== id ? r : {
+      ...r,
+      status: acao === "aprovar" ? "PROSSEGUIR" : "PARAR",
+      resolvidoEm: new Date().toISOString(),
+      aprovadoPorNome: "Demo Admin",
+      observacao: adminObs[id] || "",
+    }));
+    setAdminObs(o => { const n = { ...o }; delete n[id]; return n; });
+  };
+
+  const adicionarUser = () => {
+    if (!novoForm.nome.trim()) { setNovoMsg({ tipo: "erro", msg: "Informe o nome." }); return; }
+    setEquipe(p => [...p, {
+      id: `demo-u${Date.now()}`,
+      nome: novoForm.nome,
+      email: novoForm.email || `${novoForm.nome.toLowerCase().replace(/\s+/g, ".")}@demo.com`,
+      role: novoForm.role,
+      ativo: true,
+    }]);
+    setNovoForm({ nome: "", email: "", role: "RIGGER" });
+    setNovoMsg({ tipo: "suc", msg: "Usuário adicionado ao demo." });
+    setTimeout(() => setNovoMsg(null), 3000);
+  };
+
+  const toggleUserAtivo = (id) => setEquipe(p => p.map(u => u.id !== id ? u : { ...u, ativo: !u.ativo }));
+
+  // ── RIGGER WORKFLOW ──
+  const calcCap = () => {
+    const crane = parseFloat(capForm.craneCapacity);
+    const load  = parseFloat(capForm.loadWeight);
+    const rig   = parseFloat(capForm.riggingWeight) || 0;
+    if (!crane || crane <= 0) { setCapError("Informe a capacidade do guindaste."); return; }
+    if (!load  || load  <= 0) { setCapError("Informe o peso da carga."); return; }
+    setCapError(null);
+    const r = demoCalcCap(crane, load, rig);
+    setCapResult(r);
+    if (r.approved) {
+      setCapData({ capGuindasteKg: crane, capCargaKg: load, capAparelhoKg: rig, capTotalKg: r.totalLoad, capUsoPercent: r.usagePercent, capRisco: r.riskLevel });
+      setCapOk(true);
+    }
+  };
+
+  const calcSling = () => {
+    const load  = parseFloat(slingForm.loadWeight);
+    const legs  = parseInt(slingForm.numberOfLegs);
+    const angle = parseFloat(slingForm.angleFromHorizontal);
+    const wll   = slingForm.wll ? parseFloat(slingForm.wll) : null;
+    if (!load  || load  <= 0)                       { setSlingError("Informe o peso da carga."); return; }
+    if (!angle || angle <= 0 || angle > 90)         { setSlingError("Ângulo deve estar entre 1° e 90°."); return; }
+    setSlingError(null);
+    const r = demoCalcSling(load, legs, angle, wll);
+    setSlingResult(r);
+    if (r.riskLevel !== "DANGER") {
+      setSlingData2({ eslNumPernas: legs, eslAnguloGraus: angle, eslTensaoPorPernaKg: r.tensionPerLeg, eslFatorCarga: r.loadFactor, eslRisco: r.riskLevel, eslAnguloAviso: r.angleWarning });
+      setSlingOk(true);
+    }
+  };
+
+  const clTotal    = CHECKLIST.reduce((s, c) => s + c.items.length, 0);
+  const clDone     = Object.values(clChecked).filter(Boolean).length;
+  const clPct      = Math.round((clDone / clTotal) * 100);
+  const clAllDone  = clDone === clTotal;
+
+  const submeterDemo = () => {
+    if (!clJobId.trim() || !clOperator.trim()) { setClError("Preencha o número da OS e o nome do Rigger."); return; }
+    setClError(null);
+    const req = {
+      id: `demo-eph-${Date.now()}`,
+      operacaoOs: clJobId,
+      riggerNome: clOperator,
+      status: "ANALISAR",
+      criadoEm: new Date().toISOString(),
+      ...capData,
+      ...slingData2,
+    };
+    setEpRequests(p => [req, ...p]);
+    setClSubmitted(req);
+  };
+
+  const resetWorkflow = () => {
+    setWfTab(0);
+    setCapForm({ craneCapacity: "", loadWeight: "", riggingWeight: "50" });
+    setCapResult(null); setCapData(null); setCapOk(false); setCapError(null);
+    setSlingForm({ loadWeight: "", numberOfLegs: "2", angleFromHorizontal: "45", wll: "" });
+    setSlingResult(null); setSlingData2(null); setSlingOk(false); setSlingError(null);
+    setClChecked({}); setClOperator(""); setClJobId(""); setClSubmitted(null); setClError(null);
+  };
+
+  const adminFiltered = adminFiltro === "TODOS" ? adminRequests : adminRequests.filter(r => r.status === adminFiltro);
+
+  const DEMO_BADGE = (
+    <span style={{ background: "#7c3aed22", border: "1px solid #a78bfa44", color: "#a78bfa", fontSize: 10, fontWeight: 700, letterSpacing: "2px", padding: "2px 8px", borderRadius: 4, textTransform: "uppercase", marginLeft: 8 }}>
+      DEMO
+    </span>
+  );
+
+  return (
+    <div style={S.app}>
+
+      {/* ── Header ── */}
+      <div style={S.header(isMobile)}>
+        <div style={S.headerTop(isMobile)}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <button onClick={onVoltar} style={S.logoutBtn(isMobile)}>← Voltar</button>
+            <div>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <span style={S.logoText(isMobile)}>RiggingCheck</span>
+                {DEMO_BADGE}
+              </div>
+              <div style={S.logoSub(isMobile)}>Demonstração de Funcionalidades</div>
+            </div>
+          </div>
+          {!isMobile && (
+            <div style={{ fontSize: 11, color: "#f59e0b", background: "rgba(245,158,11,0.08)", border: "1px solid #f59e0b33", borderRadius: 6, padding: "6px 12px" }}>
+              ⚠️ Dados simulados — sem conexão à API
+            </div>
+          )}
+        </div>
+        <div style={S.tabs(isMobile)}>
+          <button style={S.tab(mainTab === "admin",  isMobile)} onClick={() => setMainTab("admin")}>🔑 Administrador / Líder</button>
+          <button style={S.tab(mainTab === "rigger", isMobile)} onClick={() => setMainTab("rigger")}>👷 Rigger / Operador</button>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 24px" }}>
+
+        {/* Banner aviso */}
+        <div style={{ ...S.warnBox, marginBottom: 28 }}>
+          {mainTab === "admin"
+            ? "🎭 Demonstração do Painel Administrativo — Aprovar/negar e gerenciar equipe funcionam apenas nesta sessão. Nenhum dado é enviado ao servidor."
+            : "🎭 Demonstração Rigger/Operador — As solicitações geradas existem somente na memória do navegador e serão apagadas ao sair desta página."}
+        </div>
+
+        {/* ════════════════ ADMIN TAB ════════════════ */}
+        {mainTab === "admin" && (
+          <>
+            <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+              <button style={S.tab(adminPainel === "solicitacoes", isMobile)} onClick={() => setAdminPainel("solicitacoes")}>📋 Solicitações</button>
+              <button style={S.tab(adminPainel === "equipe",       isMobile)} onClick={() => setAdminPainel("equipe")}>👥 Equipe</button>
+            </div>
+
+            {/* ── SOLICITAÇÕES ── */}
+            {adminPainel === "solicitacoes" && (
+              <>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
+                  {["ANALISAR", "PROSSEGUIR", "PARAR", "TODOS"].map(s => (
+                    <button key={s} style={S.tab(adminFiltro === s, isMobile)} onClick={() => setAdminFiltro(s)}>{s}</button>
+                  ))}
+                </div>
+
+                {adminFiltered.length === 0 && (
+                  <div style={{ ...S.normaBox, textAlign: "center", padding: 36 }}>
+                    Nenhuma solicitação com status "{adminFiltro}".
+                  </div>
+                )}
+
+                {adminFiltered.map(sol => (
+                  <div key={sol.id} style={{ background: "#0f0f1a", border: `1px solid ${statusColor(sol.status)}22`, borderRadius: 12, padding: 24, marginBottom: 16 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
+                      <div>
+                        <div style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 15 }}>OS: {sol.operacaoOs}</div>
+                        <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 4 }}>Rigger: {sol.riggerNome}</div>
+                        <div style={{ color: "#475569", fontSize: 11, marginTop: 4 }}>
+                          Solicitado em: {new Date(sol.criadoEm).toLocaleString("pt-BR")}
+                        </div>
+                        {sol.resolvidoEm && (
+                          <div style={{ color: "#475569", fontSize: 11 }}>
+                            Resolvido em: {new Date(sol.resolvidoEm).toLocaleString("pt-BR")} por {sol.aprovadoPorNome}
+                          </div>
+                        )}
+                        {sol.observacao && (
+                          <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>Obs: "{sol.observacao}"</div>
+                        )}
+                      </div>
+                      <div style={S.riskBadge(statusColor(sol.status))}>{sol.status}</div>
+                    </div>
+
+                    <SolTechCard sol={sol} />
+
+                    {sol.status === "ANALISAR" && (
+                      <div style={{ marginTop: 16 }}>
+                        <input
+                          style={{ ...S.input, fontSize: 12, padding: "8px 12px", width: "100%", boxSizing: "border-box" }}
+                          placeholder="Observação (opcional)"
+                          value={adminObs[sol.id] || ""}
+                          onChange={e => setAdminObs(o => ({ ...o, [sol.id]: e.target.value }))}
+                        />
+                        <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+                          <button
+                            style={{ ...S.btn(false), background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#000", padding: "10px 24px" }}
+                            onClick={() => resolverAdmin(sol.id, "aprovar")}>
+                            ✅ Autorizar Içamento
+                          </button>
+                          <button
+                            style={{ ...S.btn(false), background: "rgba(239,68,68,0.12)", border: "1px solid #ef444466", color: "#ef4444", padding: "10px 24px" }}
+                            onClick={() => resolverAdmin(sol.id, "negar")}>
+                            🚫 Negar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* ── EQUIPE ── */}
+            {adminPainel === "equipe" && (
+              <>
+                <div style={{ background: "#0f0f1a", border: "1px solid #1e2a3a", borderRadius: 12, padding: 24, marginBottom: 32 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#f59e0b", marginBottom: 16, letterSpacing: "1px", textTransform: "uppercase" }}>
+                    + Novo Usuário (Demo)
+                  </div>
+                  <div style={S.grid()}>
+                    <div style={S.field}>
+                      <label style={S.label}>Nome completo</label>
+                      <input style={S.input} placeholder="João da Silva" value={novoForm.nome}
+                        onChange={e => setNovoForm(f => ({ ...f, nome: e.target.value }))} />
+                    </div>
+                    <div style={S.field}>
+                      <label style={S.label}>E-mail (opcional)</label>
+                      <input style={S.input} type="email" placeholder="joao@empresa.com" value={novoForm.email}
+                        onChange={e => setNovoForm(f => ({ ...f, email: e.target.value }))} />
+                    </div>
+                    <div style={S.field}>
+                      <label style={S.label}>Cargo</label>
+                      <select style={{ ...S.input, cursor: "pointer" }} value={novoForm.role}
+                        onChange={e => setNovoForm(f => ({ ...f, role: e.target.value }))}>
+                        <option value="RIGGER">Rigger</option>
+                        <option value="OPERADOR">Operador</option>
+                        <option value="LIDER_EQUIPE">Líder de Equipe</option>
+                        <option value="GERENTE_OPERACOES">Gerente de Operações</option>
+                        <option value="ADMIN_EMPRESA">Admin Empresa</option>
+                      </select>
+                    </div>
+                  </div>
+                  {novoMsg && (
+                    <div style={{ ...(novoMsg.tipo === "erro" ? S.errorBox : S.successBox), marginTop: 12 }}>{novoMsg.msg}</div>
+                  )}
+                  <button style={{ ...S.btn(false), marginTop: 16 }} onClick={adicionarUser}>
+                    Adicionar ao Demo
+                  </button>
+                </div>
+
+                <div style={{ fontSize: 11, color: "#475569", letterSpacing: "2px", textTransform: "uppercase", marginBottom: 16 }}>
+                  Membros da equipe ({equipe.length})
+                </div>
+                {equipe.map(f => (
+                  <div key={f.id} style={{ background: "#0f0f1a", border: `1px solid ${f.ativo ? "#1e2a3a" : "#2d0000"}`, borderRadius: 12, padding: 18, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, color: f.ativo ? "#e2e8f0" : "#475569", fontSize: 14 }}>{f.nome}</div>
+                      <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>{f.email}</div>
+                      <div style={{ marginTop: 6, display: "flex", gap: 8, alignItems: "center" }}>
+                        <span style={{ background: "#1e2a3a", color: "#38bdf8", fontSize: 11, padding: "2px 8px", borderRadius: 4 }}>
+                          {roleLabel(f.role)}
+                        </span>
+                        {!f.ativo && (
+                          <span style={{ background: "#2d0000", color: "#ef4444", fontSize: 11, padding: "2px 8px", borderRadius: 4 }}>Inativo</span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => toggleUserAtivo(f.id)}
+                      style={{ fontSize: 12, padding: "8px 16px", borderRadius: 8, border: "1px solid", cursor: "pointer",
+                        background: f.ativo ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)",
+                        borderColor: f.ativo ? "#ef444444" : "#22c55e44",
+                        color: f.ativo ? "#ef4444" : "#22c55e" }}>
+                      {f.ativo ? "Desativar" : "Reativar"}
+                    </button>
+                  </div>
+                ))}
+              </>
+            )}
+          </>
+        )}
+
+        {/* ════════════════ RIGGER TAB ════════════════ */}
+        {mainTab === "rigger" && (
+          <>
+            <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+              <button style={S.tab(riggerPainel === "usuarios",  isMobile)} onClick={() => setRiggerPainel("usuarios")}>👥 Usuários Autorizados</button>
+              <button style={S.tab(riggerPainel === "workflow",  isMobile)} onClick={() => setRiggerPainel("workflow")}>⚙️ Nova Operação</button>
+            </div>
+
+            {/* ── USUÁRIOS AUTORIZADOS ── */}
+            {riggerPainel === "usuarios" && (
+              <>
+                <div style={{ fontSize: 11, color: "#475569", letterSpacing: "2px", textTransform: "uppercase", marginBottom: 16 }}>
+                  Usuários autorizados ({equipe.filter(u => u.ativo).length} ativos de {equipe.length})
+                </div>
+                {equipe.map(f => (
+                  <div key={f.id} style={{ background: "#0f0f1a", border: `1px solid ${f.ativo ? "#1e2a3a" : "#2d0000"}`, borderRadius: 10, padding: "14px 18px", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, color: f.ativo ? "#e2e8f0" : "#475569", fontSize: 13 }}>{f.nome}</div>
+                      <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>{f.email}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <span style={{ background: "#1e2a3a", color: "#38bdf8", fontSize: 11, padding: "2px 8px", borderRadius: 4 }}>
+                        {roleLabel(f.role)}
+                      </span>
+                      <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 700,
+                        background: f.ativo ? "#052e16" : "#2d0000",
+                        color: f.ativo ? "#22c55e" : "#ef4444" }}>
+                        {f.ativo ? "ATIVO" : "INATIVO"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                <div style={{ ...S.normaBox, marginTop: 8 }}>
+                  ℹ️ Lista gerenciada pelo Administrador na aba ao lado. Usuários adicionados/desativados refletem aqui em tempo real.
+                </div>
+              </>
+            )}
+
+            {/* ── NOVA OPERAÇÃO (WORKFLOW) ── */}
+            {riggerPainel === "workflow" && (
+              <>
+                {/* Workflow sub-tabs */}
+                <div style={{ ...S.tabs(isMobile), marginBottom: 0 }}>
+                  {[
+                    { label: "⚖️ Capacidade", locked: false },
+                    { label: "📐 Eslingas",   locked: !capOk },
+                    { label: "📋 Checklist",  locked: !slingOk },
+                  ].map((t, i) => (
+                    <button key={i}
+                      style={{ ...S.tab(wfTab === i, isMobile), ...(t.locked ? { opacity: 0.35, cursor: "not-allowed" } : {}) }}
+                      onClick={() => !t.locked && setWfTab(i)}>
+                      {t.locked ? "🔒 " : ""}{t.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* TAB 0: CAPACIDADE */}
+                {wfTab === 0 && (
+                  <div style={S.card}>
+                    <div style={S.cardTitle}>⚖️ &nbsp;Verificação de Capacidade</div>
+                    <div style={S.grid()}>
+                      {[
+                        { key: "craneCapacity", label: "Capacidade do Guindaste (kg)", placeholder: "ex: 10000" },
+                        { key: "loadWeight",    label: "Peso da Carga (kg)",           placeholder: "ex: 6500"  },
+                        { key: "riggingWeight", label: "Peso do Aparelho (kg)",        placeholder: "ex: 50"    },
+                      ].map(f => (
+                        <div key={f.key} style={S.field}>
+                          <label style={S.label}>{f.label}</label>
+                          <input style={S.input} type="number" placeholder={f.placeholder}
+                            value={capForm[f.key]} onChange={e => setCapForm(p => ({ ...p, [f.key]: e.target.value }))} />
+                        </div>
+                      ))}
+                    </div>
+                    <div style={S.normaBox}>
+                      📋 <strong style={{ color: "#94a3b8" }}>ABNT NBR 11900 / NR-11:</strong> Margem mínima recomendada: 10%.
+                    </div>
+                    {capError && <div style={S.errorBox}>{capError}</div>}
+                    <div style={{ marginTop: 20 }}>
+                      <button style={S.btn(false)} onClick={calcCap}>Verificar</button>
+                    </div>
+                    {capResult && (() => {
+                      const risk = riskColor(capResult.riskLevel);
+                      return (
+                        <>
+                          <div style={S.result(risk.color, risk.bg)}>
+                            <div>
+                              <div style={S.bigNum(risk.color)}>{capResult.usagePercent?.toFixed(1)}%</div>
+                              <div style={S.smallLabel}>da capacidade utilizada</div>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={S.progressBar}><div style={S.progressFill(capResult.usagePercent, risk.color)} /></div>
+                              <div style={{ marginTop: 12, fontSize: 13, lineHeight: 1.8 }}>
+                                <div>Carga total: <strong style={{ color: "#e2e8f0" }}>{capResult.totalLoad?.toFixed(0)} kg</strong></div>
+                                <div>Margem disponível: <strong style={{ color: "#e2e8f0" }}>{capResult.availableMargin?.toFixed(0)} kg</strong></div>
+                              </div>
+                            </div>
+                            <div style={S.riskBadge(risk.color)}>{riskLabel(capResult.riskLevel)}</div>
+                          </div>
+                          {capResult.approved
+                            ? <div style={S.successBox}>✅ Capacidade aprovada — prossiga para o cálculo de eslingas.{" "}
+                                <button style={{ background: "none", border: "none", color: "#22c55e", cursor: "pointer", fontSize: 13 }} onClick={() => setWfTab(1)}>Ir para Eslingas →</button>
+                              </div>
+                            : <div style={S.warnBox}>⚠️ <strong>OPERAÇÃO NÃO PERMITIDA.</strong> Reduza a carga ou reposicione o guindaste.</div>
+                          }
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {/* TAB 1: ESLINGAS */}
+                {wfTab === 1 && (
+                  <div style={S.card}>
+                    <div style={S.cardTitle}>📐 &nbsp;Cálculo de Eslingas & Cabos</div>
+                    <div style={S.grid()}>
+                      {[
+                        { key: "loadWeight",         label: "Peso total da carga (kg)",               placeholder: "ex: 5000" },
+                        { key: "angleFromHorizontal", label: "Ângulo da eslinga (° da horizontal)",    placeholder: "ex: 60"   },
+                        { key: "wll",                label: "WLL da eslinga (kg) — opcional",         placeholder: "ex: 3200" },
+                      ].map(f => (
+                        <div key={f.key} style={S.field}>
+                          <label style={S.label}>{f.label}</label>
+                          <input style={S.input} type="number" placeholder={f.placeholder}
+                            value={slingForm[f.key]} onChange={e => setSlingForm(p => ({ ...p, [f.key]: e.target.value }))} />
+                        </div>
+                      ))}
+                      <div style={S.field}>
+                        <label style={S.label}>Número de pernas</label>
+                        <select style={S.select} value={slingForm.numberOfLegs}
+                          onChange={e => setSlingForm(p => ({ ...p, numberOfLegs: e.target.value }))}>
+                          {["1","2","3","4"].map(n => <option key={n} value={n}>{n} perna{n > 1 ? "s" : ""}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    {parseFloat(slingForm.angleFromHorizontal) < 45 && (
+                      <div style={S.warnBox}>⚠️ Ângulo abaixo de 45° aumenta drasticamente a tensão nas eslingas.</div>
+                    )}
+                    <div style={S.normaBox}>
+                      📋 <strong style={{ color: "#94a3b8" }}>ABNT NBR 13541:</strong> Fator de segurança mínimo: 5:1.
+                    </div>
+                    {slingError && <div style={S.errorBox}>{slingError}</div>}
+                    <div style={{ marginTop: 20 }}>
+                      <button style={S.btn(false)} onClick={calcSling}>Calcular</button>
+                    </div>
+                    {slingResult && (() => {
+                      const risk = riskColor(slingResult.riskLevel);
+                      return (
+                        <>
+                          <div style={S.result(risk.color, risk.bg)}>
+                            <div>
+                              <div style={S.bigNum(risk.color)}>{slingResult.tensionPerLeg?.toFixed(0)}<span style={{ fontSize: 18 }}> kg</span></div>
+                              <div style={S.smallLabel}>tensão por perna</div>
+                            </div>
+                            <div style={{ flex: 1, fontSize: 13, lineHeight: 2 }}>
+                              <div>Fator de carga: <strong style={{ color: "#e2e8f0" }}>{slingResult.loadFactor?.toFixed(3)}×</strong></div>
+                              {slingResult.wllUsagePercent != null && (
+                                <div>Uso do WLL: <strong style={{ color: risk.color }}>{slingResult.wllUsagePercent?.toFixed(1)}%</strong></div>
+                              )}
+                              {slingResult.angleWarning && <div style={{ color: "#f59e0b" }}>⚠️ Ângulo crítico!</div>}
+                            </div>
+                            <div style={S.riskBadge(risk.color)}>{riskLabel(slingResult.riskLevel)}</div>
+                          </div>
+                          {slingResult.riskLevel !== "DANGER"
+                            ? <div style={S.successBox}>✅ Cálculo concluído — prossiga para o checklist NR-11.{" "}
+                                <button style={{ background: "none", border: "none", color: "#22c55e", cursor: "pointer", fontSize: 13 }} onClick={() => setWfTab(2)}>Ir para Checklist →</button>
+                              </div>
+                            : <div style={S.warnBox}>🚫 Risco DANGER detectado. Corrija os parâmetros antes de prosseguir.</div>
+                          }
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {/* TAB 2: CHECKLIST */}
+                {wfTab === 2 && (
+                  <div style={S.card}>
+                    <div style={S.cardTitle}>📋 &nbsp;Checklist de Içamento — NR-11 / ABNT</div>
+                    {clSubmitted ? (
+                      <div>
+                        <div style={{ ...S.warnBox, textAlign: "center", padding: 28 }}>
+                          <div style={{ fontSize: 28, marginBottom: 12 }}>⏳</div>
+                          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Solicitação registrada (demo)</div>
+                          <div style={{ color: "#94a3b8", fontSize: 12 }}>OS: {clSubmitted.operacaoOs} · Rigger: {clSubmitted.riggerNome}</div>
+                          <div style={{ color: "#64748b", fontSize: 11, marginTop: 8 }}>Esta solicitação existe apenas nesta sessão e será apagada ao sair da página.</div>
+                        </div>
+                        <button style={{ ...S.btn(false), background: "#1e1e35", color: "#64748b", marginTop: 20 }} onClick={resetWorkflow}>
+                          Nova Operação
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div style={S.grid()}>
+                          <div style={S.field}>
+                            <label style={S.label}>Operação / OS nº</label>
+                            <input style={S.input} placeholder="ex: OS-2024-089" value={clJobId} onChange={e => setClJobId(e.target.value)} />
+                          </div>
+                          <div style={S.field}>
+                            <label style={S.label}>Rigger Responsável</label>
+                            <input style={S.input} placeholder="Nome completo" value={clOperator} onChange={e => setClOperator(e.target.value)} />
+                          </div>
+                        </div>
+                        <hr style={S.divider} />
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                          <div style={{ fontSize: 13 }}>
+                            <span style={{ color: clAllDone ? "#22c55e" : "#f59e0b", fontWeight: 700 }}>{clDone}</span>
+                            <span style={{ color: "#64748b" }}> / {clTotal} itens verificados</span>
+                          </div>
+                          <div style={S.riskBadge(clAllDone ? "#22c55e" : "#f59e0b")}>{clPct}%</div>
+                        </div>
+                        <div style={S.progressBar}><div style={S.progressFill(clPct, clAllDone ? "#22c55e" : "#f59e0b")} /></div>
+                        {CHECKLIST.map((cat, ci) => (
+                          <div key={ci}>
+                            <div style={S.catTitle}>▸ {cat.category}
+                              <span style={{ color: "#475569", fontWeight: 400 }}>
+                                ({cat.items.filter((_, ii) => clChecked[`${ci}-${ii}`]).length}/{cat.items.length})
+                              </span>
+                            </div>
+                            {cat.items.map((item, ii) => {
+                              const key = `${ci}-${ii}`;
+                              const isChecked = !!clChecked[key];
+                              return (
+                                <div key={ii} style={S.checkRow(isChecked)} onClick={() => setClChecked(p => ({ ...p, [key]: !p[key] }))}>
+                                  <div style={S.checkbox(isChecked)}>
+                                    {isChecked && <span style={{ color: "#000", fontSize: 13, fontWeight: 900 }}>✓</span>}
+                                  </div>
+                                  <span style={{ fontSize: 13, lineHeight: 1.5, userSelect: "none" }}>{item}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ))}
+                        {clError && <div style={S.errorBox}>{clError}</div>}
+                        <div style={{ marginTop: 28, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                          <button style={S.btn(!clAllDone)} disabled={!clAllDone} onClick={submeterDemo}>
+                            {!clAllDone ? `Aguardando ${clTotal - clDone} item(s)` : "🔒 Solicitar Liberação (Demo)"}
+                          </button>
+                          <button style={{ ...S.btn(false), background: "#1e1e35", color: "#64748b" }} onClick={resetWorkflow}>
+                            Reiniciar
+                          </button>
+                        </div>
+                        {clAllDone && (
+                          <div style={{ ...S.normaBox, marginTop: 16 }}>
+                            ℹ️ A solicitação será adicionada apenas à memória desta sessão de demo — não é enviada à API.
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Solicitações efêmeras da sessão */}
+                {epRequests.length > 0 && (
+                  <div style={{ marginTop: 32 }}>
+                    <div style={{ fontSize: 11, color: "#f59e0b", letterSpacing: "2px", textTransform: "uppercase", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                      ⏱️ Solicitações desta sessão
+                      <span style={{ fontSize: 10, color: "#475569", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(apagadas ao sair)</span>
+                    </div>
+                    {epRequests.map(r => (
+                      <div key={r.id} style={{ background: "#0f0f1a", border: "1px solid #f59e0b33", borderRadius: 12, padding: 20, marginBottom: 12 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+                          <div>
+                            <div style={{ fontWeight: 700, color: "#e2e8f0" }}>OS: {r.operacaoOs}</div>
+                            <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 2 }}>Rigger: {r.riggerNome}</div>
+                            <div style={{ color: "#475569", fontSize: 11, marginTop: 2 }}>
+                              Criado em: {new Date(r.criadoEm).toLocaleString("pt-BR")}
+                            </div>
+                          </div>
+                          <div style={S.riskBadge(statusColor(r.status))}>{r.status}</div>
+                        </div>
+                        <SolTechCard sol={r} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        )}
+
+        <div style={{ ...S.normaBox, textAlign: "center", marginTop: 32 }}>
+          RiggingCheck Demo &nbsp;·&nbsp; Nenhum dado é persistido nesta página
+          <br />
+          <span style={{ color: "#475569" }}>NR-11 · ABNT NBR 11900 · ABNT NBR 13541</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── ROOT ─────────────────────────────────────────────────────────────────────────
 export default function App() {
   const isMobile = useIsMobile();
   const [authenticated, setAuthenticated] = useState(() => !!getToken());
-  const [view, setView] = useState("app"); // "app" | "admin"
+  const [view, setView] = useState("app"); // "app" | "admin" | "demo"
   const [tab, setTab] = useState(0);
   const [capacityOk, setCapacityOk] = useState(false);
   const [slingOk, setSlingOk] = useState(false);
@@ -1722,8 +2430,12 @@ export default function App() {
     return () => window.removeEventListener("rc_session_expired", handler);
   }, []);
 
+  if (view === "demo") {
+    return <DemoPage onVoltar={() => setView("app")} />;
+  }
+
   if (!authenticated) {
-    return <LoginScreen onAuth={() => setAuthenticated(true)} />;
+    return <LoginScreen onAuth={() => setAuthenticated(true)} onDemo={() => setView("demo")} />;
   }
 
   if (view === "admin" && isSuperAdmin) {
