@@ -84,6 +84,17 @@ const CHECKLIST = [
       "Confirmar presença do Rigger responsável certificado (NR-11)",
     ],
   },
+  {
+    category: "Norma Petrobrás N-2869",
+    items: [
+      "Plano de Içamento elaborado e aprovado pela supervisão responsável",
+      "Certificados de calibração e inspeção dos equipamentos vigentes",
+      "APR (Análise Preliminar de Risco) preenchida e assinada por todos os envolvidos",
+      "Zona de exclusão delimitada conforme plano de içamento aprovado",
+      "Plano de comunicação estabelecido e testado (rádios verificados)",
+      "Plano de contingência discutido com toda a equipe envolvida",
+    ],
+  },
 ];
 
 // ── STYLES ───────────────────────────────────────────────────────────────────────
@@ -923,7 +934,7 @@ function SlingModule({ onCompleted, isDemo }) {
 function ChecklistModule({ capacityData, slingData }) {
   const total = CHECKLIST.reduce((s, c) => s + c.items.length, 0);
   const [checked, setChecked] = useState({});
-  const [operator, setOperator] = useState("");
+  const [operator] = useState(() => getUser()?.userName || "");
   const [jobId, setJobId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -935,8 +946,8 @@ function ChecklistModule({ capacityData, slingData }) {
   const allDone = done === total;
 
   const solicitarLiberacao = async () => {
-    if (!jobId.trim() || !operator.trim()) {
-      setError("Preencha o número da OS e o nome do Rigger.");
+    if (!jobId.trim()) {
+      setError("Preencha o número da OS.");
       return;
     }
     setLoading(true); setError(null);
@@ -977,7 +988,7 @@ function ChecklistModule({ capacityData, slingData }) {
   }, [polling, solicitacao]);
 
   const resetar = () => {
-    setChecked({}); setOperator(""); setJobId("");
+    setChecked({}); setJobId("");
     setSolicitacao(null); setPolling(false); setError(null);
   };
 
@@ -1031,7 +1042,7 @@ function ChecklistModule({ capacityData, slingData }) {
             </div>
             <div style={S.field}>
               <label style={S.label}>Rigger Responsável</label>
-              <input style={S.input} placeholder="Nome completo" value={operator} onChange={e => setOperator(e.target.value)} />
+              <input style={{ ...S.input, background: "#0a0a0f", color: "#64748b", cursor: "default" }} value={operator} readOnly title="Preenchido automaticamente com seu nome de usuário" />
             </div>
           </div>
           <hr style={S.divider} />
@@ -1263,8 +1274,8 @@ function AdminDashboard({ onVoltar, isMobile }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setErroEdit(data.error || "Erro ao salvar alterações."); return; }
-      setEquipe(p => p.map(f => f.id === editandoId ? { ...f, ...editForm } : f));
       setEditandoId(null);
+      carregarEquipe();
     } catch { setErroEdit("Erro de conexão."); }
   };
 
@@ -1342,7 +1353,9 @@ function AdminDashboard({ onVoltar, isMobile }) {
         {/* Navegação principal do painel */}
         <div style={S.tabs(isMobile)}>
           <button style={S.tab(painel === "solicitacoes", isMobile)} onClick={() => setPainel("solicitacoes")}>📋 Solicitações</button>
-          <button style={S.tab(painel === "equipe", isMobile)} onClick={() => setPainel("equipe")}>👥 Equipe</button>
+          {user?.role === "ADMIN_EMPRESA" && (
+            <button style={S.tab(painel === "equipe", isMobile)} onClick={() => setPainel("equipe")}>👥 Equipe</button>
+          )}
         </div>
       </div>
 
@@ -1702,8 +1715,8 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setErroEditFunc(data.error || "Erro ao salvar alterações."); return; }
-      setFuncionarios(p => p.map(f => f.id === editandoFuncId ? { ...f, ...editFuncForm } : f));
       setEditandoFuncId(null);
+      carregarFuncionarios(empresaSel.id);
     } catch { setErroEditFunc("Erro de conexão."); }
   };
 
@@ -2760,8 +2773,291 @@ function DemoPage({ onVoltar }) {
         <div style={{ ...S.normaBox, textAlign: "center", marginTop: 32 }}>
           RiggingCheck Demo &nbsp;·&nbsp; Nenhum dado é persistido nesta página
           <br />
-          <span style={{ color: "#475569" }}>NR-11 · ABNT NBR 11900 · ABNT NBR 13541</span>
+          <span style={{ color: "#475569" }}>NR-11 · ABNT NBR 11900 · ABNT NBR 13541 · Petrobrás N-2869</span>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── CARD TÉCNICO (reutilizado em vários dashboards) ──────────────────────────────
+function CardTecnicoSol({ sol }) {
+  return (
+    <div style={{ marginTop: 14, background: "#0a0a0f", borderRadius: 8, padding: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div>
+          <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Capacidade</div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, color: "#94a3b8" }}>
+            <div>Guindaste: <strong style={{ color: "#e2e8f0" }}>{sol.capGuindasteKg?.toLocaleString("pt-BR")} kg</strong></div>
+            <div>Carga total: <strong style={{ color: "#e2e8f0" }}>{sol.capTotalKg?.toFixed(0)} kg</strong></div>
+            <div>Uso: <strong style={{ color: riskColor(sol.capRisco).color }}>{sol.capUsoPercent?.toFixed(1)}%</strong></div>
+            <div>Risco: <strong style={{ color: riskColor(sol.capRisco).color }}>{riskLabel(sol.capRisco)}</strong></div>
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Eslinga</div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, color: "#94a3b8" }}>
+            <div>Pernas: <strong style={{ color: "#e2e8f0" }}>{sol.eslNumPernas}</strong></div>
+            <div>Ângulo: <strong style={{ color: sol.eslAnguloAviso ? "#f59e0b" : "#e2e8f0" }}>{sol.eslAnguloGraus}°{sol.eslAnguloAviso ? " ⚠️" : ""}</strong></div>
+            <div>Tensão/perna: <strong style={{ color: "#e2e8f0" }}>{sol.eslTensaoPorPernaKg?.toFixed(0)} kg</strong></div>
+            {sol.eslWllKg != null && (
+              <div>WLL: <strong style={{ color: "#e2e8f0" }}>{sol.eslWllKg?.toLocaleString("pt-BR")} kg</strong>
+                {sol.eslWllUsoPercent != null && <span style={{ color: riskColor(sol.eslRisco).color }}> ({sol.eslWllUsoPercent?.toFixed(1)}%)</span>}
+              </div>
+            )}
+            <div>Risco: <strong style={{ color: riskColor(sol.eslRisco).color }}>{riskLabel(sol.eslRisco)}</strong></div>
+          </div>
+        </div>
+      </div>
+      {sol.eslTemManilha && (
+        <div style={{ borderTop: "1px solid #1e2a3a", marginTop: 10, paddingTop: 10 }}>
+          <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Manilha</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, fontSize: 12, color: "#94a3b8" }}>
+            <div>Capacidade: <strong style={{ color: "#e2e8f0" }}>{sol.eslManilhaCapacidadeKg?.toLocaleString("pt-BR")} kg</strong></div>
+            <div>Uso: <strong style={{ color: sol.eslManilhaCompativel ? "#22c55e" : "#ef4444" }}>{sol.eslManilhaUsoPercent?.toFixed(1)}%</strong></div>
+            <div>Compatível: <strong style={{ color: sol.eslManilhaCompativel ? "#22c55e" : "#ef4444" }}>{sol.eslManilhaCompativel ? "Sim" : "Não"}</strong></div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── PAINEL LÍDER DE EQUIPE ────────────────────────────────────────────────────────
+function LiderEquipeDashboard({ onVoltar, isMobile }) {
+  const [showModalSenha, setShowModalSenha] = useState(false);
+  const [statusFiltro, setStatusFiltro] = useState("ANALISAR");
+  const [lista, setLista] = useState([]);
+  const [loadingSol, setLoadingSol] = useState(true);
+  const [obs, setObs] = useState({});
+  const user = getUser();
+
+  const carregar = useCallback(async (s) => {
+    setLoadingSol(true);
+    try {
+      const res = await authFetch(`${API}/api/liberacoes?status=${s}`);
+      if (res.ok) setLista(await res.json());
+    } catch { /* ignora */ }
+    setLoadingSol(false);
+  }, []);
+
+  useEffect(() => { carregar(statusFiltro); }, [carregar, statusFiltro]);
+
+  const resolver = async (id, acao) => {
+    try {
+      const res = await authFetch(`${API}/api/liberacoes/${id}/${acao}`, {
+        method: "POST",
+        body: JSON.stringify({ observacao: obs[id] || "" }),
+      });
+      if (res.ok) {
+        setLista(p => p.filter(s => s.id !== id));
+        setObs(o => { const n = { ...o }; delete n[id]; return n; });
+      }
+    } catch { /* ignora */ }
+  };
+
+  return (
+    <div style={S.app}>
+      {showModalSenha && <ModalAlterarSenha onFechar={() => setShowModalSenha(false)} />}
+      <div style={S.header(isMobile)}>
+        <div style={S.headerTop(isMobile)}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <button onClick={onVoltar} style={{ ...S.logoutBtn(isMobile), borderColor: "#22c55e44", color: "#22c55e" }}>← Voltar</button>
+            <div>
+              <div style={S.logoText(isMobile)}>Painel Líder de Equipe</div>
+              <div style={S.logoSub(isMobile)}>{user?.empresaName || "RiggingCheck"}</div>
+            </div>
+          </div>
+          <div style={S.userInfo(isMobile)}>
+            <div style={S.roleBadge(isMobile)}>{roleLabel(user?.role)}</div>
+            <div style={S.userBadge(isMobile)}>{user?.userName}</div>
+            <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => setShowModalSenha(true)}>
+              {isMobile ? "🔑" : "Alterar Senha"}
+            </button>
+          </div>
+        </div>
+        <div style={S.tabs(isMobile)}>
+          {["ANALISAR", "PROSSEGUIR", "PARAR", "TODOS"].map(s => (
+            <button key={s} style={S.tab(statusFiltro === s, isMobile)} onClick={() => setStatusFiltro(s)}>{s}</button>
+          ))}
+          <button onClick={() => carregar(statusFiltro)} style={{ ...S.tab(false, isMobile), marginLeft: 4 }}>↻</button>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 24px" }}>
+        {loadingSol && <div style={{ color: "#64748b", textAlign: "center", padding: 40 }}>Carregando...</div>}
+        {!loadingSol && lista.length === 0 && (
+          <div style={{ ...S.normaBox, textAlign: "center", padding: 36 }}>
+            Nenhuma solicitação com status "{statusFiltro}".
+          </div>
+        )}
+        {!loadingSol && lista.map(sol => (
+          <div key={sol.id} style={{ background: "#0f0f1a", border: `1px solid ${statusColor(sol.status)}22`, borderRadius: 12, padding: 24, marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
+              <div>
+                <div style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 15 }}>OS: {sol.operacaoOs}</div>
+                <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 4 }}>Rigger: {sol.riggerNome}</div>
+                <div style={{ color: "#475569", fontSize: 11, marginTop: 4 }}>
+                  Solicitado em: {new Date(sol.criadoEm).toLocaleString("pt-BR")}
+                </div>
+                {sol.resolvidoEm && (
+                  <div style={{ color: "#475569", fontSize: 11 }}>
+                    Resolvido em: {new Date(sol.resolvidoEm).toLocaleString("pt-BR")} por {sol.aprovadoPorNome}
+                  </div>
+                )}
+                {sol.observacao && <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>Obs: "{sol.observacao}"</div>}
+              </div>
+              <div style={S.riskBadge(statusColor(sol.status))}>{sol.status}</div>
+            </div>
+            <CardTecnicoSol sol={sol} />
+            {sol.status === "ANALISAR" && (
+              <div style={{ marginTop: 16 }}>
+                <input
+                  style={{ ...S.input, fontSize: 12, padding: "8px 12px", width: "100%", boxSizing: "border-box" }}
+                  placeholder="Observação (opcional)"
+                  value={obs[sol.id] || ""}
+                  onChange={e => setObs(o => ({ ...o, [sol.id]: e.target.value }))}
+                />
+                <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+                  <button
+                    style={{ ...S.btn(false), background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#000", padding: "10px 24px" }}
+                    onClick={() => resolver(sol.id, "aprovar")}>
+                    ✅ Autorizar Içamento
+                  </button>
+                  <button
+                    style={{ ...S.btn(false), background: "rgba(239,68,68,0.12)", border: "1px solid #ef444466", color: "#ef4444", padding: "10px 24px" }}
+                    onClick={() => resolver(sol.id, "negar")}>
+                    🚫 Negar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── PAINEL GERENTE DE OPERAÇÕES ───────────────────────────────────────────────────
+function GerenteDashboard({ onVoltar, isMobile }) {
+  const [showModalSenha, setShowModalSenha] = useState(false);
+  const [lista, setLista] = useState([]);
+  const [totalFuncionarios, setTotalFuncionarios] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [statusFiltro, setStatusFiltro] = useState("TODOS");
+  const user = getUser();
+
+  useEffect(() => {
+    const init = async () => {
+      setLoading(true);
+      try {
+        const [rSol, rFunc] = await Promise.all([
+          authFetch(`${API}/api/liberacoes?status=TODOS`),
+          authFetch(`${API}/api/funcionarios`),
+        ]);
+        if (rSol.ok) setLista(await rSol.json());
+        if (rFunc.ok) {
+          const funcs = await rFunc.json();
+          setTotalFuncionarios(funcs.length);
+        }
+      } catch { /* ignora */ }
+      setLoading(false);
+    };
+    init();
+  }, []);
+
+  const total      = lista.length;
+  const aprovadas  = lista.filter(s => s.status === "PROSSEGUIR").length;
+  const reprovadas = lista.filter(s => s.status === "PARAR").length;
+  const pendentes  = lista.filter(s => s.status === "ANALISAR").length;
+  const taxaAprov  = aprovadas + reprovadas > 0
+    ? Math.round((aprovadas / (aprovadas + reprovadas)) * 100) : 0;
+
+  const listaFiltrada = statusFiltro === "TODOS" ? lista : lista.filter(s => s.status === statusFiltro);
+
+  const StatCard = ({ label, value, color, sub }) => (
+    <div style={{ background: "#0f0f1a", border: `1px solid ${color}22`, borderRadius: 12, padding: "18px 22px", flex: "1 1 140px" }}>
+      <div style={{ fontSize: 26, fontWeight: 800, color }}>{value}</div>
+      <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>{label}</div>
+      {sub && <div style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>{sub}</div>}
+    </div>
+  );
+
+  return (
+    <div style={S.app}>
+      {showModalSenha && <ModalAlterarSenha onFechar={() => setShowModalSenha(false)} />}
+      <div style={S.header(isMobile)}>
+        <div style={S.headerTop(isMobile)}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <button onClick={onVoltar} style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }}>← Voltar</button>
+            <div>
+              <div style={S.logoText(isMobile)}>Painel de Controle</div>
+              <div style={S.logoSub(isMobile)}>{user?.empresaName || "RiggingCheck"}</div>
+            </div>
+          </div>
+          <div style={S.userInfo(isMobile)}>
+            <div style={S.roleBadge(isMobile)}>{roleLabel(user?.role)}</div>
+            <div style={S.userBadge(isMobile)}>{user?.userName}</div>
+            <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => setShowModalSenha(true)}>
+              {isMobile ? "🔑" : "Alterar Senha"}
+            </button>
+          </div>
+        </div>
+        <div style={S.tabs(isMobile)}>
+          {["TODOS", "ANALISAR", "PROSSEGUIR", "PARAR"].map(s => (
+            <button key={s} style={S.tab(statusFiltro === s, isMobile)} onClick={() => setStatusFiltro(s)}>{s}</button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 24px" }}>
+        {loading ? (
+          <div style={{ color: "#64748b", textAlign: "center", padding: 60 }}>Carregando dados...</div>
+        ) : (
+          <>
+            {/* Stats */}
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 32 }}>
+              <StatCard label="Total de Solicitações" value={total} color="#38bdf8" />
+              <StatCard label="Taxa de Aprovação" value={`${taxaAprov}%`} color="#22c55e" sub={`${aprovadas} aprovadas`} />
+              <StatCard label="Pendentes" value={pendentes} color="#f59e0b" />
+              <StatCard label="Reprovadas" value={reprovadas} color="#ef4444" />
+              <StatCard label="Funcionários" value={totalFuncionarios} color="#a78bfa" />
+            </div>
+
+            {/* Lista de solicitações (somente leitura) */}
+            <div style={{ fontSize: 11, color: "#475569", letterSpacing: "2px", textTransform: "uppercase", marginBottom: 16 }}>
+              Histórico de Solicitações
+            </div>
+            {listaFiltrada.length === 0 && (
+              <div style={{ ...S.normaBox, textAlign: "center", padding: 36 }}>
+                Nenhuma solicitação com status "{statusFiltro}".
+              </div>
+            )}
+            {listaFiltrada.map(sol => (
+              <div key={sol.id} style={{ background: "#0f0f1a", border: `1px solid ${statusColor(sol.status)}22`, borderRadius: 12, padding: 20, marginBottom: 14 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
+                  <div>
+                    <div style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 14 }}>OS: {sol.operacaoOs}</div>
+                    <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 3 }}>Rigger: {sol.riggerNome}</div>
+                    <div style={{ color: "#475569", fontSize: 11, marginTop: 3 }}>
+                      Solicitado em: {new Date(sol.criadoEm).toLocaleString("pt-BR")}
+                    </div>
+                    {sol.resolvidoEm && (
+                      <div style={{ color: sol.status === "PROSSEGUIR" ? "#22c55e" : "#ef4444", fontSize: 11, marginTop: 2 }}>
+                        {sol.status === "PROSSEGUIR" ? "Autorizado" : "Reprovado"} por {sol.aprovadoPorNome}
+                        {" "}em {new Date(sol.resolvidoEm).toLocaleString("pt-BR")}
+                      </div>
+                    )}
+                    {sol.observacao && <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>Obs: "{sol.observacao}"</div>}
+                  </div>
+                  <div style={S.riskBadge(statusColor(sol.status))}>{sol.status}</div>
+                </div>
+                <CardTecnicoSol sol={sol} />
+              </div>
+            ))}
+          </>
+        )}
       </div>
     </div>
   );
@@ -2779,8 +3075,11 @@ export default function App() {
   const [slingData, setSlingData] = useState(null);
   const [showModalSenha, setShowModalSenha] = useState(false);
   const user = getUser();
-  const isSuperAdmin = IS_SUPER(user?.role);
-  const isEmpresaAdmin = user?.role === "ADMIN_EMPRESA" || user?.role === "GERENTE_OPERACOES";
+  const isSuperAdmin   = IS_SUPER(user?.role);
+  const isAdminEmpresa = user?.role === "ADMIN_EMPRESA";
+  const isLider        = user?.role === "LIDER_EQUIPE";
+  const isGerente      = user?.role === "GERENTE_OPERACOES";
+  const hasPanel       = isAdminEmpresa || isLider || isGerente;
 
   const handleLogout = useCallback(() => {
     clearAuth();
@@ -2804,9 +3103,14 @@ export default function App() {
   if (view === "admin" && isSuperAdmin) {
     return <SuperAdminDashboard onVoltar={() => setView("app")} isMobile={isMobile} />;
   }
-
-  if (view === "admin" && isEmpresaAdmin) {
+  if (view === "admin" && isAdminEmpresa) {
     return <AdminDashboard onVoltar={() => setView("app")} isMobile={isMobile} />;
+  }
+  if (view === "admin" && isLider) {
+    return <LiderEquipeDashboard onVoltar={() => setView("app")} isMobile={isMobile} />;
+  }
+  if (view === "admin" && isGerente) {
+    return <GerenteDashboard onVoltar={() => setView("app")} isMobile={isMobile} />;
   }
 
   const tabs = [
@@ -2855,9 +3159,19 @@ export default function App() {
                 {isMobile ? "⚙️" : "⚙️ Painel SaaS"}
               </button>
             )}
-            {isEmpresaAdmin && (
+            {isAdminEmpresa && (
               <button style={{ ...S.logoutBtn(isMobile), borderColor: "#f59e0b44", color: "#f59e0b" }} onClick={() => setView("admin")}>
                 {isMobile ? "🔑" : "🔑 Painel Admin"}
+              </button>
+            )}
+            {isLider && (
+              <button style={{ ...S.logoutBtn(isMobile), borderColor: "#22c55e44", color: "#22c55e" }} onClick={() => setView("admin")}>
+                {isMobile ? "📋" : "📋 Solicitações"}
+              </button>
+            )}
+            {isGerente && (
+              <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => setView("admin")}>
+                {isMobile ? "📊" : "📊 Painel Gerente"}
               </button>
             )}
             <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => setShowModalSenha(true)}>
@@ -2889,7 +3203,7 @@ export default function App() {
         <div style={{ ...S.normaBox, textAlign: "center", marginTop: 32 }}>
           v2.0.0 — RiggingCheck Fullstack &nbsp;·&nbsp; React + Java Spring Boot + PostgreSQL
           <br />
-          <span style={{ color: "#475569" }}>NR-11 · ABNT NBR 11900 · ABNT NBR 13541 · ISO 4308-1</span>
+          <span style={{ color: "#475569" }}>NR-11 · ABNT NBR 11900 · ABNT NBR 13541 · ISO 4308-1 · Petrobrás N-2869</span>
         </div>
       </div>
     </div>

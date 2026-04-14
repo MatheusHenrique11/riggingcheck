@@ -9,17 +9,17 @@ import java.util.UUID;
 
 public interface SolicitacaoLiberacaoRepository extends JpaRepository<SolicitacaoLiberacao, UUID> {
 
-    List<SolicitacaoLiberacao> findByEmpresaIdAndStatusOrderByCriadoEmDesc(UUID empresaId, String status);
+    List<SolicitacaoLiberacao> findByEmpresaIdAndStatusOrderByCriadoEmDesc(UUID empresaId, StatusLiberacao status);
 
     List<SolicitacaoLiberacao> findByEmpresaIdOrderByCriadoEmDesc(UUID empresaId);
 
     // SUPER_ADMIN: todas as empresas filtradas por status
-    List<SolicitacaoLiberacao> findByStatusOrderByCriadoEmDesc(String status);
+    List<SolicitacaoLiberacao> findByStatusOrderByCriadoEmDesc(StatusLiberacao status);
 
     // SUPER_ADMIN: todas as empresas, todos os status
     List<SolicitacaoLiberacao> findAllByOrderByCriadoEmDesc();
 
-    // contagens para stats do super admin
+    // contagens para stats
     long countByEmpresaId(UUID empresaId);
     long countByEmpresaIdAndStatus(UUID empresaId, StatusLiberacao status);
 }

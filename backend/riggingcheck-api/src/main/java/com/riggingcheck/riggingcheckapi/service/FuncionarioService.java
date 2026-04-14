@@ -54,7 +54,7 @@ public class FuncionarioService {
     @Transactional
     public FuncionarioResponse criar(FuncionarioRequest request, String emailAdmin) {
         Funcionario admin = buscarPorEmailOuLancar(emailAdmin);
-        authorizationHelper.requireAdmin(admin);
+        authorizationHelper.requireGestorFuncionarios(admin);
 
         RoleEnum role = resolverRole(request.getRole());
         validarRolePermitida(role, admin);
@@ -89,7 +89,7 @@ public class FuncionarioService {
         Funcionario admin       = buscarPorEmailOuLancar(emailAdmin);
         Funcionario funcionario = buscarPorIdOuLancar(id);
 
-        authorizationHelper.requireAdmin(admin);
+        authorizationHelper.requireGestorFuncionarios(admin);
         authorizationHelper.requireMesmaEmpresaOuSuper(admin, funcionario.getEmpresaId());
 
         if (funcionario.getId().equals(admin.getId())) {
@@ -106,7 +106,7 @@ public class FuncionarioService {
         Funcionario admin       = buscarPorEmailOuLancar(emailAdmin);
         Funcionario funcionario = buscarPorIdOuLancar(id);
 
-        authorizationHelper.requireAdmin(admin);
+        authorizationHelper.requireGestorFuncionarios(admin);
         authorizationHelper.requireMesmaEmpresaOuSuper(admin, funcionario.getEmpresaId());
 
         funcionario.setAtivo(true);
@@ -132,7 +132,7 @@ public class FuncionarioService {
         Funcionario admin       = buscarPorEmailOuLancar(emailAdmin);
         Funcionario funcionario = buscarPorIdOuLancar(id);
 
-        authorizationHelper.requireAdmin(admin);
+        authorizationHelper.requireGestorFuncionarios(admin);
         authorizationHelper.requireMesmaEmpresaOuSuper(admin, funcionario.getEmpresaId());
 
         RoleEnum role = resolverRole(request.getRole());

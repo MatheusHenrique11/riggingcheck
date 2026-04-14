@@ -91,7 +91,7 @@ public class LiberacaoService {
     private LiberacaoResponse resolver(UUID id, StatusLiberacao novoStatus,
                                        String observacao, String emailAdmin) {
         Funcionario admin = buscarFuncionarioOuLancar(emailAdmin);
-        authorizationHelper.requireAdmin(admin);
+        authorizationHelper.requireAdminComResolucao(admin);
 
         SolicitacaoLiberacao sol = buscarSolicitacaoOuLancar(id);
         authorizationHelper.requireMesmaEmpresaOuSuper(admin, sol.getEmpresaId());
@@ -152,13 +152,13 @@ public class LiberacaoService {
 
     private List<SolicitacaoLiberacao> listarGlobal(StatusLiberacao status) {
         return status != null
-                ? liberacaoRepository.findByStatusOrderByCriadoEmDesc(status.name())
+                ? liberacaoRepository.findByStatusOrderByCriadoEmDesc(status)
                 : liberacaoRepository.findAllByOrderByCriadoEmDesc();
     }
 
     private List<SolicitacaoLiberacao> listarPorEmpresa(UUID empresaId, StatusLiberacao status) {
         return status != null
-                ? liberacaoRepository.findByEmpresaIdAndStatusOrderByCriadoEmDesc(empresaId, status.name())
+                ? liberacaoRepository.findByEmpresaIdAndStatusOrderByCriadoEmDesc(empresaId, status)
                 : liberacaoRepository.findByEmpresaIdOrderByCriadoEmDesc(empresaId);
     }
 

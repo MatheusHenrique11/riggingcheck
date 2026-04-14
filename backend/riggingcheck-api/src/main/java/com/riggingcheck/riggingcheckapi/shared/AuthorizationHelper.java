@@ -15,6 +15,10 @@ import java.util.UUID;
 @Component
 public class AuthorizationHelper {
 
+    /**
+     * Papéis que podem VISUALIZAR solicitações e listar equipe.
+     * ADMIN_EMPRESA, GERENTE_OPERACOES, LIDER_EQUIPE, SUPER_ADMIN.
+     */
     private static final Set<RoleEnum> ROLES_ADMIN = Set.of(
         RoleEnum.ADMIN_EMPRESA,
         RoleEnum.GERENTE_OPERACOES,
@@ -23,12 +27,45 @@ public class AuthorizationHelper {
     );
 
     /**
-     * Exige que o funcionário seja admin (qualquer nível).
-     * Também valida que a conta está ativa.
+     * Papéis que podem APROVAR ou REPROVAR solicitações.
+     * ADMIN_EMPRESA, LIDER_EQUIPE, SUPER_ADMIN.
+     * GERENTE_OPERACOES tem acesso somente leitura.
      */
+    private static final Set<RoleEnum> ROLES_COM_RESOLUCAO = Set.of(
+        RoleEnum.ADMIN_EMPRESA,
+        RoleEnum.LIDER_EQUIPE,
+        RoleEnum.SUPER_ADMIN
+    );
+
+    /**
+     * Papéis que podem CRIAR, EDITAR e DESATIVAR funcionários.
+     * ADMIN_EMPRESA, SUPER_ADMIN.
+     */
+    private static final Set<RoleEnum> ROLES_GESTOR_FUNCIONARIOS = Set.of(
+        RoleEnum.ADMIN_EMPRESA,
+        RoleEnum.SUPER_ADMIN
+    );
+
+    /** Exige acesso de visualização (solicitar + listar). */
     public void requireAdmin(Funcionario funcionario) {
         requireAtivo(funcionario);
         if (!ROLES_ADMIN.contains(funcionario.getRole())) {
+            throw new AcessoNegadoException();
+        }
+    }
+
+    /** Exige permissão para aprovar/reprovar içamentos. */
+    public void requireAdminComResolucao(Funcionario funcionario) {
+        requireAtivo(funcionario);
+        if (!ROLES_COM_RESOLUCAO.contains(funcionario.getRole())) {
+            throw new AcessoNegadoException();
+        }
+    }
+
+    /** Exige permissão para gerenciar funcionários (CRUD). */
+    public void requireGestorFuncionarios(Funcionario funcionario) {
+        requireAtivo(funcionario);
+        if (!ROLES_GESTOR_FUNCIONARIOS.contains(funcionario.getRole())) {
             throw new AcessoNegadoException();
         }
     }
