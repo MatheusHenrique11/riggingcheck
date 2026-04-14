@@ -2,6 +2,12 @@ server:
   port: 8080
 
 spring:
+  jackson:
+    time-zone: America/Sao_Paulo
+    serialization:
+      write-dates-as-timestamps: false
+
+
   datasource:
     url: jdbc:h2:mem:riggingcheck
     driver-class-name: org.h2.Driver

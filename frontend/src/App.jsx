@@ -903,7 +903,7 @@ function SlingModule({ onCompleted, isDemo }) {
             </div>
             <div style={{ flex: 1, fontSize: 13, lineHeight: 2 }}>
               <div>Fator de carga: <strong style={{ color: "#e2e8f0" }}>{result.loadFactor?.toFixed(3)}×</strong></div>
-              <div>WLL eslinga: <strong style={{ color: "#e2e8f0" }}>{parseFloat(form.wll).toLocaleString("pt-BR")} kg</strong></div>
+              <div>WLL eslinga: <strong style={{ color: "#e2e8f0" }}>{parseFloat(form.wll).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })} kg</strong></div>
               <div>Uso do WLL: <strong style={{ color: risk.color }}>{result.wllUsagePercent?.toFixed(1)}%</strong></div>
               {result.angleWarning && <div style={{ color: "#f59e0b" }}>⚠️ Ângulo crítico!</div>}
             </div>
@@ -1014,7 +1014,7 @@ function ChecklistModule({ capacityData, slingData }) {
               <div style={{ color: "#94a3b8", fontSize: 12, marginBottom: 4 }}>OS: {solicitacao.operacaoOs} · Rigger: {solicitacao.riggerNome}</div>
               <div style={{ color: "#22c55e", fontSize: 12 }}>Autorizado por: <strong>{solicitacao.aprovadoPorNome}</strong></div>
               {solicitacao.observacao && <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 8 }}>"{solicitacao.observacao}"</div>}
-              <div style={{ color: "#475569", fontSize: 11, marginTop: 8 }}>{new Date(solicitacao.resolvidoEm).toLocaleString("pt-BR")}</div>
+              <div style={{ color: "#475569", fontSize: 11, marginTop: 8 }}>{new Date(solicitacao.resolvidoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}</div>
             </div>
           )}
           {solicitacao.status === "PARAR" && (
@@ -1395,11 +1395,11 @@ function AdminDashboard({ onVoltar, isMobile }) {
                         <div style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 15 }}>OS: {sol.operacaoOs}</div>
                         <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 4 }}>Rigger: {sol.riggerNome}</div>
                         <div style={{ color: "#475569", fontSize: 11, marginTop: 4 }}>
-                          Solicitado em: {new Date(sol.criadoEm).toLocaleString("pt-BR")}
+                          Solicitado em: {new Date(sol.criadoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
                         </div>
                         {sol.resolvidoEm && (
                           <div style={{ color: "#475569", fontSize: 11 }}>
-                            Resolvido em: {new Date(sol.resolvidoEm).toLocaleString("pt-BR")} por {sol.aprovadoPorNome}
+                            Resolvido em: {new Date(sol.resolvidoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })} por {sol.aprovadoPorNome}
                           </div>
                         )}
                         {sol.observacao && (
@@ -1957,7 +1957,7 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
                     { label: "Aprovadas", value: emp.liberacoesProsseguir ?? 0, color: "#22c55e" },
                     { label: "Negadas", value: emp.liberacoesParar ?? 0, color: "#ef4444" },
                     { label: "Pendentes", value: emp.liberacoesAnalisar ?? 0, color: "#a78bfa" },
-                    { label: "Cadastrada em", value: emp.criadoEm ? new Date(emp.criadoEm).toLocaleDateString("pt-BR") : "—", color: "#64748b" },
+                    { label: "Cadastrada em", value: emp.criadoEm ? new Date(emp.criadoEm).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "—", color: "#64748b" },
                   ].map(({ label, value, color }) => (
                     <div key={label} style={{ background: "#0a0a0f", borderRadius: 8, padding: "10px 12px" }}>
                       <div style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 4 }}>{label}</div>
@@ -1986,7 +1986,7 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
                   <div style={{ fontSize: 20, fontWeight: 800, color: "#e2e8f0", marginBottom: 4 }}>{empresaSel.razaoSocial}</div>
                   <div style={{ fontSize: 12, color: "#64748b" }}>CNPJ: {empresaSel.cnpj} · Admin: {empresaSel.adminNome} · {empresaSel.adminEmail}</div>
                   <div style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>
-                    Cadastrada em: {empresaSel.criadoEm ? new Date(empresaSel.criadoEm).toLocaleString("pt-BR") : "—"}
+                    Cadastrada em: {empresaSel.criadoEm ? new Date(empresaSel.criadoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "—"}
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
@@ -2125,7 +2125,7 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
                             <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 700, background: f.ativo !== false ? "#052e16" : "#2d0000", color: f.ativo !== false ? "#22c55e" : "#ef4444" }}>
                               {f.ativo !== false ? "ATIVO" : "INATIVO"}
                             </span>
-                            {f.criadoEm && <span style={{ fontSize: 10, color: "#475569" }}>desde {new Date(f.criadoEm).toLocaleDateString("pt-BR")}</span>}
+                            {f.criadoEm && <span style={{ fontSize: 10, color: "#475569" }}>desde {new Date(f.criadoEm).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}</span>}
                           </div>
                         </div>
                         <div style={{ display: "flex", gap: 8 }}>
@@ -2581,11 +2581,11 @@ function DemoPage({ onVoltar }) {
                         <div style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 15 }}>OS: {sol.operacaoOs}</div>
                         <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 4 }}>Rigger: {sol.riggerNome}</div>
                         <div style={{ color: "#475569", fontSize: 11, marginTop: 4 }}>
-                          Solicitado em: {new Date(sol.criadoEm).toLocaleString("pt-BR")}
+                          Solicitado em: {new Date(sol.criadoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
                         </div>
                         {sol.resolvidoEm && (
                           <div style={{ color: "#475569", fontSize: 11 }}>
-                            Resolvido em: {new Date(sol.resolvidoEm).toLocaleString("pt-BR")} por {sol.aprovadoPorNome}
+                            Resolvido em: {new Date(sol.resolvidoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })} por {sol.aprovadoPorNome}
                           </div>
                         )}
                         {sol.observacao && (
@@ -2898,11 +2898,11 @@ function LiderEquipeDashboard({ onVoltar, isMobile }) {
                 <div style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 15 }}>OS: {sol.operacaoOs}</div>
                 <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 4 }}>Rigger: {sol.riggerNome}</div>
                 <div style={{ color: "#475569", fontSize: 11, marginTop: 4 }}>
-                  Solicitado em: {new Date(sol.criadoEm).toLocaleString("pt-BR")}
+                  Solicitado em: {new Date(sol.criadoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
                 </div>
                 {sol.resolvidoEm && (
                   <div style={{ color: "#475569", fontSize: 11 }}>
-                    Resolvido em: {new Date(sol.resolvidoEm).toLocaleString("pt-BR")} por {sol.aprovadoPorNome}
+                    Resolvido em: {new Date(sol.resolvidoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })} por {sol.aprovadoPorNome}
                   </div>
                 )}
                 {sol.observacao && <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>Obs: "{sol.observacao}"</div>}
@@ -2940,12 +2940,128 @@ function LiderEquipeDashboard({ onVoltar, isMobile }) {
 }
 
 // ── PAINEL GERENTE DE OPERAÇÕES ───────────────────────────────────────────────────
+function OSDetalhadaModal({ sol, onFechar }) {
+  const fmt = (v) => v != null ? Number(v).toLocaleString("pt-BR") : "—";
+  const fmtP = (v) => v != null ? `${Number(v).toLocaleString("pt-BR")}%` : "—";
+  const fmtDt = (v) => v ? new Date(v).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "—";
+
+  const Row = ({ label, value, bold }) => (
+    <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #e5e7eb" }}>
+      <span style={{ color: "#374151", fontSize: 13 }}>{label}</span>
+      <span style={{ fontWeight: bold ? 700 : 500, color: "#111827", fontSize: 13 }}>{value}</span>
+    </div>
+  );
+
+  const Section = ({ title, children }) => (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ background: "#1e3a5f", color: "#fff", fontWeight: 700, fontSize: 12, letterSpacing: "1.5px", textTransform: "uppercase", padding: "6px 12px", borderRadius: "6px 6px 0 0" }}>
+        {title}
+      </div>
+      <div style={{ border: "1px solid #d1d5db", borderTop: "none", borderRadius: "0 0 6px 6px", padding: "4px 12px" }}>
+        {children}
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "24px 16px" }}>
+      <style>{`
+        @media print {
+          body > * { display: none !important; }
+          #os-print-area { display: block !important; position: static !important; background: white !important; }
+          #os-print-area * { color: black !important; }
+          .no-print { display: none !important; }
+        }
+      `}</style>
+
+      <div id="os-print-area" style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: 720, padding: 32, color: "#111" }}>
+        {/* Cabeçalho */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: "#1e3a5f", letterSpacing: 1 }}>RIGGINGCHECK</div>
+            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>Ordem de Serviço de Içamento</div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#1e3a5f" }}>OS: {sol.operacaoOs}</div>
+            <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>Emitido em: {fmtDt(new Date().toISOString())}</div>
+          </div>
+        </div>
+
+        <div style={{ borderTop: "3px solid #1e3a5f", marginBottom: 20 }} />
+
+        <Section title="Identificação">
+          <Row label="Empresa" value={sol.empresaNome} />
+          <Row label="Rigger / Responsável" value={sol.riggerNome} bold />
+          <Row label="Data da Solicitação" value={fmtDt(sol.criadoEm)} />
+        </Section>
+
+        <Section title="Capacidade do Equipamento">
+          <Row label="Capacidade do Guindaste" value={`${fmt(sol.capGuindasteKg)} kg`} />
+          <Row label="Capacidade da Carga" value={`${fmt(sol.capCargaKg)} kg`} />
+          <Row label="Capacidade do Aparelho de Içamento" value={`${fmt(sol.capAparelhoKg)} kg`} />
+          <Row label="Capacidade Total (carga + aparelho)" value={`${fmt(sol.capTotalKg)} kg`} bold />
+          <Row label="Percentual de Uso do Guindaste" value={fmtP(sol.capUsoPercent)} bold />
+          <Row label="Classificação de Risco" value={sol.capRisco || "—"} bold />
+        </Section>
+
+        <Section title="Dados da Lingada">
+          <Row label="Número de Pernas" value={sol.eslNumPernas ?? "—"} />
+          <Row label="Ângulo da Lingada" value={sol.eslAnguloGraus != null ? `${sol.eslAnguloGraus}°` : "—"} />
+          <Row label="Tensão por Perna" value={`${fmt(sol.eslTensaoPorPernaKg)} kg`} bold />
+          <Row label="Fator de Carga (ângulo)" value={sol.eslFatorCarga != null ? Number(sol.eslFatorCarga).toLocaleString("pt-BR", { minimumFractionDigits: 2, timeZone: "America/Sao_Paulo" }) : "—"} />
+          <Row label="WLL da Eslinga" value={`${fmt(sol.eslWllKg)} kg`} />
+          <Row label="Percentual de Uso da WLL" value={fmtP(sol.eslWllUsoPercent)} bold />
+          <Row label="Classificação de Risco da Lingada" value={sol.eslRisco || "—"} bold />
+          <Row label="Aviso de Ângulo Crítico" value={sol.eslAnguloAviso ? "SIM — verificar ângulo" : "Não"} />
+        </Section>
+
+        {sol.eslTemManilha && (
+          <Section title="Manilha">
+            <Row label="Capacidade da Manilha" value={`${fmt(sol.eslManilhaCapacidadeKg)} kg`} />
+            <Row label="Percentual de Uso da Manilha" value={fmtP(sol.eslManilhaUsoPercent)} bold />
+            <Row label="Compatível com a Carga" value={sol.eslManilhaCompativel ? "SIM" : "NÃO — verificar"} bold />
+          </Section>
+        )}
+
+        <Section title="Autorização">
+          <Row label="Status" value="AUTORIZADO — PROSSEGUIR" bold />
+          <Row label="Autorizado por" value={sol.aprovadoPorNome || "—"} bold />
+          <Row label="Data / Hora da Autorização" value={fmtDt(sol.resolvidoEm)} />
+          {sol.observacao && <Row label="Observações" value={sol.observacao} />}
+        </Section>
+
+        <div style={{ borderTop: "1px solid #d1d5db", marginTop: 24, paddingTop: 14, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+          <div style={{ fontSize: 11, color: "#9ca3af" }}>
+            Documento gerado pelo sistema RiggingCheck · Válido apenas para a OS indicada
+          </div>
+          <div style={{ display: "flex", gap: 10 }} className="no-print">
+            <button
+              onClick={() => window.print()}
+              style={{ background: "#1e3a5f", color: "#fff", border: "none", borderRadius: 8, padding: "9px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+            >
+              Imprimir / PDF
+            </button>
+            <button
+              onClick={onFechar}
+              style={{ background: "transparent", color: "#6b7280", border: "1px solid #d1d5db", borderRadius: 8, padding: "9px 20px", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function GerenteDashboard({ onVoltar, isMobile }) {
   const [showModalSenha, setShowModalSenha] = useState(false);
   const [lista, setLista] = useState([]);
   const [totalFuncionarios, setTotalFuncionarios] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [painel, setPainel] = useState("analitico");
   const [statusFiltro, setStatusFiltro] = useState("TODOS");
+  const [osAberta, setOsAberta] = useState(null);
   const user = getUser();
 
   useEffect(() => {
@@ -2975,6 +3091,7 @@ function GerenteDashboard({ onVoltar, isMobile }) {
     ? Math.round((aprovadas / (aprovadas + reprovadas)) * 100) : 0;
 
   const listaFiltrada = statusFiltro === "TODOS" ? lista : lista.filter(s => s.status === statusFiltro);
+  const listaAutorizadas = lista.filter(s => s.status === "PROSSEGUIR");
 
   const StatCard = ({ label, value, color, sub }) => (
     <div style={{ background: "#0f0f1a", border: `1px solid ${color}22`, borderRadius: 12, padding: "18px 22px", flex: "1 1 140px" }}>
@@ -2987,6 +3104,8 @@ function GerenteDashboard({ onVoltar, isMobile }) {
   return (
     <div style={S.app}>
       {showModalSenha && <ModalAlterarSenha onFechar={() => setShowModalSenha(false)} />}
+      {osAberta && <OSDetalhadaModal sol={osAberta} onFechar={() => setOsAberta(null)} />}
+
       <div style={S.header(isMobile)}>
         <div style={S.headerTop(isMobile)}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -3005,18 +3124,20 @@ function GerenteDashboard({ onVoltar, isMobile }) {
           </div>
         </div>
         <div style={S.tabs(isMobile)}>
-          {["TODOS", "ANALISAR", "PROSSEGUIR", "PARAR"].map(s => (
-            <button key={s} style={S.tab(statusFiltro === s, isMobile)} onClick={() => setStatusFiltro(s)}>{s}</button>
-          ))}
+          <button style={S.tab(painel === "analitico", isMobile)} onClick={() => setPainel("analitico")}>
+            {isMobile ? "Analytics" : "Painel Analítico"}
+          </button>
+          <button style={S.tab(painel === "relatorios", isMobile)} onClick={() => setPainel("relatorios")}>
+            {isMobile ? "Relatórios" : "Relatórios de OS"}
+          </button>
         </div>
       </div>
 
       <div style={{ maxWidth: 960, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 24px" }}>
         {loading ? (
           <div style={{ color: "#64748b", textAlign: "center", padding: 60 }}>Carregando dados...</div>
-        ) : (
+        ) : painel === "analitico" ? (
           <>
-            {/* Stats */}
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 32 }}>
               <StatCard label="Total de Solicitações" value={total} color="#38bdf8" />
               <StatCard label="Taxa de Aprovação" value={`${taxaAprov}%`} color="#22c55e" sub={`${aprovadas} aprovadas`} />
@@ -3025,7 +3146,12 @@ function GerenteDashboard({ onVoltar, isMobile }) {
               <StatCard label="Funcionários" value={totalFuncionarios} color="#a78bfa" />
             </div>
 
-            {/* Lista de solicitações (somente leitura) */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+              {["TODOS", "ANALISAR", "PROSSEGUIR", "PARAR"].map(s => (
+                <button key={s} style={{ ...S.tab(statusFiltro === s, isMobile), borderRadius: 8 }} onClick={() => setStatusFiltro(s)}>{s}</button>
+              ))}
+            </div>
+
             <div style={{ fontSize: 11, color: "#475569", letterSpacing: "2px", textTransform: "uppercase", marginBottom: 16 }}>
               Histórico de Solicitações
             </div>
@@ -3041,12 +3167,12 @@ function GerenteDashboard({ onVoltar, isMobile }) {
                     <div style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 14 }}>OS: {sol.operacaoOs}</div>
                     <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 3 }}>Rigger: {sol.riggerNome}</div>
                     <div style={{ color: "#475569", fontSize: 11, marginTop: 3 }}>
-                      Solicitado em: {new Date(sol.criadoEm).toLocaleString("pt-BR")}
+                      Solicitado em: {new Date(sol.criadoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
                     </div>
                     {sol.resolvidoEm && (
                       <div style={{ color: sol.status === "PROSSEGUIR" ? "#22c55e" : "#ef4444", fontSize: 11, marginTop: 2 }}>
                         {sol.status === "PROSSEGUIR" ? "Autorizado" : "Reprovado"} por {sol.aprovadoPorNome}
-                        {" "}em {new Date(sol.resolvidoEm).toLocaleString("pt-BR")}
+                        {" "}em {new Date(sol.resolvidoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
                       </div>
                     )}
                     {sol.observacao && <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>Obs: "{sol.observacao}"</div>}
@@ -3054,6 +3180,50 @@ function GerenteDashboard({ onVoltar, isMobile }) {
                   <div style={S.riskBadge(statusColor(sol.status))}>{sol.status}</div>
                 </div>
                 <CardTecnicoSol sol={sol} />
+              </div>
+            ))}
+          </>
+        ) : (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0" }}>Relatórios de OS Autorizadas</div>
+                <div style={{ fontSize: 12, color: "#475569", marginTop: 3 }}>
+                  {listaAutorizadas.length} içamento{listaAutorizadas.length !== 1 ? "s" : ""} autorizado{listaAutorizadas.length !== 1 ? "s" : ""}
+                </div>
+              </div>
+            </div>
+
+            {listaAutorizadas.length === 0 && (
+              <div style={{ ...S.normaBox, textAlign: "center", padding: 48 }}>
+                Nenhum içamento autorizado ainda.
+              </div>
+            )}
+
+            {listaAutorizadas.map(sol => (
+              <div key={sol.id} style={{ background: "#0f0f1a", border: "1px solid #22c55e33", borderRadius: 12, padding: 20, marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 14 }}>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <div style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 15 }}>OS: {sol.operacaoOs}</div>
+                  <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>Rigger: {sol.riggerNome}</div>
+                  <div style={{ color: "#475569", fontSize: 11, marginTop: 3 }}>
+                    Solicitado: {new Date(sol.criadoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
+                  </div>
+                  <div style={{ color: "#22c55e", fontSize: 11, marginTop: 2 }}>
+                    Autorizado por {sol.aprovadoPorNome} em {new Date(sol.resolvidoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
+                  </div>
+                  {sol.observacao && (
+                    <div style={{ color: "#64748b", fontSize: 11, marginTop: 2 }}>Obs: "{sol.observacao}"</div>
+                  )}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
+                  <div style={{ ...S.riskBadge("#22c55e"), fontSize: 11 }}>AUTORIZADO</div>
+                  <button
+                    onClick={() => setOsAberta(sol)}
+                    style={{ background: "#1e3a5f", color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontWeight: 700, fontSize: 12, cursor: "pointer", whiteSpace: "nowrap" }}
+                  >
+                    Ver OS Detalhada
+                  </button>
+                </div>
               </div>
             ))}
           </>
