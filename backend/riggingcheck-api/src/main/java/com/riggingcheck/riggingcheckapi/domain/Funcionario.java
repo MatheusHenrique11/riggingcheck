@@ -22,7 +22,7 @@ public class Funcionario {
     private String nome;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false)
+    @Column(name = "role", nullable = false, columnDefinition = "VARCHAR(50)")
     private RoleEnum role;
 
     @Column(name = "email", unique = true, nullable = false)
