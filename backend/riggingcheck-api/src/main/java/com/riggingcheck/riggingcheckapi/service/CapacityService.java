@@ -2,16 +2,19 @@ package com.riggingcheck.riggingcheckapi.service;
 
 import com.riggingcheck.riggingcheckapi.dto.CapacityVerifyRequest;
 import com.riggingcheck.riggingcheckapi.dto.CapacityVerifyResponse;
-import com.riggingcheck.riggingcheckapi.exception.RegraDeNegocioException;
+import com.riggingcheck.riggingcheckapi.shared.RiskCalculator;
 import org.springframework.stereotype.Service;
 
 @Service
 public class CapacityService {
 
     public CapacityVerifyResponse verify(CapacityVerifyRequest req) {
-        double totalLoad = req.loadWeight() + req.riggingWeight();
-        double usagePct = (totalLoad / req.craneCapacity()) * 100;
-        String risk = usagePct < 70 ? "SAFE" : usagePct < 90 ? "WARNING" : "DANGER";
-        return new CapacityVerifyResponse(totalLoad, usagePct, req.craneCapacity() - totalLoad, risk, usagePct < 90);
+        double totalLoad   = req.loadWeight() + req.riggingWeight();
+        double usagePct    = (totalLoad / req.craneCapacity()) * 100;
+        double margem      = req.craneCapacity() - totalLoad;
+        String risk        = RiskCalculator.fromUsagePercent(usagePct);
+        boolean approved   = usagePct < RiskCalculator.WARNING_THRESHOLD;
+
+        return new CapacityVerifyResponse(totalLoad, usagePct, margem, risk, approved);
     }
 }

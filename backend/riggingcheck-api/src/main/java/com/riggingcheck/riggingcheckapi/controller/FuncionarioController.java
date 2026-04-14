@@ -1,5 +1,7 @@
 package com.riggingcheck.riggingcheckapi.controller;
 
+import com.riggingcheck.riggingcheckapi.dto.AlterarSenhaRequest;
+import com.riggingcheck.riggingcheckapi.dto.AtualizarFuncionarioRequest;
 import com.riggingcheck.riggingcheckapi.dto.FuncionarioRequest;
 import com.riggingcheck.riggingcheckapi.dto.FuncionarioResponse;
 import com.riggingcheck.riggingcheckapi.service.FuncionarioService;
@@ -33,6 +35,22 @@ public class FuncionarioController {
     public ResponseEntity<List<FuncionarioResponse>> listar(
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(funcionarioService.listar(userDetails.getUsername()));
+    }
+
+    @PutMapping("/minha-senha")
+    public ResponseEntity<Void> alterarSenha(
+            @Valid @RequestBody AlterarSenhaRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        funcionarioService.alterarSenha(userDetails.getUsername(), request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<FuncionarioResponse> atualizar(
+            @PathVariable UUID id,
+            @Valid @RequestBody AtualizarFuncionarioRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(funcionarioService.atualizar(id, request, userDetails.getUsername()));
     }
 
     @PostMapping("/{id}/desativar")

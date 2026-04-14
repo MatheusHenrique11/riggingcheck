@@ -33,4 +33,10 @@ public class LiberacaoResponse {
     private Double eslFatorCarga;
     private String eslRisco;
     private Boolean eslAnguloAviso;
+    private Double eslWllKg;
+    private Double eslWllUsoPercent;
+    private Boolean eslTemManilha;
+    private Double eslManilhaCapacidadeKg;
+    private Double eslManilhaUsoPercent;
+    private Boolean eslManilhaCompativel;
 }

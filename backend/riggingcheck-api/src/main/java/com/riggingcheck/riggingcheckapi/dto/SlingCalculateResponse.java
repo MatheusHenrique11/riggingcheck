@@ -5,5 +5,9 @@ public record SlingCalculateResponse(
         double loadFactor,
         Double wllUsagePercent,
         String riskLevel,
-        boolean angleWarning
+        boolean angleWarning,
+        Boolean temManilha,
+        Double manilhaCapacidadeKg,
+        Double manilhaUsoPercent,
+        Boolean manilhaCompativel
 ) {}

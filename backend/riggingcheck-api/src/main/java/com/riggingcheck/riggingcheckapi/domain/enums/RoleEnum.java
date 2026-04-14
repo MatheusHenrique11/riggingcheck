@@ -6,5 +6,6 @@ public enum RoleEnum {
     GERENTE_OPERACOES,
     LIDER_EQUIPE,
     RIGGER,
-    OPERADOR
+    OPERADOR,
+    OPERADOR_GUINDASTE
 }

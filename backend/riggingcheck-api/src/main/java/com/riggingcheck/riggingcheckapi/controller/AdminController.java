@@ -1,5 +1,6 @@
 package com.riggingcheck.riggingcheckapi.controller;
 
+import com.riggingcheck.riggingcheckapi.dto.AtualizarFuncionarioRequest;
 import com.riggingcheck.riggingcheckapi.dto.EmpresaAdminRequest;
 import com.riggingcheck.riggingcheckapi.dto.EmpresaAdminResponse;
 import com.riggingcheck.riggingcheckapi.dto.FuncionarioRequest;
@@ -60,6 +61,14 @@ public class AdminController {
             @PathVariable UUID id,
             @Valid @RequestBody FuncionarioRequest request) {
         return ResponseEntity.ok(adminService.criarFuncionarioEmpresa(id, request));
+    }
+
+    @PutMapping("/empresas/{id}/funcionarios/{fid}")
+    public ResponseEntity<FuncionarioResponse> atualizarFuncionario(
+            @PathVariable UUID id,
+            @PathVariable UUID fid,
+            @Valid @RequestBody AtualizarFuncionarioRequest request) {
+        return ResponseEntity.ok(adminService.atualizarFuncionarioEmpresa(id, fid, request));
     }
 
     @PostMapping("/empresas/{id}/funcionarios/{fid}/desativar")

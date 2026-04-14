@@ -7,8 +7,10 @@ spring:
     driver-class-name: org.h2.Driver
   h2:
     console:
-      enabled: true
+      # Nunca habilitar em produção — acesso direto ao banco sem autenticação extra
+      enabled: false
   jpa:
     hibernate:
       ddl-auto: create-drop
-    show-sql: true
+    # Desabilitado para evitar vazamento de dados sensíveis nos logs
+    show-sql: false

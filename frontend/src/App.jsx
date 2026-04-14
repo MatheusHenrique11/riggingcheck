@@ -332,6 +332,7 @@ const roleLabel = (role) => {
     LIDER_EQUIPE: "Líder de Equipe",
     RIGGER: "Rigger",
     OPERADOR: "Operador",
+    OPERADOR_GUINDASTE: "Operador de Guindaste",
   };
   return map[role] || role;
 };
@@ -743,7 +744,10 @@ function CapacityModule({ onApproved, isDemo }) {
 
 // ── MODULE 2: SLING ──────────────────────────────────────────────────────────────
 function SlingModule({ onCompleted, isDemo }) {
-  const [form, setForm] = useState({ loadWeight: "", numberOfLegs: "2", angleFromHorizontal: "45", wll: "" });
+  const [form, setForm] = useState({
+    loadWeight: "", numberOfLegs: "2", angleFromHorizontal: "45",
+    wll: "", temManilha: false, manilhaCapacidadeKg: "",
+  });
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -752,32 +756,33 @@ function SlingModule({ onCompleted, isDemo }) {
     const loadWeight = parseFloat(form.loadWeight);
     const numberOfLegs = parseInt(form.numberOfLegs);
     const angleFromHorizontal = parseFloat(form.angleFromHorizontal);
-    const wll = form.wll ? parseFloat(form.wll) : null;
+    const wll = parseFloat(form.wll);
+    const temManilha = form.temManilha;
+    const manilhaCapacidadeKg = temManilha ? parseFloat(form.manilhaCapacidadeKg) : null;
 
     if (!loadWeight || loadWeight <= 0) { setError("Informe o peso da carga (valor positivo)."); return; }
     if (!angleFromHorizontal || angleFromHorizontal <= 0 || angleFromHorizontal > 90) { setError("Ângulo deve estar entre 1° e 90°."); return; }
-    if (wll !== null && wll <= 0) { setError("WLL deve ser maior que zero."); return; }
+    if (!wll || wll <= 0) { setError("WLL da eslinga é obrigatório e deve ser maior que zero."); return; }
+    if (temManilha && (!manilhaCapacidadeKg || manilhaCapacidadeKg <= 0)) { setError("Informe a capacidade da manilha (valor positivo)."); return; }
 
     setLoading(true); setError(null);
     if (isDemo) {
       const radians = angleFromHorizontal * (Math.PI / 180);
       const tensionPerLeg = loadWeight / (numberOfLegs * Math.sin(radians));
-      let riskLevel = "SAFE";
-      let angleWarning = false;
-      if (angleFromHorizontal < 30) {
-        riskLevel = "DANGER";
-        angleWarning = true;
-      } else if (angleFromHorizontal < 45) {
-        riskLevel = "WARNING";
-        angleWarning = true;
+      const wllUsagePercent = (tensionPerLeg / wll) * 100;
+      let riskLevel = wllUsagePercent < 70 ? "SAFE" : wllUsagePercent < 90 ? "WARNING" : "DANGER";
+      const manilhaUsoPercent = temManilha ? (tensionPerLeg / manilhaCapacidadeKg) * 100 : null;
+      const manilhaCompativel = temManilha ? manilhaCapacidadeKg >= tensionPerLeg : null;
+      if (temManilha) {
+        const rm = manilhaUsoPercent < 70 ? "SAFE" : manilhaUsoPercent < 90 ? "WARNING" : "DANGER";
+        const nivel = r => r === "DANGER" ? 2 : r === "WARNING" ? 1 : 0;
+        if (nivel(rm) > nivel(riskLevel)) riskLevel = rm;
       }
       setTimeout(() => {
         setResult({
-          tensionPerLeg,
-          loadFactor: 1 / Math.sin(radians),
-          riskLevel,
-          angleWarning,
-          wllUsagePercent: wll ? (tensionPerLeg / wll) * 100 : null
+          tensionPerLeg, loadFactor: 1 / Math.sin(radians),
+          riskLevel, angleWarning: angleFromHorizontal < 45,
+          wllUsagePercent, temManilha, manilhaCapacidadeKg, manilhaUsoPercent, manilhaCompativel,
         });
         setLoading(false);
       }, 400);
@@ -787,18 +792,24 @@ function SlingModule({ onCompleted, isDemo }) {
     try {
       const res = await authFetch(`${API}/api/sling/calculate`, {
         method: "POST",
-        body: JSON.stringify({ loadWeight, numberOfLegs, angleFromHorizontal, wll }),
+        body: JSON.stringify({ loadWeight, numberOfLegs, angleFromHorizontal, wll, temManilha, manilhaCapacidadeKg }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { setError(data.error || "Erro no cálculo."); setLoading(false); return; }
       setResult(data);
       if (data.riskLevel !== "DANGER") onCompleted?.({
-        eslNumPernas: parseInt(form.numberOfLegs),
-        eslAnguloGraus: parseFloat(form.angleFromHorizontal),
+        eslNumPernas: numberOfLegs,
+        eslAnguloGraus: angleFromHorizontal,
         eslTensaoPorPernaKg: data.tensionPerLeg,
         eslFatorCarga: data.loadFactor,
         eslRisco: data.riskLevel,
         eslAnguloAviso: data.angleWarning ?? false,
+        eslWllKg: wll,
+        eslWllUsoPercent: data.wllUsagePercent,
+        eslTemManilha: temManilha,
+        eslManilhaCapacidadeKg: manilhaCapacidadeKg,
+        eslManilhaUsoPercent: data.manilhaUsoPercent,
+        eslManilhaCompativel: data.manilhaCompativel,
       });
     } catch {
       setError("Não foi possível conectar à API.");
@@ -812,17 +823,21 @@ function SlingModule({ onCompleted, isDemo }) {
     <div style={S.card}>
       <div style={S.cardTitle}>📐 &nbsp;Cálculo de Eslingas & Cabos</div>
       <div style={S.grid()}>
-        {[
-          { key: "loadWeight", label: "Peso total da carga (kg)", placeholder: "ex: 5000" },
-          { key: "angleFromHorizontal", label: "Ângulo da eslinga (° da horizontal)", placeholder: "ex: 60" },
-          { key: "wll", label: "WLL da eslinga (kg) — opcional", placeholder: "ex: 3200" },
-        ].map(f => (
-          <div key={f.key} style={S.field}>
-            <label style={S.label}>{f.label}</label>
-            <input style={S.input} type="number" placeholder={f.placeholder}
-              value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} />
-          </div>
-        ))}
+        <div style={S.field}>
+          <label style={S.label}>Peso total da carga (kg)</label>
+          <input style={S.input} type="number" placeholder="ex: 5000"
+            value={form.loadWeight} onChange={e => setForm(p => ({ ...p, loadWeight: e.target.value }))} />
+        </div>
+        <div style={S.field}>
+          <label style={S.label}>Ângulo da eslinga (° da horizontal)</label>
+          <input style={S.input} type="number" placeholder="ex: 60"
+            value={form.angleFromHorizontal} onChange={e => setForm(p => ({ ...p, angleFromHorizontal: e.target.value }))} />
+        </div>
+        <div style={S.field}>
+          <label style={S.label}>WLL da eslinga (kg) <span style={{ color: "#ef4444" }}>*</span></label>
+          <input style={S.input} type="number" placeholder="ex: 3200"
+            value={form.wll} onChange={e => setForm(p => ({ ...p, wll: e.target.value }))} />
+        </div>
         <div style={S.field}>
           <label style={S.label}>Número de pernas</label>
           <select style={S.select} value={form.numberOfLegs}
@@ -831,10 +846,34 @@ function SlingModule({ onCompleted, isDemo }) {
           </select>
         </div>
       </div>
+
+      {/* ── Manilha ── */}
+      <div style={{ background: "#0a0a0f", border: "1px solid #1e2a3a", borderRadius: 10, padding: "14px 18px", marginTop: 16 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", userSelect: "none" }}>
+          <input type="checkbox" checked={form.temManilha}
+            onChange={e => setForm(p => ({ ...p, temManilha: e.target.checked, manilhaCapacidadeKg: "" }))}
+            style={{ width: 16, height: 16, accentColor: "#38bdf8" }} />
+          <span style={{ color: "#94a3b8", fontSize: 13, fontWeight: 600 }}>Há manilha na lingada</span>
+        </label>
+        {form.temManilha && (
+          <div style={{ marginTop: 12 }}>
+            <div style={S.field}>
+              <label style={S.label}>Capacidade da manilha / WLL (kg) <span style={{ color: "#ef4444" }}>*</span></label>
+              <input style={S.input} type="number" placeholder="ex: 2500"
+                value={form.manilhaCapacidadeKg}
+                onChange={e => setForm(p => ({ ...p, manilhaCapacidadeKg: e.target.value }))} />
+            </div>
+            <div style={{ fontSize: 11, color: "#475569", marginTop: 8 }}>
+              A capacidade da manilha será comparada à tensão por perna. Se insuficiente, o risco será PERIGO.
+            </div>
+          </div>
+        )}
+      </div>
+
       {parseFloat(form.angleFromHorizontal) < 45 && (
-        <div style={S.warnBox}>⚠️ Ângulo abaixo de 45° aumenta drasticamente a tensão nas eslingas.</div>
+        <div style={{ ...S.warnBox, marginTop: 14 }}>⚠️ Ângulo abaixo de 45° aumenta drasticamente a tensão nas eslingas.</div>
       )}
-      <div style={S.normaBox}>
+      <div style={{ ...S.normaBox, marginTop: 14 }}>
         📋 <strong style={{ color: "#94a3b8" }}>ABNT NBR 13541:</strong> Tensão = (Carga / n° pernas) × (1 / sen θ).
         Recomenda-se θ ≥ 45°. Fator de segurança mínimo: 5:1.
       </div>
@@ -845,20 +884,33 @@ function SlingModule({ onCompleted, isDemo }) {
       </div>
       {error && <div style={S.errorBox}>{error}</div>}
       {result && (
-        <div style={S.result(risk.color, risk.bg)}>
-          <div>
-            <div style={S.bigNum(risk.color)}>{result.tensionPerLeg?.toFixed(0)}<span style={{ fontSize: 18 }}> kg</span></div>
-            <div style={S.smallLabel}>tensão por perna</div>
-          </div>
-          <div style={{ flex: 1, fontSize: 13, lineHeight: 2 }}>
-            <div>Fator de carga: <strong style={{ color: "#e2e8f0" }}>{result.loadFactor?.toFixed(3)}×</strong></div>
-            {result.wllUsagePercent && (
+        <>
+          <div style={S.result(risk.color, risk.bg)}>
+            <div>
+              <div style={S.bigNum(risk.color)}>{result.tensionPerLeg?.toFixed(0)}<span style={{ fontSize: 18 }}> kg</span></div>
+              <div style={S.smallLabel}>tensão por perna</div>
+            </div>
+            <div style={{ flex: 1, fontSize: 13, lineHeight: 2 }}>
+              <div>Fator de carga: <strong style={{ color: "#e2e8f0" }}>{result.loadFactor?.toFixed(3)}×</strong></div>
+              <div>WLL eslinga: <strong style={{ color: "#e2e8f0" }}>{parseFloat(form.wll).toLocaleString("pt-BR")} kg</strong></div>
               <div>Uso do WLL: <strong style={{ color: risk.color }}>{result.wllUsagePercent?.toFixed(1)}%</strong></div>
-            )}
-            {result.angleWarning && <div style={{ color: "#f59e0b" }}>⚠️ Ângulo crítico!</div>}
+              {result.angleWarning && <div style={{ color: "#f59e0b" }}>⚠️ Ângulo crítico!</div>}
+            </div>
+            <div style={S.riskBadge(risk.color)}>{riskLabel(result.riskLevel)}</div>
           </div>
-          <div style={S.riskBadge(risk.color)}>{riskLabel(result.riskLevel)}</div>
-        </div>
+          {result.temManilha && (
+            <div style={{ background: "#0a0a0f", border: `1px solid ${result.manilhaCompativel ? "#22c55e33" : "#ef444433"}`, borderRadius: 10, padding: "14px 18px", marginTop: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#94a3b8", marginBottom: 8, textTransform: "uppercase", letterSpacing: "1px" }}>Manilha</div>
+              <div style={{ fontSize: 13, lineHeight: 2 }}>
+                <div>Capacidade: <strong style={{ color: "#e2e8f0" }}>{result.manilhaCapacidadeKg?.toLocaleString("pt-BR")} kg</strong></div>
+                <div>Uso: <strong style={{ color: result.manilhaCompativel ? "#22c55e" : "#ef4444" }}>{result.manilhaUsoPercent?.toFixed(1)}%</strong></div>
+                <div>Compatibilidade: <strong style={{ color: result.manilhaCompativel ? "#22c55e" : "#ef4444" }}>
+                  {result.manilhaCompativel ? "✅ Compatível" : "🚫 Incompatível — capacidade insuficiente"}
+                </strong></div>
+              </div>
+            </div>
+          )}
+        </>
       )}
       {result && result.riskLevel !== "DANGER" && (
         <div style={S.successBox}>✅ Cálculo concluído — prossiga para o checklist NR-11.</div>
@@ -1038,9 +1090,84 @@ const IS_SUPER = (role) => role === "SUPER_ADMIN";
 
 const statusColor = (s) => s === "PROSSEGUIR" ? "#22c55e" : s === "PARAR" ? "#ef4444" : "#f59e0b";
 
+// ── MODAL ALTERAR SENHA ──────────────────────────────────────────────────────────
+function ModalAlterarSenha({ onFechar }) {
+  const [form, setForm] = useState({ senhaAtual: "", novaSenha: "", confirmar: "" });
+  const [erro, setErro] = useState(null);
+  const [sucesso, setSucesso] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const salvar = async () => {
+    setErro(null);
+    if (!form.senhaAtual || !form.novaSenha || !form.confirmar) {
+      setErro("Preencha todos os campos."); return;
+    }
+    if (form.novaSenha.length < 6) {
+      setErro("A nova senha deve ter pelo menos 6 caracteres."); return;
+    }
+    if (form.novaSenha !== form.confirmar) {
+      setErro("A nova senha e a confirmação não coincidem."); return;
+    }
+    setLoading(true);
+    try {
+      const res = await authFetch(`${API}/api/funcionarios/minha-senha`, {
+        method: "PUT",
+        body: JSON.stringify({ senhaAtual: form.senhaAtual, novaSenha: form.novaSenha }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setErro(data.error || "Erro ao alterar senha.");
+      } else {
+        setSucesso(true);
+      }
+    } catch { setErro("Erro de conexão."); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div style={{ background: "#0f0f1a", border: "1px solid #1e2a3a", borderRadius: 16, padding: 32, width: "100%", maxWidth: 400 }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0", marginBottom: 24 }}>Alterar Senha</div>
+        {sucesso ? (
+          <div>
+            <div style={{ ...S.successBox, marginBottom: 24 }}>Senha alterada com sucesso!</div>
+            <button style={{ ...S.btn(true), width: "100%" }} onClick={onFechar}>Fechar</button>
+          </div>
+        ) : (
+          <>
+            <div style={S.field}>
+              <label style={S.label}>Senha Atual</label>
+              <input style={S.input} type="password" placeholder="••••••" value={form.senhaAtual}
+                onChange={e => setForm(p => ({ ...p, senhaAtual: e.target.value }))} />
+            </div>
+            <div style={{ ...S.field, marginTop: 14 }}>
+              <label style={S.label}>Nova Senha (mín. 6 caracteres)</label>
+              <input style={S.input} type="password" placeholder="••••••" value={form.novaSenha}
+                onChange={e => setForm(p => ({ ...p, novaSenha: e.target.value }))} />
+            </div>
+            <div style={{ ...S.field, marginTop: 14 }}>
+              <label style={S.label}>Confirmar Nova Senha</label>
+              <input style={S.input} type="password" placeholder="••••••" value={form.confirmar}
+                onChange={e => setForm(p => ({ ...p, confirmar: e.target.value }))} />
+            </div>
+            {erro && <div style={{ ...S.errorBox, marginTop: 12 }}>{erro}</div>}
+            <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+              <button style={{ ...S.btn(loading), flex: 1 }} onClick={salvar} disabled={loading}>
+                {loading ? "Salvando..." : "Salvar"}
+              </button>
+              <button style={{ ...S.btn(false), flex: 1 }} onClick={onFechar}>Cancelar</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── ADMIN DASHBOARD (página separada — SUPER_ADMIN e ADMIN_EMPRESA) ─────────────
 function AdminDashboard({ onVoltar, isMobile }) {
   const [painel, setPainel] = useState("solicitacoes"); // "solicitacoes" | "equipe"
+  const [showModalSenha, setShowModalSenha] = useState(false);
 
   // ── Solicitações ──
   const [statusFiltro, setStatusFiltro] = useState("ANALISAR");
@@ -1054,6 +1181,9 @@ function AdminDashboard({ onVoltar, isMobile }) {
   const [novoForm, setNovoForm] = useState({ nome: "", email: "", senha: "", role: "RIGGER" });
   const [erroEq, setErroEq] = useState(null);
   const [sucEq, setSucEq] = useState(null);
+  const [editandoId, setEditandoId] = useState(null);
+  const [editForm, setEditForm] = useState({ nome: "", email: "", role: "RIGGER" });
+  const [erroEdit, setErroEdit] = useState(null);
 
   const user = getUser();
   const isSuperAdmin = IS_SUPER(user?.role);
@@ -1118,6 +1248,26 @@ function AdminDashboard({ onVoltar, isMobile }) {
     } catch { /* ignora */ }
   };
 
+  const iniciarEdicao = (f) => {
+    setEditandoId(f.id);
+    setEditForm({ nome: f.nome, email: f.email, role: f.role });
+    setErroEdit(null);
+  };
+
+  const salvarEdicao = async () => {
+    setErroEdit(null);
+    try {
+      const res = await authFetch(`${API}/api/funcionarios/${editandoId}`, {
+        method: "PUT",
+        body: JSON.stringify(editForm),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setErroEdit(data.error || "Erro ao salvar alterações."); return; }
+      setEquipe(p => p.map(f => f.id === editandoId ? { ...f, ...editForm } : f));
+      setEditandoId(null);
+    } catch { setErroEdit("Erro de conexão."); }
+  };
+
   // Agrupa por empresa para SUPER_ADMIN
   const grupos = isSuperAdmin
     ? lista.reduce((acc, sol) => {
@@ -1129,30 +1279,48 @@ function AdminDashboard({ onVoltar, isMobile }) {
     : { [user?.empresaName || "Minha Empresa"]: lista };
 
   const cardTecnico = (sol) => (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 14, background: "#0a0a0f", borderRadius: 8, padding: 14 }}>
-      <div>
-        <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Capacidade</div>
-        <div style={{ fontSize: 12, lineHeight: 1.8, color: "#94a3b8" }}>
-          <div>Guindaste: <strong style={{ color: "#e2e8f0" }}>{sol.capGuindasteKg?.toLocaleString("pt-BR")} kg</strong></div>
-          <div>Carga total: <strong style={{ color: "#e2e8f0" }}>{sol.capTotalKg?.toFixed(0)} kg</strong></div>
-          <div>Uso: <strong style={{ color: riskColor(sol.capRisco).color }}>{sol.capUsoPercent?.toFixed(1)}%</strong></div>
-          <div>Risco: <strong style={{ color: riskColor(sol.capRisco).color }}>{riskLabel(sol.capRisco)}</strong></div>
+    <div style={{ marginTop: 14, background: "#0a0a0f", borderRadius: 8, padding: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div>
+          <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Capacidade</div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, color: "#94a3b8" }}>
+            <div>Guindaste: <strong style={{ color: "#e2e8f0" }}>{sol.capGuindasteKg?.toLocaleString("pt-BR")} kg</strong></div>
+            <div>Carga total: <strong style={{ color: "#e2e8f0" }}>{sol.capTotalKg?.toFixed(0)} kg</strong></div>
+            <div>Uso: <strong style={{ color: riskColor(sol.capRisco).color }}>{sol.capUsoPercent?.toFixed(1)}%</strong></div>
+            <div>Risco: <strong style={{ color: riskColor(sol.capRisco).color }}>{riskLabel(sol.capRisco)}</strong></div>
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Eslinga</div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, color: "#94a3b8" }}>
+            <div>Pernas: <strong style={{ color: "#e2e8f0" }}>{sol.eslNumPernas}</strong></div>
+            <div>Ângulo: <strong style={{ color: sol.eslAnguloAviso ? "#f59e0b" : "#e2e8f0" }}>{sol.eslAnguloGraus}°{sol.eslAnguloAviso ? " ⚠️" : ""}</strong></div>
+            <div>Tensão/perna: <strong style={{ color: "#e2e8f0" }}>{sol.eslTensaoPorPernaKg?.toFixed(0)} kg</strong></div>
+            {sol.eslWllKg != null && (
+              <div>WLL: <strong style={{ color: "#e2e8f0" }}>{sol.eslWllKg?.toLocaleString("pt-BR")} kg</strong>
+                {sol.eslWllUsoPercent != null && <span style={{ color: riskColor(sol.eslRisco).color }}> ({sol.eslWllUsoPercent?.toFixed(1)}%)</span>}
+              </div>
+            )}
+            <div>Risco: <strong style={{ color: riskColor(sol.eslRisco).color }}>{riskLabel(sol.eslRisco)}</strong></div>
+          </div>
         </div>
       </div>
-      <div>
-        <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Eslinga</div>
-        <div style={{ fontSize: 12, lineHeight: 1.8, color: "#94a3b8" }}>
-          <div>Pernas: <strong style={{ color: "#e2e8f0" }}>{sol.eslNumPernas}</strong></div>
-          <div>Ângulo: <strong style={{ color: sol.eslAnguloAviso ? "#f59e0b" : "#e2e8f0" }}>{sol.eslAnguloGraus}°{sol.eslAnguloAviso ? " ⚠️" : ""}</strong></div>
-          <div>Tensão/perna: <strong style={{ color: "#e2e8f0" }}>{sol.eslTensaoPorPernaKg?.toFixed(0)} kg</strong></div>
-          <div>Risco: <strong style={{ color: riskColor(sol.eslRisco).color }}>{riskLabel(sol.eslRisco)}</strong></div>
+      {sol.eslTemManilha && (
+        <div style={{ borderTop: "1px solid #1e2a3a", marginTop: 10, paddingTop: 10 }}>
+          <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Manilha</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, fontSize: 12, color: "#94a3b8" }}>
+            <div>Capacidade: <strong style={{ color: "#e2e8f0" }}>{sol.eslManilhaCapacidadeKg?.toLocaleString("pt-BR")} kg</strong></div>
+            <div>Uso: <strong style={{ color: sol.eslManilhaCompativel ? "#22c55e" : "#ef4444" }}>{sol.eslManilhaUsoPercent?.toFixed(1)}%</strong></div>
+            <div>Compatível: <strong style={{ color: sol.eslManilhaCompativel ? "#22c55e" : "#ef4444" }}>{sol.eslManilhaCompativel ? "Sim" : "Não"}</strong></div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 
   return (
     <div style={S.app}>
+      {showModalSenha && <ModalAlterarSenha onFechar={() => setShowModalSenha(false)} />}
       {/* Header do painel admin */}
       <div style={S.header(isMobile)}>
         <div style={S.headerTop(isMobile)}>
@@ -1166,6 +1334,9 @@ function AdminDashboard({ onVoltar, isMobile }) {
           <div style={S.userInfo(isMobile)}>
             <div style={S.roleBadge(isMobile)}>{roleLabel(user?.role)}</div>
             <div style={S.userBadge(isMobile)}>{user?.userName}</div>
+            <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => setShowModalSenha(true)}>
+              {isMobile ? "🔑" : "Alterar Senha"}
+            </button>
           </div>
         </div>
         {/* Navegação principal do painel */}
@@ -1285,6 +1456,7 @@ function AdminDashboard({ onVoltar, isMobile }) {
                   <select style={{ ...S.input, cursor: "pointer" }} value={novoForm.role}
                     onChange={e => setNovoForm(f => ({ ...f, role: e.target.value }))}>
                     <option value="RIGGER">Rigger</option>
+                    <option value="OPERADOR_GUINDASTE">Operador de Guindaste</option>
                     <option value="LIDER_EQUIPE">Líder de Equipe</option>
                     <option value="GERENTE_OPERACOES">Gerente de Operações</option>
                     {isSuperAdmin && <option value="ADMIN_EMPRESA">Admin Empresa</option>}
@@ -1309,29 +1481,68 @@ function AdminDashboard({ onVoltar, isMobile }) {
               </div>
             )}
             {equipe.map(f => (
-              <div key={f.id} style={{ background: "#0f0f1a", border: `1px solid ${f.ativo ? "#1e2a3a" : "#2d0000"}`, borderRadius: 12, padding: 18, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-                <div>
-                  <div style={{ fontWeight: 700, color: f.ativo ? "#e2e8f0" : "#475569", fontSize: 14 }}>{f.nome}</div>
-                  <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>{f.email}</div>
-                  <div style={{ marginTop: 6, display: "flex", gap: 8, alignItems: "center" }}>
-                    <span style={{ background: "#1e2a3a", color: "#38bdf8", fontSize: 11, padding: "2px 8px", borderRadius: 4 }}>
-                      {roleLabel(f.role)}
-                    </span>
-                    {!f.ativo && (
-                      <span style={{ background: "#2d0000", color: "#ef4444", fontSize: 11, padding: "2px 8px", borderRadius: 4 }}>
-                        Inativo
-                      </span>
-                    )}
+              <div key={f.id} style={{ background: "#0f0f1a", border: `1px solid ${f.ativo ? "#1e2a3a" : "#2d0000"}`, borderRadius: 12, padding: 18, marginBottom: 12 }}>
+                {editandoId === f.id ? (
+                  <div>
+                    <div style={S.grid()}>
+                      <div style={S.field}>
+                        <label style={S.label}>Nome</label>
+                        <input style={S.input} value={editForm.nome} onChange={e => setEditForm(p => ({ ...p, nome: e.target.value }))} />
+                      </div>
+                      <div style={S.field}>
+                        <label style={S.label}>E-mail</label>
+                        <input style={S.input} type="email" value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} />
+                      </div>
+                      <div style={S.field}>
+                        <label style={S.label}>Cargo</label>
+                        <select style={{ ...S.input, cursor: "pointer" }} value={editForm.role} onChange={e => setEditForm(p => ({ ...p, role: e.target.value }))}>
+                          <option value="RIGGER">Rigger</option>
+                          <option value="OPERADOR_GUINDASTE">Operador de Guindaste</option>
+                          <option value="LIDER_EQUIPE">Líder de Equipe</option>
+                          <option value="GERENTE_OPERACOES">Gerente de Operações</option>
+                          {isSuperAdmin && <option value="ADMIN_EMPRESA">Admin Empresa</option>}
+                        </select>
+                      </div>
+                    </div>
+                    {erroEdit && <div style={{ ...S.errorBox, marginTop: 8 }}>{erroEdit}</div>}
+                    <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                      <button style={{ ...S.btn(true), padding: "8px 18px", fontSize: 13 }} onClick={salvarEdicao}>Salvar</button>
+                      <button style={{ ...S.btn(false), padding: "8px 18px", fontSize: 13 }} onClick={() => setEditandoId(null)}>Cancelar</button>
+                    </div>
                   </div>
-                </div>
-                <button
-                  onClick={() => alternarAtivo(f.id, f.ativo)}
-                  style={{ fontSize: 12, padding: "8px 16px", borderRadius: 8, border: "1px solid", cursor: "pointer",
-                    background: f.ativo ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)",
-                    borderColor: f.ativo ? "#ef444444" : "#22c55e44",
-                    color: f.ativo ? "#ef4444" : "#22c55e" }}>
-                  {f.ativo ? "Desativar" : "Reativar"}
-                </button>
+                ) : (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, color: f.ativo ? "#e2e8f0" : "#475569", fontSize: 14 }}>{f.nome}</div>
+                      <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>{f.email}</div>
+                      <div style={{ marginTop: 6, display: "flex", gap: 8, alignItems: "center" }}>
+                        <span style={{ background: "#1e2a3a", color: "#38bdf8", fontSize: 11, padding: "2px 8px", borderRadius: 4 }}>
+                          {roleLabel(f.role)}
+                        </span>
+                        {!f.ativo && (
+                          <span style={{ background: "#2d0000", color: "#ef4444", fontSize: 11, padding: "2px 8px", borderRadius: 4 }}>
+                            Inativo
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        onClick={() => iniciarEdicao(f)}
+                        style={{ fontSize: 12, padding: "8px 16px", borderRadius: 8, border: "1px solid #1e3a5a", cursor: "pointer", background: "rgba(56,189,248,0.08)", color: "#38bdf8" }}>
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => alternarAtivo(f.id, f.ativo)}
+                        style={{ fontSize: 12, padding: "8px 16px", borderRadius: 8, border: "1px solid", cursor: "pointer",
+                          background: f.ativo ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)",
+                          borderColor: f.ativo ? "#ef444444" : "#22c55e44",
+                          color: f.ativo ? "#ef4444" : "#22c55e" }}>
+                        {f.ativo ? "Desativar" : "Reativar"}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </>
@@ -1349,6 +1560,7 @@ function AdminDashboard({ onVoltar, isMobile }) {
 function SuperAdminDashboard({ onVoltar, isMobile }) {
   const user = getUser();
   const [painel, setPainel] = useState("visao-geral");
+  const [showModalSenha, setShowModalSenha] = useState(false);
   const C = "#a78bfa"; // cor SaaS
 
   // ── Estado global ──
@@ -1378,6 +1590,9 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
   const [sucFunc, setSucFunc]             = useState(null);
   const [criandoFunc, setCriandoFunc]     = useState(false);
   const [mostrarFormFunc, setMostrarFormFunc] = useState(false);
+  const [editandoFuncId, setEditandoFuncId] = useState(null);
+  const [editFuncForm, setEditFuncForm]     = useState({ nome: "", email: "", role: "RIGGER" });
+  const [erroEditFunc, setErroEditFunc]     = useState(null);
 
   const carregarEmpresas = useCallback(async () => {
     setLoadingEmp(true);
@@ -1472,6 +1687,26 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
     } catch { /* ignora */ }
   };
 
+  const iniciarEdicaoFunc = (f) => {
+    setEditandoFuncId(f.id);
+    setEditFuncForm({ nome: f.nome, email: f.email, role: f.role });
+    setErroEditFunc(null);
+  };
+
+  const salvarEdicaoFunc = async () => {
+    setErroEditFunc(null);
+    try {
+      const res = await authFetch(`${API}/api/admin/empresas/${empresaSel.id}/funcionarios/${editandoFuncId}`, {
+        method: "PUT",
+        body: JSON.stringify(editFuncForm),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setErroEditFunc(data.error || "Erro ao salvar alterações."); return; }
+      setFuncionarios(p => p.map(f => f.id === editandoFuncId ? { ...f, ...editFuncForm } : f));
+      setEditandoFuncId(null);
+    } catch { setErroEditFunc("Erro de conexão."); }
+  };
+
   // ── métricas gerais ──
   const totalEmpresas   = empresas.length;
   const empAtivas       = empresas.filter(e => e.ativo !== false).length;
@@ -1500,6 +1735,7 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
 
   return (
     <div style={S.app}>
+      {showModalSenha && <ModalAlterarSenha onFechar={() => setShowModalSenha(false)} />}
       {/* ── Header ── */}
       <div style={S.header(isMobile)}>
         <div style={S.headerTop(isMobile)}>
@@ -1518,6 +1754,9 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
               SUPER ADMIN
             </div>
             <div style={S.userBadge(isMobile)}>{user?.userName}</div>
+            <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => setShowModalSenha(true)}>
+              {isMobile ? "🔑" : "Alterar Senha"}
+            </button>
           </div>
         </div>
         <div style={S.tabs(isMobile)}>
@@ -1811,6 +2050,7 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
                         <select style={{ ...S.select, borderColor: `${C}33` }}
                           value={novoFunc.role} onChange={e => setNovoFunc(p => ({ ...p, role: e.target.value }))}>
                           <option value="RIGGER">Rigger</option>
+                          <option value="OPERADOR_GUINDASTE">Operador de Guindaste</option>
                           <option value="LIDER_EQUIPE">Líder de Equipe</option>
                           <option value="GERENTE_OPERACOES">Gerente de Operações</option>
                           <option value="ADMIN_EMPRESA">Admin Empresa</option>
@@ -1831,25 +2071,64 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
                   <div style={{ ...S.normaBox, textAlign: "center", padding: 32 }}>Nenhum funcionário cadastrado nesta empresa.</div>
                 )}
                 {funcionarios.map(f => (
-                  <div key={f.id} style={{ background: "#0f0f1a", border: `1px solid ${f.ativo !== false ? "#1e2a3a" : "#2d0000"}`, borderRadius: 10, padding: "14px 18px", marginBottom: 10, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-                    <div>
-                      <div style={{ fontWeight: 700, color: f.ativo !== false ? "#e2e8f0" : "#475569", fontSize: 14 }}>{f.nome}</div>
-                      <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{f.email}</div>
-                      <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>
-                        <span style={{ background: "#1e2a3a", color: "#38bdf8", fontSize: 11, padding: "2px 8px", borderRadius: 4 }}>
-                          {roleLabel(f.role)}
-                        </span>
-                        <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 700, background: f.ativo !== false ? "#052e16" : "#2d0000", color: f.ativo !== false ? "#22c55e" : "#ef4444" }}>
-                          {f.ativo !== false ? "ATIVO" : "INATIVO"}
-                        </span>
-                        {f.criadoEm && <span style={{ fontSize: 10, color: "#475569" }}>desde {new Date(f.criadoEm).toLocaleDateString("pt-BR")}</span>}
+                  <div key={f.id} style={{ background: "#0f0f1a", border: `1px solid ${f.ativo !== false ? "#1e2a3a" : "#2d0000"}`, borderRadius: 10, padding: "14px 18px", marginBottom: 10 }}>
+                    {editandoFuncId === f.id ? (
+                      <div>
+                        <div style={S.grid()}>
+                          <div style={S.field}>
+                            <label style={S.label}>Nome</label>
+                            <input style={{ ...S.input, borderColor: `${C}33` }} value={editFuncForm.nome} onChange={e => setEditFuncForm(p => ({ ...p, nome: e.target.value }))} />
+                          </div>
+                          <div style={S.field}>
+                            <label style={S.label}>E-mail</label>
+                            <input style={{ ...S.input, borderColor: `${C}33` }} type="email" value={editFuncForm.email} onChange={e => setEditFuncForm(p => ({ ...p, email: e.target.value }))} />
+                          </div>
+                          <div style={S.field}>
+                            <label style={S.label}>Cargo</label>
+                            <select style={{ ...S.select, borderColor: `${C}33` }} value={editFuncForm.role} onChange={e => setEditFuncForm(p => ({ ...p, role: e.target.value }))}>
+                              <option value="RIGGER">Rigger</option>
+                              <option value="OPERADOR_GUINDASTE">Operador de Guindaste</option>
+                              <option value="LIDER_EQUIPE">Líder de Equipe</option>
+                              <option value="GERENTE_OPERACOES">Gerente de Operações</option>
+                              <option value="ADMIN_EMPRESA">Admin Empresa</option>
+                            </select>
+                          </div>
+                        </div>
+                        {erroEditFunc && <div style={{ ...S.errorBox, marginTop: 8 }}>{erroEditFunc}</div>}
+                        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                          <button style={{ ...S.btn(true), background: `linear-gradient(135deg, ${C}, #7c3aed)`, color: "#fff", padding: "8px 18px", fontSize: 13 }} onClick={salvarEdicaoFunc}>Salvar</button>
+                          <button style={{ ...S.btn(false), padding: "8px 18px", fontSize: 13 }} onClick={() => setEditandoFuncId(null)}>Cancelar</button>
+                        </div>
                       </div>
-                    </div>
-                    <button
-                      onClick={() => alternarStatusFunc(f)}
-                      style={{ fontSize: 12, padding: "8px 14px", borderRadius: 8, border: "1px solid", cursor: "pointer", background: f.ativo !== false ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)", borderColor: f.ativo !== false ? "#ef444444" : "#22c55e44", color: f.ativo !== false ? "#ef4444" : "#22c55e" }}>
-                      {f.ativo !== false ? "Desativar" : "Reativar"}
-                    </button>
+                    ) : (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+                        <div>
+                          <div style={{ fontWeight: 700, color: f.ativo !== false ? "#e2e8f0" : "#475569", fontSize: 14 }}>{f.nome}</div>
+                          <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{f.email}</div>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>
+                            <span style={{ background: "#1e2a3a", color: "#38bdf8", fontSize: 11, padding: "2px 8px", borderRadius: 4 }}>
+                              {roleLabel(f.role)}
+                            </span>
+                            <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 700, background: f.ativo !== false ? "#052e16" : "#2d0000", color: f.ativo !== false ? "#22c55e" : "#ef4444" }}>
+                              {f.ativo !== false ? "ATIVO" : "INATIVO"}
+                            </span>
+                            {f.criadoEm && <span style={{ fontSize: 10, color: "#475569" }}>desde {new Date(f.criadoEm).toLocaleDateString("pt-BR")}</span>}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button
+                            onClick={() => iniciarEdicaoFunc(f)}
+                            style={{ fontSize: 12, padding: "8px 14px", borderRadius: 8, border: `1px solid ${C}44`, cursor: "pointer", background: `${C}11`, color: C }}>
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => alternarStatusFunc(f)}
+                            style={{ fontSize: 12, padding: "8px 14px", borderRadius: 8, border: "1px solid", cursor: "pointer", background: f.ativo !== false ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)", borderColor: f.ativo !== false ? "#ef444444" : "#22c55e44", color: f.ativo !== false ? "#ef4444" : "#22c55e" }}>
+                            {f.ativo !== false ? "Desativar" : "Reativar"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </>
@@ -2107,32 +2386,49 @@ const DEMO_USERS_DATA = [
 
 function SolTechCard({ sol }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 14, background: "#0a0a0f", borderRadius: 8, padding: 14 }}>
-      <div>
-        <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Capacidade</div>
-        <div style={{ fontSize: 12, lineHeight: 1.8, color: "#94a3b8" }}>
-          <div>Guindaste: <strong style={{ color: "#e2e8f0" }}>{sol.capGuindasteKg?.toLocaleString("pt-BR")} kg</strong></div>
-          <div>Carga total: <strong style={{ color: "#e2e8f0" }}>{sol.capTotalKg?.toFixed(0)} kg</strong></div>
-          <div>Uso: <strong style={{ color: riskColor(sol.capRisco).color }}>{sol.capUsoPercent?.toFixed(1)}%</strong></div>
-          <div>Risco: <strong style={{ color: riskColor(sol.capRisco).color }}>{riskLabel(sol.capRisco)}</strong></div>
+    <div style={{ marginTop: 14, background: "#0a0a0f", borderRadius: 8, padding: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div>
+          <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Capacidade</div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, color: "#94a3b8" }}>
+            <div>Guindaste: <strong style={{ color: "#e2e8f0" }}>{sol.capGuindasteKg?.toLocaleString("pt-BR")} kg</strong></div>
+            <div>Carga total: <strong style={{ color: "#e2e8f0" }}>{sol.capTotalKg?.toFixed(0)} kg</strong></div>
+            <div>Uso: <strong style={{ color: riskColor(sol.capRisco).color }}>{sol.capUsoPercent?.toFixed(1)}%</strong></div>
+            <div>Risco: <strong style={{ color: riskColor(sol.capRisco).color }}>{riskLabel(sol.capRisco)}</strong></div>
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Eslinga</div>
+          <div style={{ fontSize: 12, lineHeight: 1.8, color: "#94a3b8" }}>
+            <div>Pernas: <strong style={{ color: "#e2e8f0" }}>{sol.eslNumPernas}</strong></div>
+            <div>Ângulo: <strong style={{ color: sol.eslAnguloAviso ? "#f59e0b" : "#e2e8f0" }}>{sol.eslAnguloGraus}°{sol.eslAnguloAviso ? " ⚠️" : ""}</strong></div>
+            <div>Tensão/perna: <strong style={{ color: "#e2e8f0" }}>{sol.eslTensaoPorPernaKg?.toFixed(0)} kg</strong></div>
+            {sol.eslWllKg != null && (
+              <div>WLL: <strong style={{ color: "#e2e8f0" }}>{sol.eslWllKg?.toLocaleString("pt-BR")} kg</strong>
+                {sol.eslWllUsoPercent != null && <span style={{ color: riskColor(sol.eslRisco).color }}> ({sol.eslWllUsoPercent?.toFixed(1)}%)</span>}
+              </div>
+            )}
+            <div>Risco: <strong style={{ color: riskColor(sol.eslRisco).color }}>{riskLabel(sol.eslRisco)}</strong></div>
+          </div>
         </div>
       </div>
-      <div>
-        <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Eslinga</div>
-        <div style={{ fontSize: 12, lineHeight: 1.8, color: "#94a3b8" }}>
-          <div>Pernas: <strong style={{ color: "#e2e8f0" }}>{sol.eslNumPernas}</strong></div>
-          <div>Ângulo: <strong style={{ color: sol.eslAnguloAviso ? "#f59e0b" : "#e2e8f0" }}>{sol.eslAnguloGraus}°{sol.eslAnguloAviso ? " ⚠️" : ""}</strong></div>
-          <div>Tensão/perna: <strong style={{ color: "#e2e8f0" }}>{sol.eslTensaoPorPernaKg?.toFixed(0)} kg</strong></div>
-          <div>Risco: <strong style={{ color: riskColor(sol.eslRisco).color }}>{riskLabel(sol.eslRisco)}</strong></div>
+      {sol.eslTemManilha && (
+        <div style={{ borderTop: "1px solid #1e2a3a", marginTop: 10, paddingTop: 10 }}>
+          <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Manilha</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, fontSize: 12, color: "#94a3b8" }}>
+            <div>Capacidade: <strong style={{ color: "#e2e8f0" }}>{sol.eslManilhaCapacidadeKg?.toLocaleString("pt-BR")} kg</strong></div>
+            <div>Uso: <strong style={{ color: sol.eslManilhaCompativel ? "#22c55e" : "#ef4444" }}>{sol.eslManilhaUsoPercent?.toFixed(1)}%</strong></div>
+            <div>Compatível: <strong style={{ color: sol.eslManilhaCompativel ? "#22c55e" : "#ef4444" }}>{sol.eslManilhaCompativel ? "Sim" : "Não"}</strong></div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
 function DemoPage({ onVoltar }) {
   const isMobile = useIsMobile();
-  const [mainTab, setMainTab] = useState("admin");
+  const [mainTab, setMainTab] = useState("rigger");
 
   // ── ADMIN STATE ──
   const [adminPainel, setAdminPainel] = useState("solicitacoes");
@@ -2481,6 +2777,7 @@ export default function App() {
   const [slingOk, setSlingOk] = useState(false);
   const [capacityData, setCapacityData] = useState(null);
   const [slingData, setSlingData] = useState(null);
+  const [showModalSenha, setShowModalSenha] = useState(false);
   const user = getUser();
   const isSuperAdmin = IS_SUPER(user?.role);
   const isEmpresaAdmin = user?.role === "ADMIN_EMPRESA" || user?.role === "GERENTE_OPERACOES";
@@ -2536,6 +2833,7 @@ export default function App() {
 
   return (
     <div style={S.app}>
+      {showModalSenha && <ModalAlterarSenha onFechar={() => setShowModalSenha(false)} />}
       <div style={S.header(isMobile)}>
         <div style={S.headerTop(isMobile)}>
           <div style={S.logo}>
@@ -2562,6 +2860,9 @@ export default function App() {
                 {isMobile ? "🔑" : "🔑 Painel Admin"}
               </button>
             )}
+            <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => setShowModalSenha(true)}>
+              {isMobile ? "🔑" : "Alterar Senha"}
+            </button>
             <button style={S.logoutBtn(isMobile)} onClick={handleLogout}>Sair</button>
           </div>
         </div>

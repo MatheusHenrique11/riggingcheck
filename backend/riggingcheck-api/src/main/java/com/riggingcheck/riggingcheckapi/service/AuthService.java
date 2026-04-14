@@ -14,6 +14,8 @@ import com.riggingcheck.riggingcheckapi.repository.EmpresaRepository;
 import com.riggingcheck.riggingcheckapi.repository.FuncionarioRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,7 @@ import java.util.Optional;
 @Service
 public class AuthService {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final String CNPJ_SISTEMA = "00.000.000/0000-00";
 
     private final FuncionarioRepository funcionarioRepository;
@@ -45,6 +48,7 @@ public class AuthService {
         if (funcionarioOpt.isEmpty()
                 || Boolean.FALSE.equals(funcionarioOpt.get().getAtivo())
                 || !passwordEncoder.matches(request.getPassword(), funcionarioOpt.get().getPasswordHash())) {
+            log.warn("Falha de login para o email: {}", request.getEmail());
             throw new CredenciaisInvalidasException();
         }
 
@@ -96,12 +100,6 @@ public class AuthService {
         superAdmin.setRole(RoleEnum.SUPER_ADMIN);
         superAdmin.setAtivo(true);
         funcionarioRepository.save(superAdmin);
-    }
-
-    @Transactional
-    public void deleteSuperAdmin() {
-        funcionarioRepository.findByRole(RoleEnum.SUPER_ADMIN)
-                .forEach(funcionarioRepository::delete);
     }
 
     @Transactional

@@ -72,6 +72,24 @@ public class SolicitacaoLiberacao {
     @Column(name = "esl_angulo_aviso")
     private Boolean eslAnguloAviso;
 
+    @Column(name = "esl_wll_kg")
+    private Double eslWllKg;
+
+    @Column(name = "esl_wll_uso_percent")
+    private Double eslWllUsoPercent;
+
+    @Column(name = "esl_tem_manilha")
+    private Boolean eslTemManilha;
+
+    @Column(name = "esl_manilha_capacidade_kg")
+    private Double eslManilhaCapacidadeKg;
+
+    @Column(name = "esl_manilha_uso_percent")
+    private Double eslManilhaUsoPercent;
+
+    @Column(name = "esl_manilha_compativel")
+    private Boolean eslManilhaCompativel;
+
     // ── Resolução ────────────────────────────────────────────────────────────────
     @Column(name = "aprovado_por_id")
     private UUID aprovadoPorId;

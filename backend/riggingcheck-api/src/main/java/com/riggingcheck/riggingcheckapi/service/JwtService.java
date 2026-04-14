@@ -3,20 +3,21 @@ package com.riggingcheck.riggingcheckapi.service;
 import com.riggingcheck.riggingcheckapi.domain.Funcionario;
 import com.riggingcheck.riggingcheckapi.domain.enums.RoleEnum;
 import io.jsonwebtoken.*;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 @Service
 public class JwtService {
+
+    private static final int MIN_SECRET_BYTES = 32;
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -24,26 +25,30 @@ public class JwtService {
     @Value("${jwt.expiration}")
     private long jwtExpirationInMillis;
 
+    @PostConstruct
+    void validarSegredo() {
+        if (jwtSecret == null || jwtSecret.isBlank()) {
+            throw new IllegalStateException("JWT_SECRET não configurado. Defina a variável de ambiente JWT_SECRET.");
+        }
+        if (jwtSecret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException(
+                "JWT_SECRET muito curto (mínimo %d bytes). Segredo fraco compromete a segurança de todos os tokens."
+                    .formatted(MIN_SECRET_BYTES));
+        }
+    }
+
     private SecretKey getSigningKey() {
-        byte[] raw = jwtSecret.getBytes(StandardCharsets.UTF_8);
-        byte[] keyBytes = raw.length >= 32 ? raw : Arrays.copyOf(raw, 32);
+        byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
         return new SecretKeySpec(keyBytes, "HmacSHA256");
     }
 
-    private Claims parseClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-    }
-
     public String generateToken(Funcionario funcionario) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("userId", funcionario.getId());
-        claims.put("empresaId", funcionario.getEmpresaId());
-        claims.put("role", funcionario.getRole());
-        claims.put("userName", funcionario.getNome());
+        var claims = Map.<String, Object>of(
+            "userId",    funcionario.getId().toString(),
+            "empresaId", funcionario.getEmpresaId().toString(),
+            "role",      funcionario.getRole().name(),
+            "nome",      funcionario.getNome()
+        );
 
         Date now = new Date();
         return Jwts.builder()
@@ -78,5 +83,13 @@ public class JwtService {
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
+    }
+
+    private Claims parseClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 }
