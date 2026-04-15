@@ -1,22 +1,39 @@
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 spring:
+  application:
+    name: riggingcheck-api
+
   jackson:
     time-zone: America/Sao_Paulo
     serialization:
       write-dates-as-timestamps: false
 
-
+  # Datasource padrão (dev local — H2 em memória)
   datasource:
     url: jdbc:h2:mem:riggingcheck
     driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
   h2:
     console:
-      # Nunca habilitar em produção — acesso direto ao banco sem autenticação extra
       enabled: false
+
   jpa:
     hibernate:
       ddl-auto: create-drop
-    # Desabilitado para evitar vazamento de dados sensíveis nos logs
     show-sql: false
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION_MS:86400000}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
+logging:
+  level:
+    org.springframework.security: INFO
+    com.riggingcheck: INFO
