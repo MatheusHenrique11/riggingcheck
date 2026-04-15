@@ -5,9 +5,9 @@ spring:
   application:
     name: riggingcheck-api
   jackson:
-    time-zone: America/Sao_Paulo
     serialization:
-      write-dates-as-timestamps: false
+      WRITE_DATES_AS_TIMESTAMPS: false
+    time-zone: America/Sao_Paulo
   datasource:
     url: jdbc:h2:mem:riggingcheck
     driver-class-name: org.h2.Driver
