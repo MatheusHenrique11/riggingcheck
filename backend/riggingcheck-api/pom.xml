@@ -134,4 +134,13 @@
         </plugins>
     </build>
 
+    <profiles>
+        <profile>
+            <!-- Perfil usado pelo Railway: mvn install -Pproduction
+                 A configuração de runtime (datasource, etc.) é feita via
+                 SPRING_PROFILES_ACTIVE=production nas variáveis de ambiente. -->
+            <id>production</id>
+        </profile>
+    </profiles>
+
 </project>
