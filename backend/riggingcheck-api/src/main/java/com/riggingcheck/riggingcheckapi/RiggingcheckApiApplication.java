@@ -3,16 +3,24 @@ package com.riggingcheck.riggingcheckapi;
 import com.riggingcheck.riggingcheckapi.dto.SetupRequest;
 import com.riggingcheck.riggingcheckapi.service.AuthService;
 import com.riggingcheck.riggingcheckapi.exception.RegraDeNegocioException;
+import jakarta.annotation.PostConstruct;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import java.util.TimeZone;
 
 @SpringBootApplication
 public class RiggingcheckApiApplication {
 
     public static void main(String[] args) {
+        TimeZone.setDefault(TimeZone.getTimeZone("America/Sao_Paulo"));
         SpringApplication.run(RiggingcheckApiApplication.class, args);
+    }
+
+    @PostConstruct
+    public void aplicarFusoHorario() {
+        TimeZone.setDefault(TimeZone.getTimeZone("America/Sao_Paulo"));
     }
 
     @Bean
