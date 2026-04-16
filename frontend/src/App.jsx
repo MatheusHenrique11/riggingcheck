@@ -2813,6 +2813,10 @@ function TabGuindasteCarga({ onSave }) {
   const [matIdx, setMatIdx] = useState(0);
   const [resVol, setResVol] = useState(null);
 
+  // Taxa de Utilização do Guindaste
+  const [ug, setUg] = useState({ capacidade: "", cargaTotal: "" });
+  const [resUg, setResUg] = useState(null);
+
   // SWL
   const [swl, setSwl] = useState({ crm: "", fsIdx: 2, forca: "" });
   const [resSwl, setResSwl] = useState(null);
@@ -2825,6 +2829,20 @@ function TabGuindasteCarga({ onSave }) {
     const r = { total, n2869, inputs: { ...cb } };
     setResCb(r);
     onSave?.("cargaBruta", r);
+  };
+
+  const calcUg = () => {
+    const cap = parseFloat(ug.capacidade);
+    const ct  = parseFloat(ug.cargaTotal);
+    if (isNaN(cap) || isNaN(ct) || cap <= 0) return;
+    const pct    = (ct / cap) * 100;
+    const risk   = pct < 70 ? "SAFE" : pct < 90 ? "WARNING" : "DANGER";
+    const status = pct < 70 ? "SEGURO" : pct < 90 ? "ATENCAO" : "REPROVADO";
+    const approved = pct < 90;
+    const margem = cap - ct;
+    const r = { capacidade: cap, cargaTotal: ct, pct, risk, status, approved, margem };
+    setResUg(r);
+    onSave?.("utilizacaoGuindaste", r);
   };
 
   const calcVolume = () => {
@@ -2885,6 +2903,55 @@ function TabGuindasteCarga({ onSave }) {
             unidade="kg"
             msg={resCb.n2869 ? "N-2869: IÇAMENTO CRÍTICO — carga ≥ 20t. Requer Rigger Nível 3 e plano aprovado." : "Içamento Normal (< 20t)"}
           />
+        )}
+      </div>
+
+      {/* Taxa de Utilização do Guindaste */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>🏗 2 — Taxa de Utilização do Guindaste</div>
+        <div style={S.grid()}>
+          <Campo label="Capacidade do guindaste (kg)">
+            <input style={S.input} type="number" min="0" step="1" placeholder="Ex.: 50000"
+              value={ug.capacidade} onChange={e=>setUg(p=>({...p,capacidade:e.target.value}))} />
+          </Campo>
+          <Campo label={`Carga total (kg)${resCb ? " — ou use o valor calculado abaixo" : ""}`}>
+            <div style={{ display:"flex", gap:8 }}>
+              <input style={{...S.input, flex:1}} type="number" min="0" step="1" placeholder="Ex.: 12500"
+                value={ug.cargaTotal} onChange={e=>setUg(p=>({...p,cargaTotal:e.target.value}))} />
+              {resCb && (
+                <button
+                  style={{ ...S.btn(false), padding:"0 12px", fontSize:11, whiteSpace:"nowrap" }}
+                  onClick={() => setUg(p=>({...p, cargaTotal: String(resCb.total)}))}>
+                  Usar 1.1
+                </button>
+              )}
+            </div>
+          </Campo>
+        </div>
+        <button style={{...S.btn(false), marginTop:16}} onClick={calcUg}>Calcular</button>
+        {resUg && (
+          <>
+            <ResultBox
+              status={resUg.status}
+              label="Taxa de Utilização"
+              valor={resUg.pct.toFixed(1)}
+              unidade="%"
+              msg={
+                `Capacidade: ${resUg.capacidade.toLocaleString("pt-BR")} kg | ` +
+                `Carga: ${resUg.cargaTotal.toLocaleString("pt-BR")} kg | ` +
+                `Margem: ${resUg.margem.toLocaleString("pt-BR",{maximumFractionDigits:1,timeZone:"America/Sao_Paulo"})} kg | ` +
+                (resUg.approved ? "✔ Içamento aprovado" : "✖ Içamento NÃO aprovado — sobrecarga")
+              }
+            />
+            <div style={{...S.progressBar, marginTop:12}}>
+              <div style={S.progressFill(resUg.pct, statusStyle(resUg.status).color)} />
+            </div>
+            <div style={{ display:"flex", gap:8, marginTop:8, fontSize:11, color:"#64748b" }}>
+              <span style={{ color:"#22c55e" }}>▌ &lt;70% Seguro</span>
+              <span style={{ color:"#f59e0b" }}>▌ 70–89% Atenção</span>
+              <span style={{ color:"#ef4444" }}>▌ ≥90% Reprovado</span>
+            </div>
+          </>
         )}
       </div>
 
@@ -2972,7 +3039,7 @@ function TabLingadaCarga({ onSave }) {
   const [resCg, setResCg] = useState(null);
 
   // Tensão nas Eslingas
-  const [te, setTe] = useState({ carga:"", pernas:"2", angulo:"60", tipo:"CABO" });
+  const [te, setTe] = useState({ carga:"", pernas:"2", angulo:"60", tipo:"CABO", wll:"" });
   const [resTe, setResTe] = useState(null);
 
   // N-2869 extras
@@ -3001,14 +3068,28 @@ function TabLingadaCarga({ onSave }) {
       const r = {bloqueado:true, msg:"STOP WORK — N-2869/NR-11: ângulo < 30° é PROIBIDO. Risco de colapso da lingada.", inputs:{...te}};
       setResTe(r); onSave?.("tensao", r); return;
     }
-    const mult = multAngulo(angulo);
-    const tensao = (carga/pernas)*mult;
-    const fs = te.tipo==="CINTA" ? 7 : 5;
-    const swlV = carga/fs;
-    const taxa = (tensao/swlV)*100;
-    const status = angulo<45 ? "ATENCAO" : statusCalc(taxa,[80,100]);
-    const r = {tensao,mult,taxa,fs,swl:swlV,status,bloqueado:false, inputs:{...te},
-      msg: angulo<45 ? `Atenção: ângulo ${angulo}° abaixo de 45° — zona de risco elevado.` : undefined};
+    const mult   = multAngulo(angulo);
+    const tensao = (carga / pernas) * mult;
+    const fs     = te.tipo === "CINTA" ? 7 : 5;
+
+    // Se o usuário informou o WLL real da eslinga, usa ele para calcular a utilização.
+    // Caso contrário, calcula o SWL mínimo necessário a partir do FS como referência.
+    const wllVal   = parseFloat(te.wll);
+    const temWll   = !isNaN(wllVal) && wllVal > 0;
+    const base     = temWll ? wllVal : carga / fs;   // WLL real ou SWL mínimo estimado
+    const taxa     = (tensao / base) * 100;
+    const statusBase = statusCalc(taxa, [80, 100]);
+    const status   = angulo < 45 ? "ATENCAO" : statusBase;
+
+    const r = {
+      tensao, mult, taxa, fs,
+      wll: temWll ? wllVal : null, temWll,
+      swl: temWll ? null : base,   // swl só quando não há WLL informado
+      status, bloqueado: false, inputs: {...te},
+      msg: angulo < 45
+        ? `Atenção: ângulo ${angulo}° abaixo de 45° — zona de risco elevado.`
+        : undefined,
+    };
     setResTe(r);
     onSave?.("tensao", r);
   };
@@ -3076,6 +3157,14 @@ function TabLingadaCarga({ onSave }) {
               <option value="CINTA">Cinta têxtil (FS 7:1)</option>
             </select>
           </Campo>
+          <Campo label="WLL da eslinga (kg) — etiqueta / certificado">
+            <input style={S.input} type="number" min="0" step="0.1" placeholder="Ex.: 3200"
+              value={te.wll} onChange={e=>setTe(p=>({...p,wll:e.target.value}))} />
+          </Campo>
+        </div>
+        <div style={{...S.normaBox, marginTop:12, fontSize:11, color:"#64748b"}}>
+          💡 Informe o WLL (Carga de Trabalho) da eslinga para calcular a utilização real. Se omitido,
+          a utilização será estimada pelo FS mínimo da norma ({te.tipo==="CINTA"?"7:1":"5:1"}).
         </div>
         <button style={{...S.btn(false), marginTop:16}} onClick={calcTensao}>Calcular</button>
         {resTe && (
@@ -3083,7 +3172,11 @@ function TabLingadaCarga({ onSave }) {
           ? <div style={{...S.errorBox, fontSize:13, marginTop:16, fontWeight:700}}>{resTe.msg}</div>
           : <ResultBox status={resTe.status} label="Tensão por perna"
               valor={resTe.tensao.toLocaleString("pt-BR",{maximumFractionDigits:1,timeZone:"America/Sao_Paulo"})} unidade="kgf"
-              msg={`Multiplicador: ${resTe.mult.toFixed(3)} | SWL: ${resTe.swl.toLocaleString("pt-BR",{maximumFractionDigits:1,timeZone:"America/Sao_Paulo"})} kg | Utilização: ${resTe.taxa.toFixed(1)}%${resTe.msg?` — ${resTe.msg}`:""}`}
+              msg={
+                resTe.temWll
+                  ? `Mult: ${resTe.mult.toFixed(3)} | WLL eslinga: ${resTe.wll.toLocaleString("pt-BR",{maximumFractionDigits:0,timeZone:"America/Sao_Paulo"})} kg | Utilização WLL: ${resTe.taxa.toFixed(1)}%${resTe.msg?` — ${resTe.msg}`:""}`
+                  : `Mult: ${resTe.mult.toFixed(3)} | SWL mín. (FS ${resTe.fs}:1): ${resTe.swl.toLocaleString("pt-BR",{maximumFractionDigits:1,timeZone:"America/Sao_Paulo"})} kg | Util. estimada: ${resTe.taxa.toFixed(1)}%${resTe.msg?` — ${resTe.msg}`:""}`
+              }
             />
         )}
         {/* Tabela de referência */}
@@ -3295,8 +3388,12 @@ function TabChecklistCampo({ planData }) {
             <Row l="Multiplicador"      v={fmt(tensao.mult,3)} />
             <Row l="Tensão por perna"   v={`${fmt(tensao.tensao,1)} kgf`} bold />
             <Row l="Fator de Segurança" v={`${tensao.fs}:1`} />
-            <Row l="SWL eslinga"        v={`${fmt(tensao.swl,1)} kg`} />
-            <Row l="Taxa utilização WLL"v={`${fmt(tensao.taxa,1)}%`} bold />
+            {tensao.temWll
+              ? <Row l="WLL eslinga (cert.)" v={`${fmt(tensao.wll,0)} kg`} />
+              : <Row l="SWL mín. estimado"   v={`${fmt(tensao.swl,1)} kg`} />
+            }
+            <Row l={tensao.temWll?"Utilização WLL":"Util. estimada (FS)"}
+                 v={`${fmt(tensao.taxa,1)}%`} bold />
             <Row l="Status"             v={tensao.status} bold />
           </Sec>
         )}
