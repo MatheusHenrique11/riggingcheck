@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn test *)",
+      "Bash(JAVA_HOME=/home/matheuszani/.jdks/azul-24.0.2 ./mvnw test -Dtest=\"CapacityControllerTest,SlingControllerTest\")"
+    ]
+  }
+}

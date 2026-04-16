@@ -349,7 +349,7 @@ const roleLabel = (role) => {
 };
 
 // ── LOGIN SCREEN ─────────────────────────────────────────────────────────────────
-function LoginScreen({ onAuth, onDemo }) {
+function LoginScreen({ onAuth }) {
   const isMobile = useIsMobile();
   // "select" | "usuario" | "admin"
   const [mode, setMode] = useState("select");
@@ -477,27 +477,6 @@ function LoginScreen({ onAuth, onDemo }) {
               <div style={{ marginLeft: "auto", color: accentAdmin, fontSize: 20 }}>→</div>
             </button>
           </div>
-
-          {onDemo && (
-            <div style={{ marginTop: 24 }}>
-              <button
-                onClick={onDemo}
-                style={{
-                  background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", 
-                  border: "none",
-                  borderRadius: 12, padding: "16px 24px", cursor: "pointer",
-                  textAlign: "center", transition: "all 0.2s", width: "100%",
-                  color: "#ffffff", fontSize: 14, fontWeight: "bold", fontFamily: "inherit",
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-                  boxShadow: "0 4px 14px rgba(16, 185, 129, 0.4)"
-                }}
-                onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; }}
-              >
-                Teste
-              </button>
-            </div>
-          )}
 
           <div style={{ ...S.normaBox, marginTop: 16, textAlign: "center" }}>
             NR-11 · ABNT NBR 11900 · ABNT NBR 13541
@@ -639,7 +618,7 @@ function LoginScreen({ onAuth, onDemo }) {
 }
 
 // ── MODULE 1: CAPACITY ───────────────────────────────────────────────────────────
-function CapacityModule({ onApproved, isDemo }) {
+function CapacityModule({ onApproved }) {
   const [form, setForm] = useState({ craneCapacity: "", loadWeight: "", riggingWeight: "50" });
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -654,26 +633,6 @@ function CapacityModule({ onApproved, isDemo }) {
     if (!loadWeight || loadWeight <= 0) { setError("Informe o peso da carga (valor positivo)."); return; }
 
     setLoading(true); setError(null);
-    if (isDemo) {
-      const totalLoad = loadWeight + riggingWeight;
-      const usagePercent = (totalLoad / craneCapacity) * 100;
-      let riskLevel = "SAFE";
-      if (usagePercent > 100) riskLevel = "DANGER";
-      else if (usagePercent > 85) riskLevel = "WARNING";
-
-      setTimeout(() => {
-        setResult({
-          approved: riskLevel !== "DANGER",
-          totalLoad,
-          usagePercent,
-          availableMargin: craneCapacity - totalLoad,
-          riskLevel
-        });
-        setLoading(false);
-      }, 400); // fake delay
-      return;
-    }
-
     try {
       const res = await authFetch(`${API}/api/capacity/verify`, {
         method: "POST",
@@ -754,7 +713,7 @@ function CapacityModule({ onApproved, isDemo }) {
 }
 
 // ── MODULE 2: SLING ──────────────────────────────────────────────────────────────
-function SlingModule({ onCompleted, isDemo }) {
+function SlingModule({ onCompleted }) {
   const [form, setForm] = useState({
     loadWeight: "", numberOfLegs: "2", angleFromHorizontal: "45",
     wll: "", temManilha: false, manilhaCapacidadeKg: "",
@@ -777,29 +736,6 @@ function SlingModule({ onCompleted, isDemo }) {
     if (temManilha && (!manilhaCapacidadeKg || manilhaCapacidadeKg <= 0)) { setError("Informe a capacidade da manilha (valor positivo)."); return; }
 
     setLoading(true); setError(null);
-    if (isDemo) {
-      const radians = angleFromHorizontal * (Math.PI / 180);
-      const tensionPerLeg = loadWeight / (numberOfLegs * Math.sin(radians));
-      const wllUsagePercent = (tensionPerLeg / wll) * 100;
-      let riskLevel = wllUsagePercent < 70 ? "SAFE" : wllUsagePercent < 90 ? "WARNING" : "DANGER";
-      const manilhaUsoPercent = temManilha ? (tensionPerLeg / manilhaCapacidadeKg) * 100 : null;
-      const manilhaCompativel = temManilha ? manilhaCapacidadeKg >= tensionPerLeg : null;
-      if (temManilha) {
-        const rm = manilhaUsoPercent < 70 ? "SAFE" : manilhaUsoPercent < 90 ? "WARNING" : "DANGER";
-        const nivel = r => r === "DANGER" ? 2 : r === "WARNING" ? 1 : 0;
-        if (nivel(rm) > nivel(riskLevel)) riskLevel = rm;
-      }
-      setTimeout(() => {
-        setResult({
-          tensionPerLeg, loadFactor: 1 / Math.sin(radians),
-          riskLevel, angleWarning: angleFromHorizontal < 45,
-          wllUsagePercent, temManilha, manilhaCapacidadeKg, manilhaUsoPercent, manilhaCompativel,
-        });
-        setLoading(false);
-      }, 400);
-      return;
-    }
-
     try {
       const res = await authFetch(`${API}/api/sling/calculate`, {
         method: "POST",
@@ -2338,448 +2274,6 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
     </div>
   );
 }
-
-// ── DEMO PAGE ─────────────────────────────────────────────────────────────────────
-const _dNow = Date.now();
-const DEMO_REQUESTS_DATA = [
-  {
-    id: "demo-001",
-    operacaoOs: "OS-DEMO-001",
-    riggerNome: "Carlos Andrade",
-    status: "PROSSEGUIR",
-    criadoEm: new Date(_dNow - 25 * 60 * 1000).toISOString(),
-    resolvidoEm: new Date(_dNow - 18 * 60 * 1000).toISOString(),
-    aprovadoPorNome: "Ana Lima",
-    observacao: "Operação dentro dos parâmetros de segurança. Prossiga com atenção.",
-    capGuindasteKg: 10000, capCargaKg: 6500, capAparelhoKg: 50,
-    capTotalKg: 6550, capUsoPercent: 65.5, capRisco: "SAFE",
-    eslNumPernas: 2, eslAnguloGraus: 60, eslTensaoPorPernaKg: 3775,
-    eslFatorCarga: 1.155, eslRisco: "SAFE", eslAnguloAviso: false,
-  },
-  {
-    id: "demo-002",
-    operacaoOs: "OS-DEMO-002",
-    riggerNome: "Roberto Santos",
-    status: "PARAR",
-    criadoEm: new Date(_dNow - 45 * 60 * 1000).toISOString(),
-    resolvidoEm: new Date(_dNow - 38 * 60 * 1000).toISOString(),
-    aprovadoPorNome: "Carlos Mendes",
-    observacao: "Carga excede 85% da capacidade. Ângulo de eslinga crítico (25°). Operação negada.",
-    capGuindasteKg: 5000, capCargaKg: 4800, capAparelhoKg: 80,
-    capTotalKg: 4880, capUsoPercent: 97.6, capRisco: "DANGER",
-    eslNumPernas: 2, eslAnguloGraus: 25, eslTensaoPorPernaKg: 5680,
-    eslFatorCarga: 2.366, eslRisco: "DANGER", eslAnguloAviso: true,
-  },
-  {
-    id: "demo-003",
-    operacaoOs: "OS-DEMO-003",
-    riggerNome: "Maria Costa",
-    status: "ANALISAR",
-    criadoEm: new Date(_dNow - 5 * 60 * 1000).toISOString(),
-    resolvidoEm: null,
-    aprovadoPorNome: null,
-    observacao: null,
-    capGuindasteKg: 8000, capCargaKg: 5200, capAparelhoKg: 60,
-    capTotalKg: 5260, capUsoPercent: 65.75, capRisco: "SAFE",
-    eslNumPernas: 2, eslAnguloGraus: 50, eslTensaoPorPernaKg: 3435,
-    eslFatorCarga: 1.305, eslRisco: "SAFE", eslAnguloAviso: false,
-  },
-];
-
-const DEMO_USERS_DATA = [
-  { id: "du1", nome: "Carlos Andrade",  email: "carlos@demo.com",   role: "RIGGER",       ativo: true  },
-  { id: "du2", nome: "Roberto Santos",  email: "roberto@demo.com",  role: "RIGGER",       ativo: true  },
-  { id: "du3", nome: "Maria Costa",     email: "maria@demo.com",    role: "OPERADOR",     ativo: true  },
-  { id: "du4", nome: "João Silva",      email: "joao@demo.com",     role: "OPERADOR",     ativo: true  },
-  { id: "du5", nome: "Ana Lima",        email: "ana@demo.com",      role: "LIDER_EQUIPE", ativo: true  },
-  { id: "du6", nome: "Pedro Rocha",     email: "pedro@demo.com",    role: "OPERADOR",     ativo: false },
-];
-
-
-
-function SolTechCard({ sol }) {
-  return (
-    <div style={{ marginTop: 14, background: "#0a0a0f", borderRadius: 8, padding: 14 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-        <div>
-          <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Capacidade</div>
-          <div style={{ fontSize: 12, lineHeight: 1.8, color: "#94a3b8" }}>
-            <div>Guindaste: <strong style={{ color: "#e2e8f0" }}>{sol.capGuindasteKg?.toLocaleString("pt-BR")} kg</strong></div>
-            <div>Carga total: <strong style={{ color: "#e2e8f0" }}>{sol.capTotalKg?.toFixed(0)} kg</strong></div>
-            <div>Uso: <strong style={{ color: riskColor(sol.capRisco).color }}>{sol.capUsoPercent?.toFixed(1)}%</strong></div>
-            <div>Risco: <strong style={{ color: riskColor(sol.capRisco).color }}>{riskLabel(sol.capRisco)}</strong></div>
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Eslinga</div>
-          <div style={{ fontSize: 12, lineHeight: 1.8, color: "#94a3b8" }}>
-            <div>Pernas: <strong style={{ color: "#e2e8f0" }}>{sol.eslNumPernas}</strong></div>
-            <div>Ângulo: <strong style={{ color: sol.eslAnguloAviso ? "#f59e0b" : "#e2e8f0" }}>{sol.eslAnguloGraus}°{sol.eslAnguloAviso ? " ⚠️" : ""}</strong></div>
-            <div>Tensão/perna: <strong style={{ color: "#e2e8f0" }}>{sol.eslTensaoPorPernaKg?.toFixed(0)} kg</strong></div>
-            {sol.eslWllKg != null && (
-              <div>WLL: <strong style={{ color: "#e2e8f0" }}>{sol.eslWllKg?.toLocaleString("pt-BR")} kg</strong>
-                {sol.eslWllUsoPercent != null && <span style={{ color: riskColor(sol.eslRisco).color }}> ({sol.eslWllUsoPercent?.toFixed(1)}%)</span>}
-              </div>
-            )}
-            <div>Risco: <strong style={{ color: riskColor(sol.eslRisco).color }}>{riskLabel(sol.eslRisco)}</strong></div>
-          </div>
-        </div>
-      </div>
-      {sol.eslTemManilha && (
-        <div style={{ borderTop: "1px solid #1e2a3a", marginTop: 10, paddingTop: 10 }}>
-          <div style={{ fontSize: 10, color: "#475569", letterSpacing: "1px", textTransform: "uppercase", marginBottom: 6 }}>Manilha</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, fontSize: 12, color: "#94a3b8" }}>
-            <div>Capacidade: <strong style={{ color: "#e2e8f0" }}>{sol.eslManilhaCapacidadeKg?.toLocaleString("pt-BR")} kg</strong></div>
-            <div>Uso: <strong style={{ color: sol.eslManilhaCompativel ? "#22c55e" : "#ef4444" }}>{sol.eslManilhaUsoPercent?.toFixed(1)}%</strong></div>
-            <div>Compatível: <strong style={{ color: sol.eslManilhaCompativel ? "#22c55e" : "#ef4444" }}>{sol.eslManilhaCompativel ? "Sim" : "Não"}</strong></div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DemoPage({ onVoltar }) {
-  const isMobile = useIsMobile();
-  const [mainTab, setMainTab] = useState("rigger");
-
-  // ── ADMIN STATE ──
-  const [adminPainel, setAdminPainel] = useState("solicitacoes");
-  const [adminRequests, setAdminRequests] = useState(() => DEMO_REQUESTS_DATA.map(r => ({ ...r })));
-  const [adminFiltro, setAdminFiltro] = useState("TODOS");
-  const [adminObs, setAdminObs] = useState({});
-  const [equipe, setEquipe] = useState(() => DEMO_USERS_DATA.map(u => ({ ...u })));
-  const [novoForm, setNovoForm] = useState({ nome: "", email: "", role: "RIGGER" });
-  const [novoMsg, setNovoMsg] = useState(null);
-
-  // ── RIGGER DEMO STATE ──
-  const [riggerExTab, setRiggerExTab] = useState("cap");
-  const [demoClChecked, setDemoClChecked] = useState(() => {
-    const pre = {};
-    CHECKLIST[0].items.forEach((_, ii) => { pre[`0-${ii}`] = true; });
-    pre["1-0"] = true; pre["1-1"] = true;
-    return pre;
-  });
-
-  // ── ADMIN ACTIONS ──
-  const resolverAdmin = (id, acao) => {
-    setAdminRequests(prev => prev.map(r => r.id !== id ? r : {
-      ...r,
-      status: acao === "aprovar" ? "PROSSEGUIR" : "PARAR",
-      resolvidoEm: new Date().toISOString(),
-      aprovadoPorNome: "Demo Admin",
-      observacao: adminObs[id] || "",
-    }));
-    setAdminObs(o => { const n = { ...o }; delete n[id]; return n; });
-  };
-
-  const adicionarUser = () => {
-    if (!novoForm.nome.trim()) { setNovoMsg({ tipo: "erro", msg: "Informe o nome." }); return; }
-    setEquipe(p => [...p, {
-      id: `demo-u${Date.now()}`,
-      nome: novoForm.nome,
-      email: novoForm.email || `${novoForm.nome.toLowerCase().replace(/\s+/g, ".")}@demo.com`,
-      role: novoForm.role,
-      ativo: true,
-    }]);
-    setNovoForm({ nome: "", email: "", role: "RIGGER" });
-    setNovoMsg({ tipo: "suc", msg: "Usuário adicionado ao demo." });
-    setTimeout(() => setNovoMsg(null), 3000);
-  };
-
-  const toggleUserAtivo = (id) => setEquipe(p => p.map(u => u.id !== id ? u : { ...u, ativo: !u.ativo }));
-
-  const adminFiltered = adminFiltro === "TODOS" ? adminRequests : adminRequests.filter(r => r.status === adminFiltro);
-
-  // pré-exemplos de capacidade
-  const CAP_EX = [
-    { label: "Cenário 1 — Operação Segura", crane: 10000, load: 6500, rigging: 50, total: 6550, pct: 65.5, margin: 3450, risk: "SAFE" },
-    { label: "Cenário 2 — Atenção Necessária", crane: 8000, load: 7000, rigging: 80, total: 7080, pct: 88.5, margin: 920, risk: "WARNING" },
-    { label: "Cenário 3 — Operação Negada", crane: 5000, load: 5200, rigging: 80, total: 5280, pct: 105.6, margin: -280, risk: "DANGER" },
-  ];
-  // pré-exemplos de lingada
-  const SLING_EX = [
-    { label: "Cenário 1 — Seguro", load: 6550, legs: 2, angle: 60, tension: 3783, factor: 1.155, risk: "SAFE", warn: false },
-    { label: "Cenário 2 — Atenção (ângulo baixo)", load: 7080, legs: 2, angle: 40, tension: 5508, factor: 1.556, risk: "WARNING", warn: true },
-    { label: "Cenário 3 — Perigoso", load: 4800, legs: 2, angle: 25, tension: 5680, factor: 2.366, risk: "DANGER", warn: true },
-  ];
-
-  const demoClTotal = CHECKLIST.reduce((s, c) => s + c.items.length, 0);
-  const demoClDone  = Object.values(demoClChecked).filter(Boolean).length;
-  const demoClPct   = Math.round((demoClDone / demoClTotal) * 100);
-
-  const DEMO_BADGE = (
-    <span style={{ background: "#7c3aed22", border: "1px solid #a78bfa44", color: "#a78bfa", fontSize: 10, fontWeight: 700, letterSpacing: "2px", padding: "2px 8px", borderRadius: 4, textTransform: "uppercase", marginLeft: 8 }}>
-      DEMO
-    </span>
-  );
-
-  return (
-    <div style={S.app}>
-
-      {/* ── Header ── */}
-      <div style={S.header(isMobile)}>
-        <div style={S.headerTop(isMobile)}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <button onClick={onVoltar} style={S.logoutBtn(isMobile)}>← Voltar</button>
-            <div>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <span style={S.logoText(isMobile)}>RiggingCheck</span>
-                {DEMO_BADGE}
-              </div>
-              <div style={S.logoSub(isMobile)}>Demonstração de Funcionalidades</div>
-            </div>
-          </div>
-          {!isMobile && (
-            <div style={{ fontSize: 11, color: "#f59e0b", background: "rgba(245,158,11,0.08)", border: "1px solid #f59e0b33", borderRadius: 6, padding: "6px 12px" }}>
-              ⚠️ Dados simulados — sem conexão à API
-            </div>
-          )}
-        </div>
-        <div style={S.tabs(isMobile)}>
-          <button style={S.tab(mainTab === "admin",  isMobile)} onClick={() => setMainTab("admin")}>🔑 Líder de Equipe</button>
-          <button style={S.tab(mainTab === "rigger", isMobile)} onClick={() => setMainTab("rigger")}>👷 Rigger</button>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 960, margin: "0 auto", padding: isMobile ? "24px 16px" : "40px 24px" }}>
-
-        {/* Banner aviso */}
-        <div style={{ ...S.warnBox, marginBottom: 28 }}>
-          {mainTab === "admin"
-            ? "🎭 Demonstração — Líder de Equipe: veja solicitações com os 3 status possíveis e aprove/negue em tempo real. Nenhum dado é enviado ao servidor."
-            : "🎭 Demonstração — Rigger: exemplos pré-calculados de capacidade do guindaste, lingada e checklist NR-11. Os cálculos são os mesmos do sistema real."}
-        </div>
-
-        {/* ════════════════ ADMIN TAB ════════════════ */}
-        {mainTab === "admin" && (
-          <>
-            <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-              <button style={S.tab(adminPainel === "solicitacoes", isMobile)} onClick={() => setAdminPainel("solicitacoes")}>📋 Solicitações</button>
-              <button style={S.tab(adminPainel === "equipe",       isMobile)} onClick={() => setAdminPainel("equipe")}>👥 Equipe</button>
-            </div>
-
-            {/* ── SOLICITAÇÕES ── */}
-            {adminPainel === "solicitacoes" && (
-              <>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
-                  {["ANALISAR", "PROSSEGUIR", "PARAR", "TODOS"].map(s => (
-                    <button key={s} style={S.tab(adminFiltro === s, isMobile)} onClick={() => setAdminFiltro(s)}>{s}</button>
-                  ))}
-                </div>
-
-                {adminFiltered.length === 0 && (
-                  <div style={{ ...S.normaBox, textAlign: "center", padding: 36 }}>
-                    Nenhuma solicitação com status "{adminFiltro}".
-                  </div>
-                )}
-
-                {adminFiltered.map(sol => (
-                  <div key={sol.id} style={{ background: "#0f0f1a", border: `1px solid ${statusColor(sol.status)}22`, borderRadius: 12, padding: 24, marginBottom: 16 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
-                      <div>
-                        <div style={{ fontWeight: 700, color: "#e2e8f0", fontSize: 15 }}>OS: {sol.operacaoOs}</div>
-                        <div style={{ color: "#94a3b8", fontSize: 13, marginTop: 4 }}>Rigger: {sol.riggerNome}</div>
-                        <div style={{ color: "#475569", fontSize: 11, marginTop: 4 }}>
-                          Solicitado em: {new Date(sol.criadoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })}
-                        </div>
-                        {sol.resolvidoEm && (
-                          <div style={{ color: "#475569", fontSize: 11 }}>
-                            Resolvido em: {new Date(sol.resolvidoEm).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })} por {sol.aprovadoPorNome}
-                          </div>
-                        )}
-                        {sol.observacao && (
-                          <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>Obs: "{sol.observacao}"</div>
-                        )}
-                      </div>
-                      <div style={S.riskBadge(statusColor(sol.status))}>{sol.status}</div>
-                    </div>
-
-                    <SolTechCard sol={sol} />
-
-                    {sol.status === "ANALISAR" && (
-                      <div style={{ marginTop: 16 }}>
-                        <input
-                          style={{ ...S.input, fontSize: 12, padding: "8px 12px", width: "100%", boxSizing: "border-box" }}
-                          placeholder="Observação (opcional)"
-                          value={adminObs[sol.id] || ""}
-                          onChange={e => setAdminObs(o => ({ ...o, [sol.id]: e.target.value }))}
-                        />
-                        <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
-                          <button
-                            style={{ ...S.btn(false), background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#000", padding: "10px 24px" }}
-                            onClick={() => resolverAdmin(sol.id, "aprovar")}>
-                            ✅ Autorizar Içamento
-                          </button>
-                          <button
-                            style={{ ...S.btn(false), background: "rgba(239,68,68,0.12)", border: "1px solid #ef444466", color: "#ef4444", padding: "10px 24px" }}
-                            onClick={() => resolverAdmin(sol.id, "negar")}>
-                            🚫 Negar
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </>
-            )}
-
-            {/* ── EQUIPE ── */}
-            {adminPainel === "equipe" && (
-              <>
-                <div style={{ background: "#0f0f1a", border: "1px solid #1e2a3a", borderRadius: 12, padding: 24, marginBottom: 32 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#f59e0b", marginBottom: 16, letterSpacing: "1px", textTransform: "uppercase" }}>
-                    + Novo Usuário (Demo)
-                  </div>
-                  <div style={S.grid()}>
-                    <div style={S.field}>
-                      <label style={S.label}>Nome completo</label>
-                      <input style={S.input} placeholder="João da Silva" value={novoForm.nome}
-                        onChange={e => setNovoForm(f => ({ ...f, nome: e.target.value }))} />
-                    </div>
-                    <div style={S.field}>
-                      <label style={S.label}>E-mail (opcional)</label>
-                      <input style={S.input} type="email" placeholder="joao@empresa.com" value={novoForm.email}
-                        onChange={e => setNovoForm(f => ({ ...f, email: e.target.value }))} />
-                    </div>
-                    <div style={S.field}>
-                      <label style={S.label}>Cargo</label>
-                      <select style={{ ...S.input, cursor: "pointer" }} value={novoForm.role}
-                        onChange={e => setNovoForm(f => ({ ...f, role: e.target.value }))}>
-                        <option value="RIGGER">Rigger</option>
-                        <option value="OPERADOR">Operador</option>
-                        <option value="LIDER_EQUIPE">Líder de Equipe</option>
-                        <option value="GERENTE_OPERACOES">Gerente de Operações</option>
-                        <option value="ADMIN_EMPRESA">Admin Empresa</option>
-                      </select>
-                    </div>
-                  </div>
-                  {novoMsg && (
-                    <div style={{ ...(novoMsg.tipo === "erro" ? S.errorBox : S.successBox), marginTop: 12 }}>{novoMsg.msg}</div>
-                  )}
-                  <button style={{ ...S.btn(false), marginTop: 16 }} onClick={adicionarUser}>
-                    Adicionar ao Demo
-                  </button>
-                </div>
-
-                <div style={{ fontSize: 11, color: "#475569", letterSpacing: "2px", textTransform: "uppercase", marginBottom: 16 }}>
-                  Membros da equipe ({equipe.length})
-                </div>
-                {equipe.map(f => (
-                  <div key={f.id} style={{ background: "#0f0f1a", border: `1px solid ${f.ativo ? "#1e2a3a" : "#2d0000"}`, borderRadius: 12, padding: 18, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-                    <div>
-                      <div style={{ fontWeight: 700, color: f.ativo ? "#e2e8f0" : "#475569", fontSize: 14 }}>{f.nome}</div>
-                      <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>{f.email}</div>
-                      <div style={{ marginTop: 6, display: "flex", gap: 8, alignItems: "center" }}>
-                        <span style={{ background: "#1e2a3a", color: "#38bdf8", fontSize: 11, padding: "2px 8px", borderRadius: 4 }}>
-                          {roleLabel(f.role)}
-                        </span>
-                        {!f.ativo && (
-                          <span style={{ background: "#2d0000", color: "#ef4444", fontSize: 11, padding: "2px 8px", borderRadius: 4 }}>Inativo</span>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => toggleUserAtivo(f.id)}
-                      style={{ fontSize: 12, padding: "8px 16px", borderRadius: 8, border: "1px solid", cursor: "pointer",
-                        background: f.ativo ? "rgba(239,68,68,0.08)" : "rgba(34,197,94,0.08)",
-                        borderColor: f.ativo ? "#ef444444" : "#22c55e44",
-                        color: f.ativo ? "#ef4444" : "#22c55e" }}>
-                      {f.ativo ? "Desativar" : "Reativar"}
-                    </button>
-                  </div>
-                ))}
-              </>
-            )}
-          </>
-        )}
-
-        {/* ════════════════ RIGGER TAB ════════════════ */}
-        {mainTab === "rigger" && (
-          <>
-            {/* sub-tabs */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-              <button style={S.tab(riggerExTab === "cap",   isMobile)} onClick={() => setRiggerExTab("cap")}>⚖️ Capacidade</button>
-              <button style={S.tab(riggerExTab === "sling", isMobile)} onClick={() => setRiggerExTab("sling")}>📐 Lingada</button>
-              <button style={S.tab(riggerExTab === "check", isMobile)} onClick={() => setRiggerExTab("check")}>📋 Checklist</button>
-            </div>
-
-            {/* ── CAPACIDADE ── */}
-            {riggerExTab === "cap" && (
-              <CapacityModule isDemo={true} />
-            )}
-
-            {/* ── LINGADA ── */}
-            {riggerExTab === "sling" && (
-              <SlingModule isDemo={true} />
-            )}
-
-            {/* ── CHECKLIST ── */}
-            {riggerExTab === "check" && (
-              <div style={S.card}>
-                <div style={S.cardTitle}>📋 &nbsp;Checklist de Içamento — NR-11 / ABNT</div>
-                <div style={S.normaBox}>
-                  📋 <strong style={{ color: "#94a3b8" }}>Como funciona:</strong> Todos os {CHECKLIST.reduce((s,c) => s + c.items.length, 0)} itens devem ser marcados antes
-                  de solicitar a liberação ao Líder de Equipe. Clique nos itens abaixo para simular a marcação.
-                </div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, marginTop: 20 }}>
-                  <div style={{ fontSize: 13 }}>
-                    <span style={{ color: demoClDone === demoClTotal ? "#22c55e" : "#f59e0b", fontWeight: 700 }}>{demoClDone}</span>
-                    <span style={{ color: "#64748b" }}> / {demoClTotal} itens verificados</span>
-                  </div>
-                  <div style={S.riskBadge(demoClDone === demoClTotal ? "#22c55e" : "#f59e0b")}>{demoClPct}%</div>
-                </div>
-                <div style={S.progressBar}>
-                  <div style={S.progressFill(demoClPct, demoClDone === demoClTotal ? "#22c55e" : "#f59e0b")} />
-                </div>
-                {CHECKLIST.map((cat, ci) => (
-                  <div key={ci}>
-                    <div style={S.catTitle}>▸ {cat.category}
-                      <span style={{ color: "#475569", fontWeight: 400 }}>
-                        ({cat.items.filter((_, ii) => demoClChecked[`${ci}-${ii}`]).length}/{cat.items.length})
-                      </span>
-                    </div>
-                    {cat.items.map((item, ii) => {
-                      const key = `${ci}-${ii}`;
-                      const isChecked = !!demoClChecked[key];
-                      return (
-                        <div key={ii} style={S.checkRow(isChecked)} onClick={() => setDemoClChecked(p => ({ ...p, [key]: !p[key] }))}>
-                          <div style={S.checkbox(isChecked)}>
-                            {isChecked && <span style={{ color: "#000", fontSize: 13, fontWeight: 900 }}>✓</span>}
-                          </div>
-                          <span style={{ fontSize: 13, lineHeight: 1.5, userSelect: "none" }}>{item}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-                <div style={{ marginTop: 28 }}>
-                  <button style={S.btn(demoClDone < demoClTotal)} disabled={demoClDone < demoClTotal}>
-                    {demoClDone < demoClTotal
-                      ? `🔒 Aguardando ${demoClTotal - demoClDone} item(s)`
-                      : "✅ Checklist completo — pronto para solicitar liberação"}
-                  </button>
-                </div>
-                {demoClDone === demoClTotal && (
-                  <div style={{ ...S.successBox, marginTop: 16 }}>
-                    No sistema real, ao clicar em "Solicitar Liberação" o Líder de Equipe recebe a notificação e pode aprovar ou negar.
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
-
-        <div style={{ ...S.normaBox, textAlign: "center", marginTop: 32 }}>
-          RiggingCheck Demo &nbsp;·&nbsp; Nenhum dado é persistido nesta página
-          <br />
-          <span style={{ color: "#475569" }}>NR-11 · ABNT NBR 11900 · ABNT NBR 13541 · Petrobrás N-2869</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── CARD TÉCNICO (reutilizado em vários dashboards) ──────────────────────────────
 function CardTecnicoSol({ sol }) {
   return (
@@ -3233,28 +2727,770 @@ function GerenteDashboard({ onVoltar, isMobile }) {
   );
 }
 
+// ── PLANEJAMENTO BÁSICO ───────────────────────────────────────────────────────────
+
+const MATERIAIS = [
+  { nome: "Aço",                 pe: 7850  },
+  { nome: "Alumínio",            pe: 2800  },
+  { nome: "Bronze",              pe: 8500  },
+  { nome: "Chumbo",              pe: 11400 },
+  { nome: "Cobre",               pe: 8900  },
+  { nome: "Ferro fundido",       pe: 7250  },
+  { nome: "Concreto simples",    pe: 2400  },
+  { nome: "Concreto armado",     pe: 2500  },
+  { nome: "Granito",             pe: 2800  },
+  { nome: "Mármore",             pe: 2800  },
+  { nome: "Madeira pinho/cedro", pe: 500   },
+  { nome: "Borracha",            pe: 1700  },
+  { nome: "Vidro plano",         pe: 2600  },
+];
+
+const FATORES_SEG = [
+  { tipo: "Cabos e cordoalhas estáticos",       fsMin: 3  },
+  { tipo: "Cabos para tração horizontal",        fsMin: 4  },
+  { tipo: "Guinchos, guindastes e escavadeiras", fsMin: 5  },
+  { tipo: "Pontes rolantes",                     fsMin: 6  },
+  { tipo: "Talhas elétricas",                    fsMin: 7  },
+  { tipo: "Guindaste estacionário",              fsMin: 6  },
+  { tipo: "Laços",                               fsMin: 5  },
+  { tipo: "Elevador de obra",                    fsMin: 8  },
+  { tipo: "Elevador de passageiros",             fsMin: 12 },
+];
+
+// Para ângulos intermediários usa-se sin() diretamente; tabela é referência visual
+const multAngulo = (graus) => {
+  const r = (graus * Math.PI) / 180;
+  return graus > 0 ? 1 / Math.sin(r) : Infinity;
+};
+
+const statusCalc = (pct, limites = [80, 100]) =>
+  pct <= limites[0] ? "SEGURO" : pct <= limites[1] ? "ATENCAO" : "REPROVADO";
+
+const statusStyle = (s) => ({
+  SEGURO:    { color: "#22c55e", bg: "#052e16", border: "#22c55e33" },
+  ATENCAO:   { color: "#f59e0b", bg: "#2d1900", border: "#f59e0b33" },
+  REPROVADO: { color: "#ef4444", bg: "#2d0000", border: "#ef444433" },
+}[s] || { color: "#64748b", bg: "#0f0f1a", border: "#1e1e35" });
+
+function ResultBox({ status, label, valor, unidade, msg }) {
+  const st = statusStyle(status);
+  return (
+    <div style={{ background: st.bg, border: `1px solid ${st.border}`, borderRadius: 12, padding: 20, marginTop: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+        <div>
+          <div style={{ fontSize: 11, color: "#64748b", letterSpacing: "1px", textTransform: "uppercase" }}>{label}</div>
+          <div style={{ fontSize: 32, fontWeight: 800, color: st.color, marginTop: 4 }}>
+            {valor} <span style={{ fontSize: 14, fontWeight: 400 }}>{unidade}</span>
+          </div>
+          {msg && <div style={{ fontSize: 12, color: st.color, marginTop: 4 }}>{msg}</div>}
+        </div>
+        <div style={{ background: st.color, color: "#000", fontWeight: 800, fontSize: 11, letterSpacing: "2px", padding: "6px 14px", borderRadius: 6 }}>
+          {status}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Campo({ label, children }) {
+  return (
+    <div style={S.field}>
+      <label style={S.label}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
+// ── TAB 1: GUINDASTE & CARGA ──────────────────────────────────────────────────────
+function TabGuindasteCarga({ onSave }) {
+  // Carga Bruta
+  const [cb, setCb] = useState({ liq: "", esl: "", man: "", disp: "" });
+  const [resCb, setResCb] = useState(null);
+
+  // Volume / Peso
+  const [forma, setForma] = useState("PARALELEPIPEDO");
+  const [dims, setDims] = useState({ L: "", C: "", H: "", D: "" });
+  const [matIdx, setMatIdx] = useState(0);
+  const [resVol, setResVol] = useState(null);
+
+  // SWL
+  const [swl, setSwl] = useState({ crm: "", fsIdx: 2, forca: "" });
+  const [resSwl, setResSwl] = useState(null);
+
+  const calcCargaBruta = () => {
+    const v = Object.values(cb).map(Number);
+    if (v.some(isNaN)) return;
+    const total = v.reduce((a, b) => a + b, 0);
+    const n2869 = total >= 20000;
+    const r = { total, n2869, inputs: { ...cb } };
+    setResCb(r);
+    onSave?.("cargaBruta", r);
+  };
+
+  const calcVolume = () => {
+    const { L, C, H, D } = dims;
+    const l = parseFloat(L), c = parseFloat(C), h = parseFloat(H), d = parseFloat(D);
+    let vol = 0;
+    if (forma === "PARALELEPIPEDO") { if ([l,c,h].some(isNaN)) return; vol = l * c * h; }
+    if (forma === "CILINDRO")       { if ([d,h].some(isNaN)) return; vol = (d*d*0.7854) * h; }
+    if (forma === "PIRAMIDE")       { if ([l,c,h].some(isNaN)) return; vol = l * c * (h / 3); }
+    if (forma === "CUBO")           { if (isNaN(l)) return; vol = l * l * l; }
+    if (forma === "CUNHA")          { if ([l,c,h].some(isNaN)) return; vol = (l * c / 2) * h; }
+    const mat = MATERIAIS[matIdx];
+    const peso = vol * mat.pe;
+    const r = { vol, peso, forma, matNome: mat.nome, matPe: mat.pe };
+    setResVol(r);
+    onSave?.("volume", r);
+  };
+
+  const calcSwl = () => {
+    const crm = parseFloat(swl.crm), forca = parseFloat(swl.forca);
+    if (isNaN(crm) || isNaN(forca) || crm <= 0) return;
+    const fs = FATORES_SEG[swl.fsIdx].fsMin;
+    const swlVal = crm / fs;
+    const taxa = (forca / swlVal) * 100;
+    const status = statusCalc(taxa, [80, 100]);
+    const r = { swlVal, taxa, fs, status, crm, forca, tipoAplicacao: FATORES_SEG[swl.fsIdx].tipo };
+    setResSwl(r);
+    onSave?.("swl", r);
+  };
+
+  const formaFields = {
+    PARALELEPIPEDO: [["L","Largura (m)"],["C","Comprimento (m)"],["H","Altura (m)"]],
+    CILINDRO:       [["D","Diâmetro (m)"],["H","Altura (m)"]],
+    PIRAMIDE:       [["L","Largura (m)"],["C","Comprimento (m)"],["H","Altura (m)"]],
+    CUBO:           [["L","Lado (m)"]],
+    CUNHA:          [["L","Largura (m)"],["C","Comprimento (m)"],["H","Altura (m)"]],
+  };
+
+  return (
+    <div>
+      {/* Carga Bruta */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>⚖ 1.1 — Carga Bruta</div>
+        <div style={S.grid()}>
+          {[["liq","Carga líquida (kg)"],["esl","Peso eslingas (kg)"],["man","Peso manilhas (kg)"],["disp","Peso dispositivos (kg)"]].map(([k,l])=>(
+            <Campo key={k} label={l}>
+              <input style={S.input} type="number" min="0" value={cb[k]}
+                onChange={e=>setCb(p=>({...p,[k]:e.target.value}))} />
+            </Campo>
+          ))}
+        </div>
+        <button style={{...S.btn(false), marginTop:16}} onClick={calcCargaBruta}>Calcular</button>
+        {resCb && (
+          <ResultBox
+            status={resCb.n2869 ? "ATENCAO" : "SEGURO"}
+            label="Carga Bruta Total"
+            valor={resCb.total.toLocaleString("pt-BR")}
+            unidade="kg"
+            msg={resCb.n2869 ? "N-2869: IÇAMENTO CRÍTICO — carga ≥ 20t. Requer Rigger Nível 3 e plano aprovado." : "Içamento Normal (< 20t)"}
+          />
+        )}
+      </div>
+
+      {/* Volume + Peso */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>📐 1.2 / 1.3 — Volume & Peso por Geometria</div>
+        <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:16 }}>
+          <Campo label="Forma geométrica">
+            <select style={S.select} value={forma} onChange={e=>{setForma(e.target.value); setDims({L:"",C:"",H:"",D:""}); setResVol(null);}}>
+              {["PARALELEPIPEDO","CILINDRO","PIRAMIDE","CUBO","CUNHA"].map(f=>(
+                <option key={f} value={f}>{f}</option>
+              ))}
+            </select>
+          </Campo>
+          <Campo label="Material (NBR 6120)">
+            <select style={S.select} value={matIdx} onChange={e=>setMatIdx(Number(e.target.value))}>
+              {MATERIAIS.map((m,i)=>(
+                <option key={m.nome} value={i}>{m.nome} — {m.pe.toLocaleString("pt-BR")} kg/m³</option>
+              ))}
+            </select>
+          </Campo>
+        </div>
+        <div style={S.grid()}>
+          {formaFields[forma].map(([k,l])=>(
+            <Campo key={k} label={l}>
+              <input style={S.input} type="number" min="0" step="0.01" value={dims[k]}
+                onChange={e=>setDims(p=>({...p,[k]:e.target.value}))} />
+            </Campo>
+          ))}
+        </div>
+        <button style={{...S.btn(false), marginTop:16}} onClick={calcVolume}>Calcular</button>
+        {resVol && (
+          <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginTop:16 }}>
+            <ResultBox status="SEGURO" label="Volume" valor={resVol.vol.toLocaleString("pt-BR",{maximumFractionDigits:4,timeZone:"America/Sao_Paulo"})} unidade="m³" />
+            <ResultBox status={resVol.peso >= 20000 ? "ATENCAO" : "SEGURO"} label="Peso estimado" valor={resVol.peso.toLocaleString("pt-BR",{maximumFractionDigits:1,timeZone:"America/Sao_Paulo"})} unidade="kg"
+              msg={resVol.peso>=20000?"N-2869: Içamento Crítico":undefined}/>
+          </div>
+        )}
+      </div>
+
+      {/* SWL */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>🔒 4 — SWL / Fator de Segurança</div>
+        <div style={S.grid()}>
+          <Campo label="CRM — Carga de Ruptura Mínima (kg)">
+            <input style={S.input} type="number" min="0" value={swl.crm}
+              onChange={e=>setSwl(p=>({...p,crm:e.target.value}))} />
+          </Campo>
+          <Campo label="Tipo de aplicação">
+            <select style={S.select} value={swl.fsIdx} onChange={e=>setSwl(p=>({...p,fsIdx:Number(e.target.value)}))}>
+              {FATORES_SEG.map((f,i)=>(
+                <option key={i} value={i}>{f.tipo} (FS ≥ {f.fsMin})</option>
+              ))}
+            </select>
+          </Campo>
+          <Campo label="Força exercida (kg)">
+            <input style={S.input} type="number" min="0" value={swl.forca}
+              onChange={e=>setSwl(p=>({...p,forca:e.target.value}))} />
+          </Campo>
+        </div>
+        <button style={{...S.btn(false), marginTop:16}} onClick={calcSwl}>Calcular</button>
+        {resSwl && (
+          <>
+            <ResultBox
+              status={resSwl.status}
+              label="SWL (Carga de Trabalho Segura)"
+              valor={resSwl.swlVal.toLocaleString("pt-BR",{maximumFractionDigits:1,timeZone:"America/Sao_Paulo"})}
+              unidade="kg"
+              msg={`Taxa de utilização: ${resSwl.taxa.toFixed(1)}% | FS aplicado: ${resSwl.fs}:1`}
+            />
+            <div style={{...S.progressBar, marginTop:12}}>
+              <div style={S.progressFill(resSwl.taxa, statusStyle(resSwl.status).color)} />
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── TAB 2: LINGADA & CARGA ────────────────────────────────────────────────────────
+function TabLingadaCarga({ onSave }) {
+  // Centro de Gravidade
+  const [cg, setCg] = useState({ p1:"", p2:"", dt:"" });
+  const [resCg, setResCg] = useState(null);
+
+  // Tensão nas Eslingas
+  const [te, setTe] = useState({ carga:"", pernas:"2", angulo:"60", tipo:"CABO" });
+  const [resTe, setResTe] = useState(null);
+
+  // N-2869 extras
+  const [n2869, setN2869] = useState({
+    vento:"", utilizacao:"", usaDoisGuindastes:false,
+    sobreInstalacoes:false, areaClassificada:false,
+  });
+  const [resN2, setResN2] = useState(null);
+
+  const calcCG = () => {
+    const p1=parseFloat(cg.p1), p2=parseFloat(cg.p2), dt=parseFloat(cg.dt);
+    if([p1,p2,dt].some(isNaN)||p1<=0||p2<=0||dt<=0) return;
+    const pt = p1+p2;
+    const d1 = (p2/pt)*dt;
+    const d2 = dt-d1;
+    const desequil = Math.abs(p1-p2)/pt*100;
+    const r = {pt,d1,d2,desequil,status:desequil>30?"ATENCAO":"SEGURO", inputs:{...cg}};
+    setResCg(r);
+    onSave?.("cg", r);
+  };
+
+  const calcTensao = () => {
+    const carga=parseFloat(te.carga), pernas=parseInt(te.pernas), angulo=parseFloat(te.angulo);
+    if([carga,pernas,angulo].some(isNaN)||carga<=0) return;
+    if(angulo<30) {
+      const r = {bloqueado:true, msg:"STOP WORK — N-2869/NR-11: ângulo < 30° é PROIBIDO. Risco de colapso da lingada.", inputs:{...te}};
+      setResTe(r); onSave?.("tensao", r); return;
+    }
+    const mult = multAngulo(angulo);
+    const tensao = (carga/pernas)*mult;
+    const fs = te.tipo==="CINTA" ? 7 : 5;
+    const swlV = carga/fs;
+    const taxa = (tensao/swlV)*100;
+    const status = angulo<45 ? "ATENCAO" : statusCalc(taxa,[80,100]);
+    const r = {tensao,mult,taxa,fs,swl:swlV,status,bloqueado:false, inputs:{...te},
+      msg: angulo<45 ? `Atenção: ângulo ${angulo}° abaixo de 45° — zona de risco elevado.` : undefined};
+    setResTe(r);
+    onSave?.("tensao", r);
+  };
+
+  const validarN2869 = () => {
+    const vento=parseFloat(n2869.vento), util=parseFloat(n2869.utilizacao);
+    const critico = (util>=75)||n2869.usaDoisGuindastes||n2869.sobreInstalacoes||n2869.areaClassificada;
+    const limUtil = critico ? 75 : 85;
+    const alertas = [];
+    if(!isNaN(vento)&&vento>=45) alertas.push(`Vento ${vento} km/h ≥ 45 km/h — OPERAÇÃO PROIBIDA.`);
+    if(!isNaN(util)&&util>limUtil) alertas.push(`Utilização ${util}% excede limite ${limUtil}% para içamento ${critico?"Crítico":"Normal"}.`);
+    if(n2869.usaDoisGuindastes) alertas.push("Dois guindastes → Içamento Crítico: exige Rigger Nível 3.");
+    if(n2869.sobreInstalacoes) alertas.push("Içamento sobre instalações vivas → Crítico.");
+    if(n2869.areaClassificada) alertas.push("Área classificada (risco explosão) → Crítico.");
+    const r = {critico,limUtil,alertas,inputs:{...n2869},
+      status: alertas.length===0?"SEGURO":(!isNaN(vento)&&vento>=45)||(!isNaN(util)&&util>100)?"REPROVADO":"ATENCAO"};
+    setResN2(r);
+    onSave?.("n2869", r);
+  };
+
+  return (
+    <div>
+      {/* Centro de Gravidade */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>⚖ 2 — Centro de Gravidade (2 pontos)</div>
+        <div style={S.grid()}>
+          {[["p1","P1 — Peso no ponto 1 (kg)"],["p2","P2 — Peso no ponto 2 (kg)"],["dt","Dt — Distância total entre pontos (m)"]].map(([k,l])=>(
+            <Campo key={k} label={l}>
+              <input style={S.input} type="number" min="0" step="0.01" value={cg[k]}
+                onChange={e=>setCg(p=>({...p,[k]:e.target.value}))} />
+            </Campo>
+          ))}
+        </div>
+        <button style={{...S.btn(false), marginTop:16}} onClick={calcCG}>Calcular</button>
+        {resCg && (
+          <>
+            <ResultBox status={resCg.status} label="Posição do CG relativa ao Ponto 1"
+              valor={resCg.d1.toLocaleString("pt-BR",{maximumFractionDigits:3,timeZone:"America/Sao_Paulo"})} unidade="m"
+              msg={`d2: ${resCg.d2.toLocaleString("pt-BR",{maximumFractionDigits:3,timeZone:"America/Sao_Paulo"})} m | Desequilíbrio: ${resCg.desequil.toFixed(1)}%${resCg.desequil>30?" — ATENÇÃO: carga desequilibrada":""}`}
+            />
+          </>
+        )}
+      </div>
+
+      {/* Tensão nas Eslingas */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>📐 3 — Tensão nas Eslingas (N-2869/NBR 13541)</div>
+        <div style={S.grid()}>
+          <Campo label="Carga total (kg)">
+            <input style={S.input} type="number" min="0" value={te.carga}
+              onChange={e=>setTe(p=>({...p,carga:e.target.value}))} />
+          </Campo>
+          <Campo label="Número de pernas">
+            <select style={S.select} value={te.pernas} onChange={e=>setTe(p=>({...p,pernas:e.target.value}))}>
+              {[1,2,3,4].map(n=><option key={n} value={n}>{n} perna{n>1?"s":""}</option>)}
+            </select>
+          </Campo>
+          <Campo label="Ângulo da eslinga (° com a vertical) — mín. 30°">
+            <input style={S.input} type="number" min="1" max="90" value={te.angulo}
+              onChange={e=>setTe(p=>({...p,angulo:e.target.value}))} />
+          </Campo>
+          <Campo label="Tipo de eslinga">
+            <select style={S.select} value={te.tipo} onChange={e=>setTe(p=>({...p,tipo:e.target.value}))}>
+              <option value="CABO">Cabo de aço (FS 5:1)</option>
+              <option value="CINTA">Cinta têxtil (FS 7:1)</option>
+            </select>
+          </Campo>
+        </div>
+        <button style={{...S.btn(false), marginTop:16}} onClick={calcTensao}>Calcular</button>
+        {resTe && (
+          resTe.bloqueado
+          ? <div style={{...S.errorBox, fontSize:13, marginTop:16, fontWeight:700}}>{resTe.msg}</div>
+          : <ResultBox status={resTe.status} label="Tensão por perna"
+              valor={resTe.tensao.toLocaleString("pt-BR",{maximumFractionDigits:1,timeZone:"America/Sao_Paulo"})} unidade="kgf"
+              msg={`Multiplicador: ${resTe.mult.toFixed(3)} | SWL: ${resTe.swl.toLocaleString("pt-BR",{maximumFractionDigits:1,timeZone:"America/Sao_Paulo"})} kg | Utilização: ${resTe.taxa.toFixed(1)}%${resTe.msg?` — ${resTe.msg}`:""}`}
+            />
+        )}
+        {/* Tabela de referência */}
+        <div style={{...S.normaBox, marginTop:16}}>
+          <div style={{color:"#f59e0b", marginBottom:8, fontSize:11, letterSpacing:"1px", textTransform:"uppercase"}}>Tabela de Multiplicadores (apostila SERTECH / N-2869)</div>
+          <div style={{display:"flex", flexWrap:"wrap", gap:"4px 14px", fontSize:11}}>
+            {[[90,1.000],[85,1.004],[80,1.015],[75,1.035],[70,1.064],[65,1.103],[60,1.155],[55,1.221],[50,1.305],[45,1.414],[40,1.556],[35,1.743]].map(([g,m])=>(
+              <span key={g} style={{color: g<45?"#f59e0b":g<30?"#ef4444":"#64748b"}}>{g}°→{m.toFixed(3)}</span>
+            ))}
+            <span style={{color:"#ef4444", fontWeight:700}}>{"<"}30°→PROIBIDO</span>
+          </div>
+        </div>
+      </div>
+
+      {/* N-2869 Validações */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>🛡 N-2869 — Classificação & Validações</div>
+        <div style={S.grid()}>
+          <Campo label="Velocidade do vento (km/h)">
+            <input style={S.input} type="number" min="0" value={n2869.vento}
+              onChange={e=>setN2869(p=>({...p,vento:e.target.value}))} />
+          </Campo>
+          <Campo label="Utilização do guindaste (%)">
+            <input style={S.input} type="number" min="0" max="100" value={n2869.utilizacao}
+              onChange={e=>setN2869(p=>({...p,utilizacao:e.target.value}))} />
+          </Campo>
+        </div>
+        <div style={{display:"flex", flexDirection:"column", gap:10, marginTop:14}}>
+          {[
+            ["usaDoisGuindastes","Operação com 2 ou mais guindastes simultâneos"],
+            ["sobreInstalacoes","Carga passa sobre tubulações/equipamentos críticos"],
+            ["areaClassificada","Área classificada (risco de explosão)"],
+          ].map(([k,l])=>(
+            <label key={k} style={{display:"flex", alignItems:"center", gap:10, cursor:"pointer", fontSize:12, color:"#94a3b8"}}>
+              <input type="checkbox" checked={n2869[k]} onChange={e=>setN2869(p=>({...p,[k]:e.target.checked}))}
+                style={{width:16, height:16, accentColor:"#f59e0b"}} />
+              {l}
+            </label>
+          ))}
+        </div>
+        <button style={{...S.btn(false), marginTop:16}} onClick={validarN2869}>Validar N-2869</button>
+        {resN2 && (
+          <>
+            <div style={{background: resN2.critico?"#2d1900":"#052e16", border:`1px solid ${resN2.critico?"#f59e0b33":"#22c55e33"}`, borderRadius:10, padding:14, marginTop:14}}>
+              <div style={{fontWeight:700, color: resN2.critico?"#f59e0b":"#22c55e", fontSize:13}}>
+                Classificação: IÇAMENTO {resN2.critico?"CRÍTICO":"NORMAL"}
+              </div>
+              <div style={{color:"#94a3b8", fontSize:11, marginTop:4}}>Limite de utilização: {resN2.limUtil}%</div>
+              {resN2.critico && <div style={{color:"#f59e0b", fontSize:11, marginTop:4}}>Requer assinatura de Rigger Nível 3 e plano aprovado pela supervisão.</div>}
+            </div>
+            {resN2.alertas.map((a,i)=>(
+              <div key={i} style={{...S.errorBox, marginTop:8}}>{a}</div>
+            ))}
+            {resN2.alertas.length===0 && <div style={{...S.successBox, marginTop:8}}>Todos os parâmetros N-2869 dentro dos limites.</div>}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── TAB 3: CHECKLIST DE CAMPO ─────────────────────────────────────────────────────
+const CHECKLIST_CAMPO = [
+  { id:"c1",  cat:"Guindastes & Solo",          item:"Estabilidade das esteiras/sapatas verificada" },
+  { id:"c2",  cat:"Guindastes & Solo",          item:"Laudo de compactação do solo disponível" },
+  { id:"c3",  cat:"Guindastes & Solo",          item:"Pressão das patolas calculada e dentro do limite do solo" },
+  { id:"c4",  cat:"Guindastes & Solo",          item:"Pranchas de distribuição dimensionadas e posicionadas" },
+  { id:"c5",  cat:"Equipamentos",               item:"Condições gerais do guindaste verificadas" },
+  { id:"c6",  cat:"Equipamentos",               item:"Condições do moitão e cabos de içamento verificadas" },
+  { id:"c7",  cat:"Equipamentos",               item:"Tabela de carga em poder do operador" },
+  { id:"c8",  cat:"Equipamentos",               item:"Raio real medido na trena ≤ raio planejado" },
+  { id:"c9",  cat:"Acessórios",                 item:"Eslingas/cintas sem fios rompidos ou cortes" },
+  { id:"c10", cat:"Acessórios",                 item:"Todos acessórios com TAG e certificado de teste (12 meses)" },
+  { id:"c11", cat:"Acessórios",                 item:"Manilhas e ganchos sem pintura (que oculta trincas)" },
+  { id:"c12", cat:"Acessórios",                 item:"Relação D/d verificada (dano por curvatura excessiva)" },
+  { id:"c13", cat:"Pessoal & Comunicação",      item:"Nível de experiência do operador compatível com o equipamento" },
+  { id:"c14", cat:"Pessoal & Comunicação",      item:"Nível de experiência do sinaleiro" },
+  { id:"c15", cat:"Pessoal & Comunicação",      item:"Supervisor experiente presente no local" },
+  { id:"c16", cat:"Pessoal & Comunicação",      item:"Sistema de comunicação (rádio) testado" },
+  { id:"c17", cat:"Ambiente",                   item:"Velocidade do vento < 45 km/h (boletim climático)" },
+  { id:"c18", cat:"Ambiente",                   item:"Verificação do subsolo (galerias, fundações, envelopes)" },
+  { id:"c19", cat:"Ambiente",                   item:"Redes elétricas na proximidade verificadas" },
+  { id:"c20", cat:"Ambiente",                   item:"Linha de fogo (área de giro e queda) isolada e sinalizada" },
+  { id:"c21", cat:"N-2869 — Petrobras",         item:"Plano de içamento elaborado e aprovado pela supervisão" },
+  { id:"c22", cat:"N-2869 — Petrobras",         item:"APR preenchida e assinada por todos os envolvidos" },
+  { id:"c23", cat:"N-2869 — Petrobras",         item:"Zona de exclusão delimitada conforme plano" },
+  { id:"c24", cat:"N-2869 — Petrobras",         item:"Para içamento crítico: Rigger Nível 3 designado e presente" },
+  { id:"c25", cat:"N-2869 — Petrobras",         item:"Certificados de calibração dos equipamentos de monitoração vigentes" },
+  { id:"c26", cat:"N-2869 — Petrobras",         item:"Plano de contingência discutido com toda a equipe" },
+];
+
+const CL_KEY = "rc_checklist_campo";
+
+function TabChecklistCampo({ planData }) {
+  const [checked, setChecked]       = useState(() => { try { return JSON.parse(localStorage.getItem(CL_KEY)||"{}"); } catch { return {}; } });
+  const [resp, setResp]             = useState("");
+  const [pat, setPat]               = useState({ cargaTotal:"", pesoGuindaste:"", areaPatolas:"" });
+  const [resPat, setResPat]         = useState(null);
+  const [resistSolo, setResistSolo] = useState("1.5");
+  const [showRelatorio, setShowRelatorio] = useState(false);
+
+  useEffect(() => { localStorage.setItem(CL_KEY, JSON.stringify(checked)); }, [checked]);
+
+  const toggle = (id) => setChecked(p => ({ ...p, [id]: !p[id] }));
+  const total  = CHECKLIST_CAMPO.length;
+  const done   = Object.values(checked).filter(Boolean).length;
+  const pct    = Math.round((done/total)*100);
+
+  const calcPatolamento = () => {
+    const ct=parseFloat(pat.cargaTotal), pg=parseFloat(pat.pesoGuindaste), area=parseFloat(pat.areaPatolas);
+    if([ct,pg,area].some(isNaN)||area<=0) return;
+    const pressao = (ct+pg)/area;
+    const resist  = parseFloat(resistSolo);
+    const ok      = !isNaN(resist) && pressao <= resist;
+    setResPat({ pressao, status: ok?"SEGURO":"REPROVADO",
+      msg: ok ? `${pressao.toFixed(3)} t/m² ≤ resistência ${resist} t/m²` : `${pressao.toFixed(3)} t/m² EXCEDE ${resist} t/m² — ampliar pranchas!` });
+  };
+
+  const categorias = [...new Set(CHECKLIST_CAMPO.map(i=>i.cat))];
+  const fmt = (v, dec=1) => v != null ? Number(v).toLocaleString("pt-BR",{maximumFractionDigits:dec,timeZone:"America/Sao_Paulo"}) : "—";
+  const stColor = s => s==="SEGURO"?"#16a34a":s==="ATENCAO"?"#d97706":"#dc2626";
+
+  const Relatorio = () => {
+    const { cargaBruta, volume, swl, cg, tensao, n2869 } = planData || {};
+    const emitido = new Date().toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo"});
+    const Sec = ({title, children}) => (
+      <div style={{marginBottom:18}}>
+        <div style={{background:"#1e3a5f",color:"#fff",fontWeight:700,fontSize:11,letterSpacing:"1.5px",textTransform:"uppercase",padding:"5px 12px",borderRadius:"6px 6px 0 0"}}>{title}</div>
+        <div style={{border:"1px solid #d1d5db",borderTop:"none",borderRadius:"0 0 6px 6px",padding:"4px 12px"}}>{children}</div>
+      </div>
+    );
+    const Row = ({l,v,bold}) => (
+      <div style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid #f3f4f6"}}>
+        <span style={{color:"#374151",fontSize:12}}>{l}</span>
+        <span style={{fontWeight:bold?700:500,color:"#111827",fontSize:12}}>{v}</span>
+      </div>
+    );
+    return (
+      <div id="rc-relatorio" style={{background:"#fff",color:"#111",padding:32,maxWidth:740,margin:"0 auto",fontFamily:"Arial,sans-serif"}}>
+        {/* Cabeçalho */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20,borderBottom:"3px solid #1e3a5f",paddingBottom:16}}>
+          <div>
+            <div style={{fontSize:22,fontWeight:800,color:"#1e3a5f"}}>RIGGINGCHECK</div>
+            <div style={{fontSize:12,color:"#6b7280"}}>Relatório de Planejamento de Içamento</div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:11,color:"#6b7280"}}>Emitido em</div>
+            <div style={{fontSize:13,fontWeight:700,color:"#111"}}>{emitido}</div>
+            {resp && <div style={{fontSize:12,color:"#374151",marginTop:4}}>Supervisor: <strong>{resp}</strong></div>}
+          </div>
+        </div>
+
+        {/* Carga Bruta */}
+        {cargaBruta && (
+          <Sec title="Carga Bruta">
+            <Row l="Carga líquida"    v={`${fmt(cargaBruta.inputs?.liq)} kg`} />
+            <Row l="Peso das eslingas"  v={`${fmt(cargaBruta.inputs?.esl)} kg`} />
+            <Row l="Peso das manilhas"  v={`${fmt(cargaBruta.inputs?.man)} kg`} />
+            <Row l="Peso dos dispositivos" v={`${fmt(cargaBruta.inputs?.disp)} kg`} />
+            <Row l="CARGA BRUTA TOTAL" v={`${fmt(cargaBruta.total)} kg`} bold />
+            <Row l="Classificação N-2869" v={cargaBruta.n2869?"IÇAMENTO CRÍTICO (≥ 20t)":"Içamento Normal (< 20t)"}
+                bold style={{color: cargaBruta.n2869?"#d97706":"#16a34a"}} />
+          </Sec>
+        )}
+
+        {/* Volume & Peso */}
+        {volume && (
+          <Sec title="Volume & Peso Estimado">
+            <Row l="Forma geométrica"   v={volume.forma} />
+            <Row l="Material"           v={`${volume.matNome} — ${fmt(volume.matPe,0)} kg/m³`} />
+            <Row l="Volume calculado"   v={`${fmt(volume.vol,4)} m³`} />
+            <Row l="Peso estimado"      v={`${fmt(volume.peso,1)} kg`} bold />
+          </Sec>
+        )}
+
+        {/* SWL */}
+        {swl && (
+          <Sec title="SWL / Fator de Segurança">
+            <Row l="CRM (Carga de Ruptura Mínima)" v={`${fmt(swl.crm)} kg`} />
+            <Row l="Aplicação"          v={swl.tipoAplicacao} />
+            <Row l="Fator de Segurança" v={`${swl.fs}:1`} />
+            <Row l="SWL"               v={`${fmt(swl.swlVal,1)} kg`} bold />
+            <Row l="Força exercida"     v={`${fmt(swl.forca)} kg`} />
+            <Row l="Taxa de utilização" v={`${fmt(swl.taxa,1)}%`} bold />
+            <Row l="Status"            v={swl.status} bold />
+          </Sec>
+        )}
+
+        {/* Centro de Gravidade */}
+        {cg && (
+          <Sec title="Centro de Gravidade">
+            <Row l="Peso P1"            v={`${fmt(cg.inputs?.p1)} kg`} />
+            <Row l="Peso P2"            v={`${fmt(cg.inputs?.p2)} kg`} />
+            <Row l="Peso total"         v={`${fmt(cg.pt)} kg`} bold />
+            <Row l="Distância total Dt" v={`${fmt(cg.inputs?.dt,3)} m`} />
+            <Row l="d1 (CG → ponto 1)" v={`${fmt(cg.d1,3)} m`} bold />
+            <Row l="d2 (CG → ponto 2)" v={`${fmt(cg.d2,3)} m`} bold />
+            <Row l="Desequilíbrio"      v={`${fmt(cg.desequil,1)}%${cg.desequil>30?" — ATENÇÃO":""}` } />
+          </Sec>
+        )}
+
+        {/* Tensão nas Eslingas */}
+        {tensao && !tensao.bloqueado && (
+          <Sec title="Tensão nas Eslingas">
+            <Row l="Carga total"        v={`${fmt(tensao.inputs?.carga)} kg`} />
+            <Row l="Número de pernas"   v={tensao.inputs?.pernas} />
+            <Row l="Ângulo (vertical)"  v={`${tensao.inputs?.angulo}°`} />
+            <Row l="Tipo"               v={tensao.inputs?.tipo==="CINTA"?"Cinta têxtil":"Cabo de aço"} />
+            <Row l="Multiplicador"      v={fmt(tensao.mult,3)} />
+            <Row l="Tensão por perna"   v={`${fmt(tensao.tensao,1)} kgf`} bold />
+            <Row l="Fator de Segurança" v={`${tensao.fs}:1`} />
+            <Row l="SWL eslinga"        v={`${fmt(tensao.swl,1)} kg`} />
+            <Row l="Taxa utilização WLL"v={`${fmt(tensao.taxa,1)}%`} bold />
+            <Row l="Status"             v={tensao.status} bold />
+          </Sec>
+        )}
+        {tensao?.bloqueado && (
+          <Sec title="Tensão nas Eslingas">
+            <div style={{color:"#dc2626",fontWeight:700,padding:"8px 0",fontSize:12}}>{tensao.msg}</div>
+          </Sec>
+        )}
+
+        {/* N-2869 */}
+        {n2869 && (
+          <Sec title="Validação N-2869 (Petrobras)">
+            <Row l="Classificação"      v={n2869.critico?"IÇAMENTO CRÍTICO":"Içamento Normal"} bold />
+            <Row l="Limite utilização"  v={`${n2869.limUtil}%`} />
+            <Row l="Vento informado"    v={n2869.inputs?.vento ? `${n2869.inputs.vento} km/h` : "—"} />
+            <Row l="Status geral"       v={n2869.status} bold />
+            {n2869.alertas?.length > 0 && (
+              <div style={{marginTop:6}}>
+                {n2869.alertas.map((a,i)=>(
+                  <div key={i} style={{color:"#dc2626",fontSize:11,padding:"2px 0"}}>⚠ {a}</div>
+                ))}
+              </div>
+            )}
+          </Sec>
+        )}
+
+        {/* Patolamento */}
+        {resPat && (
+          <Sec title="Patolamento">
+            <Row l="Carga total"          v={`${pat.cargaTotal} t`} />
+            <Row l="Peso do guindaste"    v={`${pat.pesoGuindaste} t`} />
+            <Row l="Área de apoio"        v={`${pat.areaPatolas} m²`} />
+            <Row l="Resistência do solo"  v={`${resistSolo} t/m²`} />
+            <Row l="Pressão calculada"    v={`${resPat.pressao.toFixed(3)} t/m²`} bold />
+            <Row l="Status"               v={resPat.status} bold />
+          </Sec>
+        )}
+
+        {/* Checklist */}
+        <Sec title={`Checklist de Campo — ${done}/${total} itens (${pct}%)`}>
+          {CHECKLIST_CAMPO.map(item=>(
+            <div key={item.id} style={{display:"flex",gap:8,padding:"3px 0",borderBottom:"1px solid #f3f4f6",alignItems:"flex-start"}}>
+              <span style={{color:checked[item.id]?"#16a34a":"#9ca3af",fontWeight:700,fontSize:13,minWidth:16}}>{checked[item.id]?"✓":"○"}</span>
+              <span style={{fontSize:11,color:checked[item.id]?"#374151":"#9ca3af"}}>{item.item}</span>
+            </div>
+          ))}
+        </Sec>
+
+        {/* Rodapé */}
+        <div style={{borderTop:"1px solid #d1d5db",marginTop:20,paddingTop:12,display:"flex",justifyContent:"space-between",fontSize:10,color:"#9ca3af",flexWrap:"wrap",gap:8}}>
+          <span>RiggingCheck · SERTECH · NR-11 · ABNT NBR 13541 · Petrobrás N-2869</span>
+          <span>Documento gerado automaticamente · Verificar dados antes de operar</span>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      {/* Modal Relatório */}
+      {showRelatorio && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",zIndex:1000,overflowY:"auto",padding:"24px 16px"}}>
+          <style>{`@media print{body>*{display:none!important}#rc-relatorio,#rc-relatorio *{display:block!important;background:white!important;color:black!important}#rc-print-btns{display:none!important}}`}</style>
+          <div id="rc-print-btns" style={{display:"flex",gap:10,justifyContent:"center",marginBottom:16}}>
+            <button onClick={()=>window.print()} style={{background:"#1e3a5f",color:"#fff",border:"none",borderRadius:8,padding:"10px 24px",fontWeight:700,fontSize:13,cursor:"pointer"}}>Imprimir / Salvar PDF</button>
+            <button onClick={()=>setShowRelatorio(false)} style={{background:"transparent",color:"#94a3b8",border:"1px solid #374151",borderRadius:8,padding:"10px 24px",fontSize:13,cursor:"pointer"}}>Fechar</button>
+          </div>
+          <Relatorio />
+        </div>
+      )}
+
+      {/* Patolamento */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>🦺 Cálculo de Patolamento (N-2869)</div>
+        <div style={{fontSize:11,color:"#64748b",marginBottom:14}}>P = (Carga total + Peso do guindaste) ÷ Área de apoio das patolas</div>
+        <div style={S.grid()}>
+          <Campo label="Carga total (t)"><input style={S.input} type="number" min="0" step="0.1" value={pat.cargaTotal} onChange={e=>setPat(p=>({...p,cargaTotal:e.target.value}))} /></Campo>
+          <Campo label="Peso do guindaste (t)"><input style={S.input} type="number" min="0" step="0.1" value={pat.pesoGuindaste} onChange={e=>setPat(p=>({...p,pesoGuindaste:e.target.value}))} /></Campo>
+          <Campo label="Área de apoio das patolas (m²)"><input style={S.input} type="number" min="0" step="0.01" value={pat.areaPatolas} onChange={e=>setPat(p=>({...p,areaPatolas:e.target.value}))} /></Campo>
+          <Campo label="Resistência do solo (t/m²)"><input style={S.input} type="number" min="0" step="0.1" value={resistSolo} onChange={e=>setResistSolo(e.target.value)} /></Campo>
+        </div>
+        <button style={{...S.btn(false),marginTop:16}} onClick={calcPatolamento}>Calcular Pressão</button>
+        {resPat && <ResultBox status={resPat.status} label="Pressão nas Patolas" valor={resPat.pressao.toFixed(3)} unidade="t/m²" msg={resPat.msg} />}
+      </div>
+
+      {/* Checklist */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>📋 Checklist de Campo — NR-11 + N-2869</div>
+        <Campo label="Supervisor Responsável">
+          <input style={{...S.input,maxWidth:320}} value={resp} onChange={e=>setResp(e.target.value)} />
+        </Campo>
+
+        <div style={{marginTop:16,marginBottom:20}}>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#64748b",marginBottom:6}}>
+            <span>{done}/{total} itens verificados</span>
+            <span style={{color:pct===100?"#22c55e":pct>=70?"#f59e0b":"#ef4444",fontWeight:700}}>{pct}%</span>
+          </div>
+          <div style={S.progressBar}><div style={S.progressFill(pct,pct===100?"#22c55e":pct>=70?"#f59e0b":"#ef4444")} /></div>
+        </div>
+
+        {categorias.map(cat => (
+          <div key={cat}>
+            <div style={{...S.catTitle,marginTop:20}}>▸ {cat}</div>
+            {CHECKLIST_CAMPO.filter(i=>i.cat===cat).map(item=>(
+              <div key={item.id} style={S.checkRow(checked[item.id])} onClick={()=>toggle(item.id)}>
+                <div style={S.checkbox(checked[item.id])}>{checked[item.id]&&<span style={{color:"#0f0f1a",fontSize:13,fontWeight:900}}>✓</span>}</div>
+                <span style={{fontSize:13,color:"#cbd5e1",lineHeight:1.5}}>{item.item}</span>
+              </div>
+            ))}
+          </div>
+        ))}
+
+        <div style={{display:"flex",gap:10,marginTop:24,flexWrap:"wrap"}}>
+          <button
+            style={{...S.btn(false),background:"linear-gradient(135deg,#1e3a5f,#1e40af)"}}
+            onClick={()=>setShowRelatorio(true)}
+          >
+            Gerar Relatório PDF
+          </button>
+          <button
+            style={{...S.btn(false),background:"transparent",border:"1px solid #ef444444",color:"#ef4444"}}
+            onClick={()=>{ setChecked({}); localStorage.removeItem(CL_KEY); }}
+          >
+            Limpar Checklist
+          </button>
+        </div>
+        <div style={{...S.normaBox,marginTop:12}}>
+          {resp&&<span>Supervisor: {resp} · </span>}{new Date().toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo"})}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── WRAPPER: PLANEJAMENTO BÁSICO ──────────────────────────────────────────────────
+function PlanejamentoBasico({ onVoltar, isMobile }) {
+  const [aba, setAba] = useState("guindaste");
+  const ABAS = [
+    { id:"guindaste", label: isMobile ? "Guindaste" : "Guindaste & Carga" },
+    { id:"lingada",   label: isMobile ? "Lingada"   : "Lingada & Carga"   },
+    { id:"checklist", label: isMobile ? "Checklist" : "Checklist de Campo" },
+  ];
+  return (
+    <div style={S.app}>
+      <div style={S.header(isMobile)}>
+        <div style={S.headerTop(isMobile)}>
+          <div style={S.logo}>
+            <div style={S.logoIcon}>🏗</div>
+            <div>
+              <div style={S.logoText(isMobile)}>RiggingCheck</div>
+              <div style={S.logoSub(isMobile)}>Planejamento Básico de Içamento</div>
+            </div>
+          </div>
+          <div style={S.userInfo(isMobile)}>
+            <button onClick={onVoltar} style={{...S.logoutBtn(isMobile), borderColor:"#f59e0b44", color:"#f59e0b"}}>
+              ← Voltar
+            </button>
+          </div>
+        </div>
+        <div style={S.tabs(isMobile)}>
+          {ABAS.map(a=>(
+            <button key={a.id} style={S.tab(aba===a.id, isMobile)} onClick={()=>setAba(a.id)}>
+              {a.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{...S.container, maxWidth:960}}>
+        {aba==="guindaste" && <TabGuindasteCarga />}
+        {aba==="lingada"   && <TabLingadaCarga />}
+        {aba==="checklist" && <TabChecklistCampo />}
+        <div style={{...S.normaBox, textAlign:"center", marginTop:32}}>
+          RiggingCheck · Planejamento Básico &nbsp;·&nbsp; SERTECH / ABNT NBR 13541 / NR-11 / Petrobrás N-2869
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── ROOT ─────────────────────────────────────────────────────────────────────────
 export default function App() {
   const isMobile = useIsMobile();
   const [authenticated, setAuthenticated] = useState(() => !!getToken());
-  const [view, setView] = useState("app"); // "app" | "admin" | "demo"
-  const [tab, setTab] = useState(0);
-  const [capacityOk, setCapacityOk] = useState(false);
-  const [slingOk, setSlingOk] = useState(false);
-  const [capacityData, setCapacityData] = useState(null);
-  const [slingData, setSlingData] = useState(null);
+  const [view, setView]   = useState("app"); // "app" | "admin"
+  const [aba, setAba]     = useState("guindaste");
+  const [planData, setPlanData] = useState({});
   const [showModalSenha, setShowModalSenha] = useState(false);
-  const user = getUser();
-  const isSuperAdmin   = IS_SUPER(user?.role);
+  const user          = getUser();
+  const isSuperAdmin  = IS_SUPER(user?.role);
   const isAdminEmpresa = user?.role === "ADMIN_EMPRESA";
-  const isLider        = user?.role === "LIDER_EQUIPE";
-  const isGerente      = user?.role === "GERENTE_OPERACOES";
-  const hasPanel       = isAdminEmpresa || isLider || isGerente;
+  const isLider       = user?.role === "LIDER_EQUIPE";
+  const isGerente     = user?.role === "GERENTE_OPERACOES";
 
-  const handleLogout = useCallback(() => {
-    clearAuth();
-    setAuthenticated(false);
-  }, []);
+  const handleLogout = useCallback(() => { clearAuth(); setAuthenticated(false); }, []);
 
   useEffect(() => {
     const handler = () => setAuthenticated(false);
@@ -3262,48 +3498,20 @@ export default function App() {
     return () => window.removeEventListener("rc_session_expired", handler);
   }, []);
 
-  if (view === "demo") {
-    return <DemoPage onVoltar={() => setView("app")} />;
+  // Painel admin — login exigido apenas aqui
+  if (view === "admin" && !authenticated) {
+    return <LoginScreen onAuth={() => setAuthenticated(true)} />;
   }
+  if (view === "admin" && isSuperAdmin)   return <SuperAdminDashboard   onVoltar={() => setView("app")} isMobile={isMobile} />;
+  if (view === "admin" && isAdminEmpresa) return <AdminDashboard         onVoltar={() => setView("app")} isMobile={isMobile} />;
+  if (view === "admin" && isLider)        return <LiderEquipeDashboard   onVoltar={() => setView("app")} isMobile={isMobile} />;
+  if (view === "admin" && isGerente)      return <GerenteDashboard       onVoltar={() => setView("app")} isMobile={isMobile} />;
 
-  if (!authenticated) {
-    return <LoginScreen onAuth={() => setAuthenticated(true)} onDemo={() => setView("demo")} />;
-  }
-
-  if (view === "admin" && isSuperAdmin) {
-    return <SuperAdminDashboard onVoltar={() => setView("app")} isMobile={isMobile} />;
-  }
-  if (view === "admin" && isAdminEmpresa) {
-    return <AdminDashboard onVoltar={() => setView("app")} isMobile={isMobile} />;
-  }
-  if (view === "admin" && isLider) {
-    return <LiderEquipeDashboard onVoltar={() => setView("app")} isMobile={isMobile} />;
-  }
-  if (view === "admin" && isGerente) {
-    return <GerenteDashboard onVoltar={() => setView("app")} isMobile={isMobile} />;
-  }
-
-  const tabs = [
-    {
-      label: "⚖ Capacidade",
-      locked: false,
-      component: <CapacityModule onApproved={(data) => { setCapacityData(data); setCapacityOk(true); }} />,
-    },
-    {
-      label: "📐 Eslingas",
-      locked: !capacityOk,
-      lockMsg: "Conclua a verificação de capacidade primeiro",
-      component: <SlingModule onCompleted={(data) => { setSlingData(data); setSlingOk(true); }} />,
-    },
-    {
-      label: "📋 Checklist NR-11",
-      locked: !slingOk,
-      lockMsg: "Conclua o cálculo de eslingas primeiro",
-      component: <ChecklistModule capacityData={capacityData} slingData={slingData} />,
-    },
+  const ABAS = [
+    { id: "guindaste", label: isMobile ? "Guindaste"  : "Guindaste & Carga"  },
+    { id: "lingada",   label: isMobile ? "Lingada"    : "Lingada & Carga"    },
+    { id: "checklist", label: isMobile ? "Checklist"  : "Checklist de Campo" },
   ];
-
-  const handleTabClick = (i) => { if (!tabs[i].locked) setTab(i); };
 
   return (
     <div style={S.app}>
@@ -3314,66 +3522,42 @@ export default function App() {
             <div style={S.logoIcon}>🏗</div>
             <div>
               <div style={S.logoText(isMobile)}>RiggingCheck</div>
-              <div style={S.logoSub(isMobile)}>Verificador de Segurança em Içamento</div>
+              <div style={S.logoSub(isMobile)}>Planejamento de Içamento</div>
             </div>
           </div>
           <div style={S.userInfo(isMobile)}>
-            {user && (
+            {user && <div style={S.roleBadge(isMobile)}>{roleLabel(user.role)}</div>}
+            {user && <div style={S.userBadge(isMobile)}>{user.userName}</div>}
+            {isSuperAdmin   && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#a78bfa44", color: "#a78bfa" }} onClick={() => setView("admin")}>{isMobile ? "⚙️" : "⚙️ Painel SaaS"}</button>}
+            {isAdminEmpresa && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#f59e0b44", color: "#f59e0b" }} onClick={() => setView("admin")}>{isMobile ? "🔑" : "🔑 Painel Admin"}</button>}
+            {isLider        && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#22c55e44", color: "#22c55e" }} onClick={() => setView("admin")}>{isMobile ? "📋" : "📋 Solicitações"}</button>}
+            {isGerente      && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => setView("admin")}>{isMobile ? "📊" : "📊 Painel Gerente"}</button>}
+            {authenticated ? (
               <>
-                <div style={S.roleBadge(isMobile)}>{roleLabel(user.role)}</div>
-                <div style={S.userBadge(isMobile)}>{user.userName}</div>
+                <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => setShowModalSenha(true)}>{isMobile ? "🔑" : "Alterar Senha"}</button>
+                <button style={S.logoutBtn(isMobile)} onClick={handleLogout}>Sair</button>
               </>
+            ) : (
+              <button style={{ ...S.logoutBtn(isMobile), borderColor: "#47556944", color: "#94a3b8" }} onClick={() => setView("admin")}>{isMobile ? "🔐" : "Acesso Admin"}</button>
             )}
-            {isSuperAdmin && (
-              <button style={{ ...S.logoutBtn(isMobile), borderColor: "#a78bfa44", color: "#a78bfa" }} onClick={() => setView("admin")}>
-                {isMobile ? "⚙️" : "⚙️ Painel SaaS"}
-              </button>
-            )}
-            {isAdminEmpresa && (
-              <button style={{ ...S.logoutBtn(isMobile), borderColor: "#f59e0b44", color: "#f59e0b" }} onClick={() => setView("admin")}>
-                {isMobile ? "🔑" : "🔑 Painel Admin"}
-              </button>
-            )}
-            {isLider && (
-              <button style={{ ...S.logoutBtn(isMobile), borderColor: "#22c55e44", color: "#22c55e" }} onClick={() => setView("admin")}>
-                {isMobile ? "📋" : "📋 Solicitações"}
-              </button>
-            )}
-            {isGerente && (
-              <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => setView("admin")}>
-                {isMobile ? "📊" : "📊 Painel Gerente"}
-              </button>
-            )}
-            <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => setShowModalSenha(true)}>
-              {isMobile ? "🔑" : "Alterar Senha"}
-            </button>
-            <button style={S.logoutBtn(isMobile)} onClick={handleLogout}>Sair</button>
           </div>
         </div>
         <div style={S.tabs(isMobile)}>
-          {tabs.map((t, i) => (
-            <button
-              key={i}
-              style={{ ...S.tab(tab === i, isMobile), ...(t.locked ? { opacity: 0.35, cursor: "not-allowed" } : {}) }}
-              onClick={() => handleTabClick(i)}
-              title={t.locked ? t.lockMsg : ""}
-            >
-              {t.locked ? "🔒 " : ""}{t.label}
+          {ABAS.map(a => (
+            <button key={a.id} style={S.tab(aba === a.id, isMobile)} onClick={() => setAba(a.id)}>
+              {a.label}
             </button>
           ))}
         </div>
       </div>
-      <div style={S.container}>
-        {tabs[tab].locked ? (
-          <div style={{ ...S.warnBox, textAlign: "center", padding: 36 }}>
-            <div style={{ fontSize: 32, marginBottom: 12 }}>🔒</div>
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>{tabs[tab].lockMsg}</div>
-          </div>
-        ) : tabs[tab].component}
+      <div style={{ ...S.container, maxWidth: 960 }}>
+        {aba === "guindaste" && <TabGuindasteCarga onSave={(k,v) => setPlanData(p=>({...p,[k]:v}))} />}
+        {aba === "lingada"   && <TabLingadaCarga   onSave={(k,v) => setPlanData(p=>({...p,[k]:v}))} />}
+        {aba === "checklist" && <TabChecklistCampo planData={planData} />}
         <div style={{ ...S.normaBox, textAlign: "center", marginTop: 32 }}>
-          v2.0.0 — RiggingCheck Fullstack &nbsp;·&nbsp; React + Java Spring Boot + PostgreSQL
+          v2.1.0 — RiggingCheck &nbsp;·&nbsp; React + Java Spring Boot + PostgreSQL
           <br />
-          <span style={{ color: "#475569" }}>NR-11 · ABNT NBR 11900 · ABNT NBR 13541 · ISO 4308-1 · Petrobrás N-2869</span>
+          <span style={{ color: "#475569" }}>SERTECH · NR-11 · ABNT NBR 13541 · ISO 4308-1 · Petrobrás N-2869</span>
         </div>
       </div>
     </div>
