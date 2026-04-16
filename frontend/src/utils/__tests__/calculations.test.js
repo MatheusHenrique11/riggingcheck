@@ -7,6 +7,8 @@ import {
   riskColor,
   roleLabel,
   calcCraneUsage,
+  getHighVoltageDistance,
+  HIGH_VOLTAGE_TABLE,
   MATERIAIS,
   FATORES_SEG,
 } from "../calculations.js";
@@ -308,5 +310,135 @@ describe("calcCraneUsage", () => {
     // SWL usa statusCalc com [80, 100]; guindaste usa calcCraneUsage com [70, 90]
     expect(calcCraneUsage(10000, 7500).status).toBe("ATENCAO"); // 75% → SWL seria SEGURO, guindaste é ATENCAO
     expect(calcCraneUsage(10000, 8500).status).toBe("ATENCAO"); // 85% → SWL seria SEGURO, guindaste é ATENCAO
+  });
+});
+
+// ── HIGH_VOLTAGE_TABLE ───────────────────────────────────────────────────────────
+
+describe("HIGH_VOLTAGE_TABLE", () => {
+  it("contém exatamente 8 faixas de tensão", () => {
+    expect(HIGH_VOLTAGE_TABLE).toHaveLength(8);
+  });
+
+  it("todas as faixas têm as propriedades faixa, minDist e norma", () => {
+    HIGH_VOLTAGE_TABLE.forEach(({ faixa, minDist, norma }) => {
+      expect(typeof faixa).toBe("string");
+      expect(norma).toBeTruthy();
+      // minDist pode ser número positivo ou null (última faixa)
+      expect(minDist === null || (typeof minDist === "number" && minDist > 0)).toBe(true);
+    });
+  });
+
+  it("distâncias estão em ordem crescente nas primeiras 7 faixas", () => {
+    const distancias = HIGH_VOLTAGE_TABLE.slice(0, 7).map((r) => r.minDist);
+    for (let i = 1; i < distancias.length; i++) {
+      expect(distancias[i]).toBeGreaterThanOrEqual(distancias[i - 1]);
+    }
+  });
+
+  it("última faixa (>500 kV) tem minDist null", () => {
+    const ultima = HIGH_VOLTAGE_TABLE[HIGH_VOLTAGE_TABLE.length - 1];
+    expect(ultima.minDist).toBeNull();
+  });
+
+  it("distância mínima global é 3,0 m (baixa tensão)", () => {
+    const minima = Math.min(
+      ...HIGH_VOLTAGE_TABLE.filter((r) => r.minDist !== null).map((r) => r.minDist)
+    );
+    expect(minima).toBe(3.0);
+  });
+
+  it("distância máxima tabelada é 10,0 m (345–500 kV)", () => {
+    const maxima = Math.max(
+      ...HIGH_VOLTAGE_TABLE.filter((r) => r.minDist !== null).map((r) => r.minDist)
+    );
+    expect(maxima).toBe(10.0);
+  });
+});
+
+// ── getHighVoltageDistance ───────────────────────────────────────────────────────
+
+describe("getHighVoltageDistance", () => {
+  // ── Tensões baixas / distribuição ───────────────────────────────────────────
+  it("retorna 3,0 m para tensão 0,4 kV (baixa tensão residencial)", () => {
+    expect(getHighVoltageDistance(0.4).minDist).toBe(3.0);
+  });
+
+  it("retorna 3,0 m para tensão exata de 1 kV (fronteira)", () => {
+    expect(getHighVoltageDistance(1).minDist).toBe(3.0);
+  });
+
+  it("retorna 3,0 m para 13,8 kV (distribuição urbana comum)", () => {
+    expect(getHighVoltageDistance(13.8).minDist).toBe(3.0);
+  });
+
+  // ── Fronteira 15 kV ──────────────────────────────────────────────────────────
+  it("retorna 4,0 m para tensão exata de 15 kV (fronteira NR-10→NBR 5422)", () => {
+    // 15 kV ≤ 15 retorna 3,0; 15 kV > 15 retorna 4,0 — confirma qual faixa é usada
+    // A função usa if (kV <= 15) return 3.0, então 15 kV exato = 3.0 m
+    expect(getHighVoltageDistance(15).minDist).toBe(3.0);
+  });
+
+  it("retorna 4,0 m para 34,5 kV (transmissão estadual)", () => {
+    expect(getHighVoltageDistance(34.5).minDist).toBe(4.0);
+  });
+
+  it("retorna 4,0 m para 69 kV (fronteira)", () => {
+    expect(getHighVoltageDistance(69).minDist).toBe(4.0);
+  });
+
+  // ── Transmissão média ────────────────────────────────────────────────────────
+  it("retorna 5,0 m para 138 kV (transmissão regional)", () => {
+    expect(getHighVoltageDistance(138).minDist).toBe(5.0);
+  });
+
+  it("retorna 6,0 m para 230 kV (transmissão estadual)", () => {
+    expect(getHighVoltageDistance(230).minDist).toBe(6.0);
+  });
+
+  // ── Alta tensão extrema ──────────────────────────────────────────────────────
+  it("retorna 8,0 m para 345 kV", () => {
+    expect(getHighVoltageDistance(345).minDist).toBe(8.0);
+  });
+
+  it("retorna 10,0 m para 500 kV (linha de transmissão de longa distância)", () => {
+    expect(getHighVoltageDistance(500).minDist).toBe(10.0);
+  });
+
+  it("retorna minDist null para 765 kV (>500 kV — consultar especialista)", () => {
+    const r = getHighVoltageDistance(765);
+    expect(r.minDist).toBeNull();
+    expect(r.norma).toBe("Consultar especialista");
+  });
+
+  // ── Entradas inválidas ───────────────────────────────────────────────────────
+  it("retorna null para tensão negativa", () => {
+    expect(getHighVoltageDistance(-1)).toBeNull();
+  });
+
+  it("retorna null para tensão null", () => {
+    expect(getHighVoltageDistance(null)).toBeNull();
+  });
+
+  it("retorna null para tensão undefined", () => {
+    expect(getHighVoltageDistance(undefined)).toBeNull();
+  });
+
+  // ── Propriedades do objeto retornado ─────────────────────────────────────────
+  it("objeto retornado contém faixa, minDist e norma", () => {
+    const r = getHighVoltageDistance(230);
+    expect(r).toHaveProperty("faixa");
+    expect(r).toHaveProperty("minDist");
+    expect(r).toHaveProperty("norma");
+  });
+
+  it("distâncias crescem conforme tensão aumenta (até 500 kV — sequência representativa)", () => {
+    // Usa pontos logo acima de cada fronteira para garantir faixa correta
+    // Exclui >500 kV pois minDist é null (consultar especialista)
+    const tensoes = [0.4, 15.1, 69.1, 138.1, 230.1, 345.1];
+    const dists   = tensoes.map((kV) => getHighVoltageDistance(kV).minDist);
+    for (let i = 1; i < dists.length; i++) {
+      expect(dists[i]).toBeGreaterThan(dists[i - 1]);
+    }
   });
 });

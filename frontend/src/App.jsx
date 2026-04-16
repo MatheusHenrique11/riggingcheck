@@ -1,4 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
+import { openPrintWindow } from "./utils/pdf.js";
+import { canPrintPdf }     from "./utils/calculations.js";
 
 function useIsMobile() {
   const [mobile, setMobile] = useState(() => window.innerWidth < 640);
@@ -2772,6 +2774,18 @@ const statusStyle = (s) => ({
   REPROVADO: { color: "#ef4444", bg: "#2d0000", border: "#ef444433" },
 }[s] || { color: "#64748b", bg: "#0f0f1a", border: "#1e1e35" });
 
+// Distâncias mínimas seguras para redes elétricas energizadas (NR-10 Anexo II / ABNT NBR 5422)
+const HIGH_VOLTAGE_TABLE = [
+  { faixa: "Até 1 kV",        minDist: 3.0,  norma: "NR-10 Anexo II"        },
+  { faixa: "1 – 15 kV",       minDist: 3.0,  norma: "NR-10 Anexo II"        },
+  { faixa: "15 – 69 kV",      minDist: 4.0,  norma: "NR-10 / ABNT NBR 5422" },
+  { faixa: "69 – 138 kV",     minDist: 5.0,  norma: "NR-10 / ABNT NBR 5422" },
+  { faixa: "138 – 230 kV",    minDist: 6.0,  norma: "ABNT NBR 5422"         },
+  { faixa: "230 – 345 kV",    minDist: 8.0,  norma: "ABNT NBR 5422"         },
+  { faixa: "345 – 500 kV",    minDist: 10.0, norma: "ABNT NBR 5422"         },
+  { faixa: "Acima de 500 kV", minDist: null, norma: "Consultar especialista" },
+];
+
 function ResultBox({ status, label, valor, unidade, msg }) {
   const st = statusStyle(status);
   return (
@@ -3181,7 +3195,7 @@ function TabLingadaCarga({ onSave }) {
         )}
         {/* Tabela de referência */}
         <div style={{...S.normaBox, marginTop:16}}>
-          <div style={{color:"#f59e0b", marginBottom:8, fontSize:11, letterSpacing:"1px", textTransform:"uppercase"}}>Tabela de Multiplicadores (apostila SERTECH / N-2869)</div>
+          <div style={{color:"#f59e0b", marginBottom:8, fontSize:11, letterSpacing:"1px", textTransform:"uppercase"}}>Tabela de Multiplicadores — NR-11 / ABNT NBR 13541 / N-2869</div>
           <div style={{display:"flex", flexWrap:"wrap", gap:"4px 14px", fontSize:11}}>
             {[[90,1.000],[85,1.004],[80,1.015],[75,1.035],[70,1.064],[65,1.103],[60,1.155],[55,1.221],[50,1.305],[45,1.414],[40,1.556],[35,1.743]].map(([g,m])=>(
               <span key={g} style={{color: g<45?"#f59e0b":g<30?"#ef4444":"#64748b"}}>{g}°→{m.toFixed(3)}</span>
@@ -3278,7 +3292,63 @@ function TabChecklistCampo({ planData }) {
   const [resistSolo, setResistSolo] = useState("1.5");
   const [showRelatorio, setShowRelatorio] = useState(false);
 
+  // Auth — verificado no momento da renderização
+  const user       = getUser();
+  const isLoggedIn = !!getToken();
+  const isGerente  = user?.role === "GERENTE_OPERACOES";
+
+  // OS / Solicitação de Liberação (somente usuários logados)
+  const [jobId,      setJobId]      = useState("");
+  const [solicitacao, setSolicitacao] = useState(null);
+  const [polling,    setPolling]    = useState(false);
+  const [solLoading, setSolLoading] = useState(false);
+  const [solError,   setSolError]   = useState(null);
+
   useEffect(() => { localStorage.setItem(CL_KEY, JSON.stringify(checked)); }, [checked]);
+
+  // Polling do status da solicitação a cada 5 s
+  useEffect(() => {
+    if (!polling || !solicitacao) return;
+    if (solicitacao.status !== "ANALISAR") { setPolling(false); return; }
+    const timer = setInterval(async () => {
+      try {
+        const r = await authFetch(`${API}/api/liberacoes/${solicitacao.id}`);
+        const d = await r.json();
+        setSolicitacao(d);
+        if (d.status !== "ANALISAR") setPolling(false);
+      } catch { /* ignora erros de rede no polling */ }
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [polling, solicitacao]);
+
+  const solicitarLiberacao = async () => {
+    if (!jobId.trim()) { setSolError("Preencha o número da OS."); return; }
+    setSolLoading(true); setSolError(null);
+    try {
+      const res = await authFetch(`${API}/api/liberacoes`, {
+        method: "POST",
+        body: JSON.stringify({
+          operacaoOs:      jobId.trim(),
+          riggerNome:      user?.userName || resp || "—",
+          dadosCapacidade: planData?.utilizacaoGuindaste || planData?.cargaBruta || null,
+          dadosEslinga:    planData?.tensao || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setSolError(data.error || "Erro ao enviar solicitação."); return; }
+      setSolicitacao(data);
+      setPolling(true);
+    } catch { setSolError("Não foi possível conectar à API."); }
+    finally   { setSolLoading(false); }
+  };
+
+  // Impressão via nova janela — usa openPrintWindow (pdf.js) para evitar tela em branco
+  const imprimirRelatorio = () => {
+    const el = document.getElementById("rc-relatorio");
+    if (!el) return;
+    const result = openPrintWindow(el.outerHTML);
+    if (!result.success) alert("Pop-up bloqueado. Permita pop-ups neste site para imprimir.");
+  };
 
   const toggle = (id) => setChecked(p => ({ ...p, [id]: !p[id] }));
   const total  = CHECKLIST_CAMPO.length;
@@ -3444,7 +3514,7 @@ function TabChecklistCampo({ planData }) {
 
         {/* Rodapé */}
         <div style={{borderTop:"1px solid #d1d5db",marginTop:20,paddingTop:12,display:"flex",justifyContent:"space-between",fontSize:10,color:"#9ca3af",flexWrap:"wrap",gap:8}}>
-          <span>RiggingCheck · SERTECH · NR-11 · ABNT NBR 13541 · Petrobrás N-2869</span>
+          <span>RiggingCheck · NR-11 · ABNT NBR 13541 · Petrobrás N-2869</span>
           <span>Documento gerado automaticamente · Verificar dados antes de operar</span>
         </div>
       </div>
@@ -3455,10 +3525,9 @@ function TabChecklistCampo({ planData }) {
     <div>
       {/* Modal Relatório */}
       {showRelatorio && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",zIndex:1000,overflowY:"auto",padding:"24px 16px"}}>
-          <style>{`@media print{body>*{display:none!important}#rc-relatorio,#rc-relatorio *{display:block!important;background:white!important;color:black!important}#rc-print-btns{display:none!important}}`}</style>
-          <div id="rc-print-btns" style={{display:"flex",gap:10,justifyContent:"center",marginBottom:16}}>
-            <button onClick={()=>window.print()} style={{background:"#1e3a5f",color:"#fff",border:"none",borderRadius:8,padding:"10px 24px",fontWeight:700,fontSize:13,cursor:"pointer"}}>Imprimir / Salvar PDF</button>
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:1000,overflowY:"auto",padding:"24px 16px"}}>
+          <div style={{display:"flex",gap:10,justifyContent:"center",marginBottom:16}}>
+            <button onClick={imprimirRelatorio} style={{background:"#1e3a5f",color:"#fff",border:"none",borderRadius:8,padding:"10px 24px",fontWeight:700,fontSize:13,cursor:"pointer"}}>🖨 Imprimir / Salvar PDF</button>
             <button onClick={()=>setShowRelatorio(false)} style={{background:"transparent",color:"#94a3b8",border:"1px solid #374151",borderRadius:8,padding:"10px 24px",fontSize:13,cursor:"pointer"}}>Fechar</button>
           </div>
           <Relatorio />
@@ -3507,12 +3576,14 @@ function TabChecklistCampo({ planData }) {
         ))}
 
         <div style={{display:"flex",gap:10,marginTop:24,flexWrap:"wrap"}}>
-          <button
-            style={{...S.btn(false),background:"linear-gradient(135deg,#1e3a5f,#1e40af)"}}
-            onClick={()=>setShowRelatorio(true)}
-          >
-            Gerar Relatório PDF
-          </button>
+          {canPrintPdf(isLoggedIn, user?.role) && (
+            <button
+              style={{...S.btn(false),background:"linear-gradient(135deg,#1e3a5f,#1e40af)"}}
+              onClick={()=>setShowRelatorio(true)}
+            >
+              Gerar Relatório PDF
+            </button>
+          )}
           <button
             style={{...S.btn(false),background:"transparent",border:"1px solid #ef444444",color:"#ef4444"}}
             onClick={()=>{ setChecked({}); localStorage.removeItem(CL_KEY); }}
@@ -3520,10 +3591,119 @@ function TabChecklistCampo({ planData }) {
             Limpar Checklist
           </button>
         </div>
-        <div style={{...S.normaBox,marginTop:12}}>
+        {isLoggedIn && !canPrintPdf(isLoggedIn, user?.role) && (
+          <div style={{...S.normaBox,marginTop:12,fontSize:11}}>
+            Relatório PDF disponível apenas para usuários com perfil <strong>Gerente de Operações</strong>.
+          </div>
+        )}
+        <div style={{...S.normaBox,marginTop:8}}>
           {resp&&<span>Supervisor: {resp} · </span>}{new Date().toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo"})}
         </div>
       </div>
+
+      {/* Tabela de Distâncias Seguras — Alta Tensão */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>⚡ Distâncias Seguras de Redes de Alta Tensão</div>
+        <div style={{fontSize:11,color:"#64748b",marginBottom:14}}>
+          Distâncias mínimas obrigatórias entre o guindaste/lança/carga e redes elétricas energizadas.
+          Medição deve ser feita no ponto mais próximo de qualquer parte do equipamento ou da carga.
+        </div>
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+            <thead>
+              <tr style={{background:"#1e1e35"}}>
+                <th style={{padding:"8px 12px",textAlign:"left",color:"#94a3b8",fontWeight:600,borderBottom:"1px solid #2d2d4a"}}>Tensão da rede</th>
+                <th style={{padding:"8px 12px",textAlign:"center",color:"#94a3b8",fontWeight:600,borderBottom:"1px solid #2d2d4a"}}>Distância mínima</th>
+                <th style={{padding:"8px 12px",textAlign:"left",color:"#94a3b8",fontWeight:600,borderBottom:"1px solid #2d2d4a"}}>Norma</th>
+              </tr>
+            </thead>
+            <tbody>
+              {HIGH_VOLTAGE_TABLE.map((row,i)=>(
+                <tr key={i} style={{background:i%2===0?"#0f0f1a":"#141424",borderBottom:"1px solid #1e1e35"}}>
+                  <td style={{padding:"7px 12px",color:"#cbd5e1"}}>{row.faixa}</td>
+                  <td style={{padding:"7px 12px",textAlign:"center",fontWeight:700,
+                    color: row.minDist===null?"#ef4444":row.minDist>=8?"#f59e0b":"#22c55e"}}>
+                    {row.minDist!==null ? `${row.minDist.toFixed(1).replace(".",",")} m` : "⚠ "+row.norma}
+                  </td>
+                  <td style={{padding:"7px 12px",color:"#64748b",fontSize:11}}>{row.minDist!==null?row.norma:"—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div style={{...S.normaBox,marginTop:12,fontSize:10}}>
+          ⚠ Em caso de dúvida ou tensões superiores a 500 kV, paralisar imediatamente e consultar a concessionária de energia elétrica.
+          Distâncias consideram condições normais de operação (sem vento) — aumentar em condições adversas.
+        </div>
+      </div>
+
+      {/* OS e Solicitação de Liberação (somente usuários com login) */}
+      {isLoggedIn && (
+        <div style={S.card}>
+          <div style={S.cardTitle}>📨 Ordem de Serviço & Solicitação de Liberação</div>
+          {solicitacao ? (
+            <div>
+              {solicitacao.status === "ANALISAR" && (
+                <div style={{...S.warnBox,textAlign:"center",padding:28}}>
+                  <div style={{fontSize:32,marginBottom:12}}>⏳</div>
+                  <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>Aguardando autorização do responsável</div>
+                  <div style={{color:"#94a3b8",fontSize:12}}>OS: <strong>{solicitacao.operacaoOs}</strong></div>
+                  <div style={{color:"#64748b",fontSize:11,marginTop:8}}>Verificando automaticamente a cada 5 segundos...</div>
+                </div>
+              )}
+              {solicitacao.status === "PROSSEGUIR" && (
+                <div style={{background:"#052e16",border:"1px solid #22c55e44",borderRadius:12,padding:28,textAlign:"center"}}>
+                  <div style={{fontSize:40,marginBottom:12}}>✅</div>
+                  <div style={{fontWeight:800,fontSize:16,color:"#22c55e",marginBottom:8}}>IÇAMENTO AUTORIZADO — PROSSEGUIR</div>
+                  <div style={{color:"#94a3b8",fontSize:12,marginBottom:4}}>OS: <strong style={{color:"#fff"}}>{solicitacao.operacaoOs}</strong></div>
+                  <div style={{color:"#22c55e",fontSize:13,marginTop:6}}>Autorizado por: <strong>{solicitacao.aprovadoPorNome}</strong></div>
+                  {solicitacao.observacao && <div style={{color:"#94a3b8",fontSize:12,marginTop:8,fontStyle:"italic"}}>"{solicitacao.observacao}"</div>}
+                  {solicitacao.resolvidoEm && <div style={{color:"#475569",fontSize:11,marginTop:6}}>{new Date(solicitacao.resolvidoEm).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo"})}</div>}
+                </div>
+              )}
+              {solicitacao.status === "PARAR" && (
+                <div style={{...S.errorBox,textAlign:"center",padding:28}}>
+                  <div style={{fontSize:40,marginBottom:12}}>🚫</div>
+                  <div style={{fontWeight:800,fontSize:16,marginBottom:8}}>IÇAMENTO NÃO AUTORIZADO — PARAR</div>
+                  <div style={{fontSize:12,marginBottom:4}}>OS: <strong>{solicitacao.operacaoOs}</strong></div>
+                  <div style={{fontSize:12}}>Negado por: <strong>{solicitacao.aprovadoPorNome}</strong></div>
+                  {solicitacao.observacao && <div style={{fontSize:12,marginTop:8,fontStyle:"italic"}}>Motivo: "{solicitacao.observacao}"</div>}
+                  {solicitacao.resolvidoEm && <div style={{fontSize:11,marginTop:6,color:"#f87171"}}>{new Date(solicitacao.resolvidoEm).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo"})}</div>}
+                </div>
+              )}
+              <button
+                style={{...S.btn(false),background:"#1e1e35",color:"#64748b",marginTop:16}}
+                onClick={()=>{ setSolicitacao(null); setJobId(""); setSolError(null); }}
+              >
+                Nova Operação
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div style={{fontSize:11,color:"#64748b",marginBottom:16}}>
+                Preencha o número da Ordem de Serviço e solicite autorização ao Líder ou Administrador para prosseguir com o içamento.
+                Os dados de carga e lingada calculados serão enviados junto com a solicitação.
+              </div>
+              <Campo label="Número da OS (Ordem de Serviço)">
+                <input style={S.input} placeholder="ex: OS-2024-089" value={jobId}
+                  onChange={e=>setJobId(e.target.value)} />
+              </Campo>
+              <div style={{marginTop:10,fontSize:11,color:"#64748b",display:"flex",gap:16,flexWrap:"wrap"}}>
+                <span>Operador: <strong style={{color:"#94a3b8"}}>{user?.userName||"—"}</strong></span>
+                <span>Perfil: <strong style={{color:"#94a3b8"}}>{roleLabel(user?.role)}</strong></span>
+              </div>
+              {solError && <div style={{...S.errorBox,marginTop:12,fontSize:12}}>{solError}</div>}
+              <button
+                style={{...S.btn(false),marginTop:16,opacity:solLoading?0.6:1}}
+                onClick={solicitarLiberacao}
+                disabled={solLoading}
+              >
+                {solLoading?"Enviando...":"📤 Solicitar Autorização do Içamento"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -3566,7 +3746,7 @@ function PlanejamentoBasico({ onVoltar, isMobile }) {
         {aba==="lingada"   && <TabLingadaCarga />}
         {aba==="checklist" && <TabChecklistCampo />}
         <div style={{...S.normaBox, textAlign:"center", marginTop:32}}>
-          RiggingCheck · Planejamento Básico &nbsp;·&nbsp; SERTECH / ABNT NBR 13541 / NR-11 / Petrobrás N-2869
+          RiggingCheck · Planejamento Básico &nbsp;·&nbsp; ABNT NBR 13541 / NR-11 / Petrobrás N-2869
         </div>
       </div>
     </div>
@@ -3654,7 +3834,7 @@ export default function App() {
         <div style={{ ...S.normaBox, textAlign: "center", marginTop: 32 }}>
           v2.1.0 — RiggingCheck &nbsp;·&nbsp; React + Java Spring Boot + PostgreSQL
           <br />
-          <span style={{ color: "#475569" }}>SERTECH · NR-11 · ABNT NBR 13541 · ISO 4308-1 · Petrobrás N-2869</span>
+          <span style={{ color: "#475569" }}>NR-11 · ABNT NBR 13541 · ISO 4308-1 · Petrobrás N-2869</span>
         </div>
       </div>
     </div>

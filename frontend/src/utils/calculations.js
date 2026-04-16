@@ -116,6 +116,58 @@ export const calcCraneUsage = (capacidade, cargaTotal) => {
 };
 
 /**
+ * Tabela de distâncias mínimas seguras entre guindastes/cargas e redes elétricas
+ * energizadas, por faixa de tensão.
+ * Fontes: NR-10 Anexo II (2004) · ABNT NBR 5422 · IEEE C2 (NESC).
+ *
+ * minDist em metros; null = consultar especialista.
+ */
+export const HIGH_VOLTAGE_TABLE = [
+  { faixa: "Até 1 kV",        minDist: 3.0,  norma: "NR-10 Anexo II"         },
+  { faixa: "1 – 15 kV",       minDist: 3.0,  norma: "NR-10 Anexo II"         },
+  { faixa: "15 – 69 kV",      minDist: 4.0,  norma: "NR-10 / ABNT NBR 5422"  },
+  { faixa: "69 – 138 kV",     minDist: 5.0,  norma: "NR-10 / ABNT NBR 5422"  },
+  { faixa: "138 – 230 kV",    minDist: 6.0,  norma: "ABNT NBR 5422"           },
+  { faixa: "230 – 345 kV",    minDist: 8.0,  norma: "ABNT NBR 5422"           },
+  { faixa: "345 – 500 kV",    minDist: 10.0, norma: "ABNT NBR 5422"           },
+  { faixa: "Acima de 500 kV", minDist: null, norma: "Consultar especialista"  },
+];
+
+/**
+ * Retorna a distância mínima segura (m) para uma dada tensão de linha (kV).
+ * Retorna null para tensão inválida (negativa ou nula).
+ * Retorna { minDist: null, ... } para tensões acima de 500 kV.
+ *
+ * @param {number} kV - Tensão da rede em kilovolts
+ * @returns {{ faixa: string, minDist: number|null, norma: string } | null}
+ */
+export const getHighVoltageDistance = (kV) => {
+  if (kV == null || kV < 0) return null;
+  if (kV <= 1)   return { faixa: "Até 1 kV",        minDist: 3.0,  norma: "NR-10 Anexo II"        };
+  if (kV <= 15)  return { faixa: "1 – 15 kV",        minDist: 3.0,  norma: "NR-10 Anexo II"        };
+  if (kV <= 69)  return { faixa: "15 – 69 kV",       minDist: 4.0,  norma: "NR-10 / ABNT NBR 5422" };
+  if (kV <= 138) return { faixa: "69 – 138 kV",      minDist: 5.0,  norma: "NR-10 / ABNT NBR 5422" };
+  if (kV <= 230) return { faixa: "138 – 230 kV",     minDist: 6.0,  norma: "ABNT NBR 5422"         };
+  if (kV <= 345) return { faixa: "230 – 345 kV",     minDist: 8.0,  norma: "ABNT NBR 5422"         };
+  if (kV <= 500) return { faixa: "345 – 500 kV",     minDist: 10.0, norma: "ABNT NBR 5422"         };
+  return           { faixa: "Acima de 500 kV",      minDist: null, norma: "Consultar especialista" };
+};
+
+/**
+ * Determina se o botão de impressão de PDF deve ser exibido para o usuário.
+ *
+ * Regra:
+ *  - Não logado → sempre pode imprimir (modo público/campo)
+ *  - Logado     → somente GERENTE_OPERACOES tem acesso ao relatório
+ *
+ * @param {boolean} isLoggedIn - true se o usuário tiver token ativo
+ * @param {string|null} role   - perfil do usuário (RoleEnum) ou null
+ * @returns {boolean}
+ */
+export const canPrintPdf = (isLoggedIn, role) =>
+  !isLoggedIn || role === "GERENTE_OPERACOES";
+
+/**
  * Nome exibível para cada perfil de usuário.
  * @param {string} role
  */
