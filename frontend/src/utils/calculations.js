@@ -94,6 +94,28 @@ export const riskColor = (level) =>
   ({ SAFE: "#22c55e", WARNING: "#f59e0b", DANGER: "#ef4444" }[level] || "#94a3b8");
 
 /**
+ * Calcula a taxa de utilização do guindaste.
+ * Thresholds conforme ABNT NBR 11900 / NR-11 (espelha RiskCalculator.java do backend):
+ *   < 70%  → SEGURO / SAFE    (operação aprovada)
+ *   70–89% → ATENCAO / WARNING (operação aprovada, monitorar)
+ *   ≥ 90%  → REPROVADO / DANGER (operação NÃO aprovada)
+ *
+ * @param {number} capacidade - Capacidade nominal do guindaste (kg), deve ser > 0
+ * @param {number} cargaTotal - Carga total içada (kg)
+ * @returns {{ pct: number, risk: string, status: string, approved: boolean, margem: number } | null}
+ *          null se capacidade <= 0
+ */
+export const calcCraneUsage = (capacidade, cargaTotal) => {
+  if (capacidade <= 0) return null;
+  const pct    = (cargaTotal / capacidade) * 100;
+  const risk   = pct < 70 ? "SAFE" : pct < 90 ? "WARNING" : "DANGER";
+  const status = pct < 70 ? "SEGURO" : pct < 90 ? "ATENCAO" : "REPROVADO";
+  const approved = pct < 90;
+  const margem = capacidade - cargaTotal;
+  return { pct, risk, status, approved, margem };
+};
+
+/**
  * Nome exibível para cada perfil de usuário.
  * @param {string} role
  */

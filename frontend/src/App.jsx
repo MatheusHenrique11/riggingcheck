@@ -2914,7 +2914,7 @@ function TabGuindasteCarga({ onSave }) {
             <input style={S.input} type="number" min="0" step="1" placeholder="Ex.: 50000"
               value={ug.capacidade} onChange={e=>setUg(p=>({...p,capacidade:e.target.value}))} />
           </Campo>
-          <Campo label={`Carga total (kg)${resCb ? " — ou use o valor calculado abaixo" : ""}`}>
+          <Campo label={`Carga total (kg)${resCb ? " — ou use o valor de 1.1 acima" : ""}`}>
             <div style={{ display:"flex", gap:8 }}>
               <input style={{...S.input, flex:1}} type="number" min="0" step="1" placeholder="Ex.: 12500"
                 value={ug.cargaTotal} onChange={e=>setUg(p=>({...p,cargaTotal:e.target.value}))} />

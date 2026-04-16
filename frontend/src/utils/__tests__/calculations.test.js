@@ -6,6 +6,7 @@ import {
   riskLabel,
   riskColor,
   roleLabel,
+  calcCraneUsage,
   MATERIAIS,
   FATORES_SEG,
 } from "../calculations.js";
@@ -199,5 +200,113 @@ describe("FATORES_SEG", () => {
       f.tipo.toLowerCase().includes("passageiros")
     );
     expect(elevador?.fsMin).toBe(12);
+  });
+});
+
+// ── calcCraneUsage ───────────────────────────────────────────────────────────────
+// Espelha RiskCalculator.java: < 70 → SAFE, 70–89 → WARNING, ≥ 90 → DANGER
+
+describe("calcCraneUsage", () => {
+  // ── Zona SEGURO (<70%) ──────────────────────────────────────────────────────
+  it("retorna SEGURO/SAFE para uso < 70%", () => {
+    // 30000 / 50000 = 60%
+    const r = calcCraneUsage(50000, 30000);
+    expect(r.pct).toBeCloseTo(60, 5);
+    expect(r.status).toBe("SEGURO");
+    expect(r.risk).toBe("SAFE");
+    expect(r.approved).toBe(true);
+  });
+
+  it("retorna SEGURO/SAFE para uso 0% (sem carga)", () => {
+    const r = calcCraneUsage(10000, 0);
+    expect(r.pct).toBeCloseTo(0, 5);
+    expect(r.status).toBe("SEGURO");
+    expect(r.approved).toBe(true);
+  });
+
+  it("limite exato: 69.99% ainda é SEGURO", () => {
+    const r = calcCraneUsage(10000, 6999);
+    expect(r.pct).toBeCloseTo(69.99, 1);
+    expect(r.status).toBe("SEGURO");
+  });
+
+  // ── Fronteira 70% (transição SEGURO → ATENCAO) ──────────────────────────────
+  it("exatamente 70% é ATENCAO/WARNING (threshold estrito: pct < 70 → SAFE)", () => {
+    // 7000 / 10000 = 70% → não é < 70, portanto ATENCAO
+    const r = calcCraneUsage(10000, 7000);
+    expect(r.pct).toBeCloseTo(70, 5);
+    expect(r.status).toBe("ATENCAO");
+    expect(r.risk).toBe("WARNING");
+    expect(r.approved).toBe(true);
+  });
+
+  // ── Zona ATENCAO (70–89%) ───────────────────────────────────────────────────
+  it("retorna ATENCAO/WARNING para uso 80%", () => {
+    // 8000 / 10000 = 80%
+    const r = calcCraneUsage(10000, 8000);
+    expect(r.pct).toBeCloseTo(80, 5);
+    expect(r.status).toBe("ATENCAO");
+    expect(r.risk).toBe("WARNING");
+    expect(r.approved).toBe(true);
+  });
+
+  it("89.99% ainda é ATENCAO e approved", () => {
+    const r = calcCraneUsage(10000, 8999);
+    expect(r.pct).toBeCloseTo(89.99, 1);
+    expect(r.status).toBe("ATENCAO");
+    expect(r.approved).toBe(true);
+  });
+
+  // ── Fronteira 90% (transição ATENCAO → REPROVADO) ───────────────────────────
+  it("exatamente 90% é REPROVADO/DANGER e não aprovado", () => {
+    // 9000 / 10000 = 90% → não é < 90, portanto REPROVADO
+    const r = calcCraneUsage(10000, 9000);
+    expect(r.pct).toBeCloseTo(90, 5);
+    expect(r.status).toBe("REPROVADO");
+    expect(r.risk).toBe("DANGER");
+    expect(r.approved).toBe(false);
+  });
+
+  // ── Zona REPROVADO (≥90%) ───────────────────────────────────────────────────
+  it("retorna REPROVADO/DANGER para uso 95%", () => {
+    const r = calcCraneUsage(10000, 9500);
+    expect(r.pct).toBeCloseTo(95, 5);
+    expect(r.status).toBe("REPROVADO");
+    expect(r.risk).toBe("DANGER");
+    expect(r.approved).toBe(false);
+  });
+
+  it("retorna REPROVADO para sobrecarga (>100%)", () => {
+    const r = calcCraneUsage(10000, 11000);
+    expect(r.pct).toBeCloseTo(110, 5);
+    expect(r.status).toBe("REPROVADO");
+    expect(r.approved).toBe(false);
+  });
+
+  // ── Margem ──────────────────────────────────────────────────────────────────
+  it("margem = capacidade - cargaTotal (positiva quando abaixo da capacidade)", () => {
+    const r = calcCraneUsage(50000, 30000);
+    expect(r.margem).toBeCloseTo(20000, 5);
+  });
+
+  it("margem negativa indica sobrecarga", () => {
+    const r = calcCraneUsage(10000, 11000);
+    expect(r.margem).toBeCloseTo(-1000, 5);
+  });
+
+  // ── Capacidade inválida ──────────────────────────────────────────────────────
+  it("retorna null para capacidade = 0", () => {
+    expect(calcCraneUsage(0, 5000)).toBeNull();
+  });
+
+  it("retorna null para capacidade negativa", () => {
+    expect(calcCraneUsage(-1000, 5000)).toBeNull();
+  });
+
+  // ── Consistência com backend RiskCalculator ──────────────────────────────────
+  it("thresholds idênticos ao backend: 70/90 (não 80/100 do SWL)", () => {
+    // SWL usa statusCalc com [80, 100]; guindaste usa calcCraneUsage com [70, 90]
+    expect(calcCraneUsage(10000, 7500).status).toBe("ATENCAO"); // 75% → SWL seria SEGURO, guindaste é ATENCAO
+    expect(calcCraneUsage(10000, 8500).status).toBe("ATENCAO"); // 85% → SWL seria SEGURO, guindaste é ATENCAO
   });
 });
