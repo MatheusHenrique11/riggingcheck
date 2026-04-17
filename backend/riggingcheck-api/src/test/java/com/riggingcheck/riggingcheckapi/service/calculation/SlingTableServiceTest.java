@@ -68,8 +68,8 @@ class SlingTableServiceTest {
     // ── Tabela Cinta Sintética ───────────────────────────────────────────────
 
     @Test
-    void cinta_tamanhoTabela_7cores() {
-        assertThat(svc.getCintaTable()).hasSize(7);
+    void cinta_tamanhoTabela_8cores() {
+        assertThat(svc.getCintaTable()).hasSize(8);
     }
 
     @Test
@@ -120,8 +120,8 @@ class SlingTableServiceTest {
     // ── Tabela Manilhas ──────────────────────────────────────────────────────
 
     @Test
-    void manilha_tamanhoTabela_13entradas() {
-        assertThat(svc.getManilhaTable()).hasSize(13);
+    void manilha_tamanhoTabela_15entradas() {
+        assertThat(svc.getManilhaTable()).hasSize(15);
     }
 
     @Test
@@ -135,17 +135,17 @@ class SlingTableServiceTest {
     }
 
     @Test
-    void manilha_swlCurvaMaiorOuIgualSwlReta() {
+    void manilha_swlCurvaIgualSwlReta() {
         for (var entry : svc.getManilhaTable()) {
             assertThat(entry.swlCurva())
-                .as("SWL Curva >= SWL Reta para diâmetro " + entry.diametroMm())
-                .isGreaterThanOrEqualTo(entry.swlReta());
+                .as("SWL Curva == SWL Reta para diâmetro " + entry.diametroMm())
+                .isEqualTo(entry.swlReta());
         }
     }
 
     @Test
-    void manilha_primeiraDiametro_95mm() {
-        assertThat(svc.getManilhaTable().get(0).diametroMm()).isCloseTo(9.5, within(0.01));
+    void manilha_primeiraDiametro_65mm() {
+        assertThat(svc.getManilhaTable().get(0).diametroMm()).isCloseTo(6.5, within(0.01));
     }
 
     @Test

@@ -156,22 +156,22 @@ describe("CORRENTE_G80_TABLE", () => {
     });
   });
 
-  it("2 pernas 60° > simples para todas as entradas (fator √3)", () => {
+  it("2 pernas 60° == simples para todas as entradas (fator 1.0)", () => {
     CORRENTE_G80_TABLE.forEach(e => {
-      expect(e.pernas2_ang60).toBeGreaterThan(e.simples);
+      expect(e.pernas2_ang60).toBeCloseTo(e.simples, 1);
     });
   });
 
-  it("pernas2_ang60 > pernas2_ang45 para todas as entradas", () => {
+  it("pernas2_ang45 > pernas2_ang60 para todas as entradas", () => {
     CORRENTE_G80_TABLE.forEach(e => {
-      expect(e.pernas2_ang60).toBeGreaterThan(e.pernas2_ang45);
+      expect(e.pernas2_ang45).toBeGreaterThan(e.pernas2_ang60);
     });
   });
 
-  it("pernas4 ≈ 2× pernas2 para mesmos ângulos", () => {
+  it("pernas4 ≈ 1.5× pernas2 para mesmos ângulos", () => {
     CORRENTE_G80_TABLE.forEach(e => {
-      expect(e.pernas4_ang60 / e.pernas2_ang60).toBeCloseTo(2.0, 1);
-      expect(e.pernas4_ang45 / e.pernas2_ang45).toBeCloseTo(2.0, 1);
+      expect(e.pernas4_ang60 / e.pernas2_ang60).toBeCloseTo(1.5, 1);
+      expect(e.pernas4_ang45 / e.pernas2_ang45).toBeCloseTo(1.5, 1);
     });
   });
 
@@ -190,9 +190,9 @@ describe("CORRENTE_G80_TABLE", () => {
     });
   });
 
-  it("choker ≈ 0.7 × simples (fator de choker EN 818-4)", () => {
+  it("choker ≈ 0.8 × simples (fator de choker)", () => {
     CORRENTE_G80_TABLE.forEach(e => {
-      expect(e.choker / e.simples).toBeCloseTo(0.7, 1);
+      expect(e.choker / e.simples).toBeCloseTo(0.8, 1);
     });
   });
 });
@@ -232,9 +232,9 @@ describe("CORRENTE_G100_TABLE", () => {
     });
   });
 
-  it("pernas4_ang60 ≈ 2× pernas2_ang60 para todas as entradas", () => {
+  it("pernas4_ang60 ≈ 1.5× pernas2_ang60 para todas as entradas", () => {
     CORRENTE_G100_TABLE.forEach(e => {
-      expect(e.pernas4_ang60 / e.pernas2_ang60).toBeCloseTo(2.0, 1);
+      expect(e.pernas4_ang60 / e.pernas2_ang60).toBeCloseTo(1.5, 1);
     });
   });
 
@@ -282,12 +282,12 @@ describe("lookupWllFromMaterial — cinta sintética", () => {
     expect(lookupWllFromMaterial({ tipo: "CINTA", id: "Violeta", modo: "cesto" })).toBeCloseTo(2000, 0);
   });
 
-  it("retorna 8000 kg para cinta Laranja vertical (8.0t)", () => {
-    expect(lookupWllFromMaterial({ tipo: "CINTA", id: "Laranja", modo: "vertical" })).toBeCloseTo(8000, 0);
+  it("retorna 10000 kg para cinta Laranja vertical (10.0t)", () => {
+    expect(lookupWllFromMaterial({ tipo: "CINTA", id: "Laranja", modo: "vertical" })).toBeCloseTo(10000, 0);
   });
 
   it("retorna null para cor inexistente", () => {
-    expect(lookupWllFromMaterial({ tipo: "CINTA", id: "Azul", modo: "vertical" })).toBeNull();
+    expect(lookupWllFromMaterial({ tipo: "CINTA", id: "Preto", modo: "vertical" })).toBeNull();
   });
 
   it("retorna null para modo inexistente", () => {
@@ -342,16 +342,16 @@ describe("lookupWllFromMaterial — corrente G80", () => {
     expect(lookupWllFromMaterial({ tipo: "CORRENTE_G80", id: 6, modo: "simples" })).toBeCloseTo(1120, 0);
   });
 
-  it("retorna 800 kg para ∅6mm choker (0.80t)", () => {
-    expect(lookupWllFromMaterial({ tipo: "CORRENTE_G80", id: 6, modo: "choker" })).toBeCloseTo(800, 0);
+  it("retorna 900 kg para ∅6mm choker (0.90t)", () => {
+    expect(lookupWllFromMaterial({ tipo: "CORRENTE_G80", id: 6, modo: "choker" })).toBeCloseTo(900, 0);
   });
 
-  it("retorna 1940 kg para ∅6mm 2 pernas 60°", () => {
-    expect(lookupWllFromMaterial({ tipo: "CORRENTE_G80", id: 6, modo: "pernas2_ang60" })).toBeCloseTo(1940, 0);
+  it("retorna 1120 kg para ∅6mm 2 pernas 60°", () => {
+    expect(lookupWllFromMaterial({ tipo: "CORRENTE_G80", id: 6, modo: "pernas2_ang60" })).toBeCloseTo(1120, 0);
   });
 
-  it("retorna 3870 kg para ∅6mm 4 pernas 60°", () => {
-    expect(lookupWllFromMaterial({ tipo: "CORRENTE_G80", id: 6, modo: "pernas4_ang60" })).toBeCloseTo(3870, 0);
+  it("retorna 1680 kg para ∅6mm 4 pernas 60°", () => {
+    expect(lookupWllFromMaterial({ tipo: "CORRENTE_G80", id: 6, modo: "pernas4_ang60" })).toBeCloseTo(1680, 0);
   });
 
   it("retorna null para diâmetro não existente na tabela G80", () => {
@@ -370,19 +370,19 @@ describe("lookupWllFromMaterial — corrente G100", () => {
     expect(g100).toBeGreaterThan(g80);
   });
 
-  it("retorna 138560 kg para ∅32mm 4 pernas 60° (138.56t)", () => {
-    expect(lookupWllFromMaterial({ tipo: "CORRENTE_G100", id: 32, modo: "pernas4_ang60" })).toBeCloseTo(138560, 0);
+  it("retorna 60000 kg para ∅32mm 4 pernas 60° (60.00t)", () => {
+    expect(lookupWllFromMaterial({ tipo: "CORRENTE_G100", id: 32, modo: "pernas4_ang60" })).toBeCloseTo(60000, 0);
   });
 });
 
 describe("MANILHA_TABLE — estrutura com polegadas", () => {
-  it("tem 13 entradas", () => {
-    expect(MANILHA_TABLE).toHaveLength(13);
+  it("tem 15 entradas", () => {
+    expect(MANILHA_TABLE).toHaveLength(15);
   });
 
-  it("primeira entrada: 3/8\" com campo pol e mm", () => {
-    expect(MANILHA_TABLE[0].pol).toBe('3/8"');
-    expect(MANILHA_TABLE[0].mm).toBeCloseTo(9.5, 1);
+  it("primeira entrada: 1/4\" com campo pol e mm", () => {
+    expect(MANILHA_TABLE[0].pol).toBe('1/4"');
+    expect(MANILHA_TABLE[0].mm).toBeCloseTo(6.5, 1);
   });
 
   it("última entrada: 2\" com mm ≈ 51", () => {
@@ -399,9 +399,9 @@ describe("MANILHA_TABLE — estrutura com polegadas", () => {
     });
   });
 
-  it("swlCurva ≥ swlReta para todos os diâmetros", () => {
+  it("swlCurva == swlReta para todos os diâmetros na Grau 6", () => {
     MANILHA_TABLE.forEach(e => {
-      expect(e.swlCurva).toBeGreaterThan(e.swlReta - 0.001);
+      expect(e.swlCurva).toBeCloseTo(e.swlReta, 2);
     });
   });
 
@@ -413,34 +413,34 @@ describe("MANILHA_TABLE — estrutura com polegadas", () => {
 });
 
 describe("lookupWllFromMaterial — manilhas (id por polegadas)", () => {
-  it("retorna 500 kg para manilha curva 3/8\" (0.5t)", () => {
-    expect(lookupWllFromMaterial({ tipo: "MANILHA_CURVA", id: '3/8"', modo: "x" })).toBeCloseTo(500, 0);
+  it("retorna 1000 kg para manilha curva 3/8\" (1.0t)", () => {
+    expect(lookupWllFromMaterial({ tipo: "MANILHA_CURVA", id: '3/8"', modo: "x" })).toBeCloseTo(1000, 0);
   });
 
-  it("retorna 500 kg para manilha reta 3/8\" (0.5t)", () => {
-    expect(lookupWllFromMaterial({ tipo: "MANILHA_RETA", id: '3/8"', modo: "x" })).toBeCloseTo(500, 0);
+  it("retorna 1000 kg para manilha reta 3/8\" (1.0t)", () => {
+    expect(lookupWllFromMaterial({ tipo: "MANILHA_RETA", id: '3/8"', modo: "x" })).toBeCloseTo(1000, 0);
   });
 
   it("retorna 12000 kg para manilha curva 1-1/4\" (12.0t)", () => {
     expect(lookupWllFromMaterial({ tipo: "MANILHA_CURVA", id: '1-1/4"', modo: "x" })).toBeCloseTo(12000, 0);
   });
 
-  it("retorna 11000 kg para manilha reta 1-1/4\" (11.0t)", () => {
-    expect(lookupWllFromMaterial({ tipo: "MANILHA_RETA", id: '1-1/4"', modo: "x" })).toBeCloseTo(11000, 0);
+  it("retorna 12000 kg para manilha reta 1-1/4\" (12.0t)", () => {
+    expect(lookupWllFromMaterial({ tipo: "MANILHA_RETA", id: '1-1/4"', modo: "x" })).toBeCloseTo(12000, 0);
   });
 
-  it("manilha curva 1-1/4\" > manilha reta 1-1/4\"", () => {
+  it("manilha curva 1-1/4\" == manilha reta 1-1/4\"", () => {
     const curva = lookupWllFromMaterial({ tipo: "MANILHA_CURVA", id: '1-1/4"', modo: "x" });
     const reta  = lookupWllFromMaterial({ tipo: "MANILHA_RETA",  id: '1-1/4"', modo: "x" });
-    expect(curva).toBeGreaterThan(reta);
+    expect(curva).toEqual(reta);
   });
 
   it("também aceita busca por mm numérico (compatibilidade)", () => {
-    expect(lookupWllFromMaterial({ tipo: "MANILHA_CURVA", id: 9.5, modo: "x" })).toBeCloseTo(500, 0);
+    expect(lookupWllFromMaterial({ tipo: "MANILHA_CURVA", id: 9.5, modo: "x" })).toBeCloseTo(1000, 0);
   });
 
   it("retorna null para polegada inexistente", () => {
-    expect(lookupWllFromMaterial({ tipo: "MANILHA_CURVA", id: '5/16"', modo: "x" })).toBeNull();
+    expect(lookupWllFromMaterial({ tipo: "MANILHA_CURVA", id: '3/16"', modo: "x" })).toBeNull();
   });
 
   it("ignora o campo modo (manilha só tem um valor por tipo)", () => {
@@ -500,8 +500,8 @@ describe("lookupWllFromMaterial — tipo inválido / edge cases", () => {
       { tipo: "CABO_AF37",     id: 25.4,          modo: "forca"        },
       { tipo: "CORRENTE_G80",  id: 16,            modo: "pernas2_ang60"},
       { tipo: "CORRENTE_G100", id: 16,            modo: "pernas4_ang45"},
-      { tipo: "MANILHA_CURVA", id: 25.0,          modo: "x"            },
-      { tipo: "MANILHA_RETA",  id: 25.0,          modo: "x"            },
+      { tipo: "MANILHA_CURVA", id: 25.4,          modo: "x"            },
+      { tipo: "MANILHA_RETA",  id: 25.4,          modo: "x"            },
     ];
     cases.forEach(cfg => {
       const wll = lookupWllFromMaterial(cfg);

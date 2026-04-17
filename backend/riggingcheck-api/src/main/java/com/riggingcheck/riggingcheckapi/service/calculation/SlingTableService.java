@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * Tabelas de capacidade de carga conforme ABNT NBR 13541-1:2014 e NBR 13545:2021.
+ * Tabelas de capacidade de carga conforme ABNT NBR 13541-1, ABNT NBR 15637, e ABNT NBR 13545.
  * FS = 5:1 para cabos de aço  |  FS = 7:1 para cintas sintéticas.
  */
 @Service
@@ -37,15 +37,15 @@ public class SlingTableService {
         );
     }
 
-    // ── Cintas Sintéticas (NBR 13545:2021, FS = 7:1) ────────────────────────
+    // ── Cintas Sintéticas (ABNT NBR 15637-1 e 2, FS = 7:1) ────────────────────────
 
     public record CintaSinteticaEntry(
             String cor,
             double vertical,   // WLL toneladas
             double choker,     // 0.8 × vertical
             double cesto,      // 2.0 × vertical
-            double ang45,      // 2 × vertical × sin(45°) ≈ 1.414 × vertical
-            double ang30       // 2 × vertical × sin(30°) = 1.0  × vertical
+            double ang45,      // Angular 0-45°: 1.4 × vertical
+            double ang30       // Angular 45-60°: 1.0 × vertical
     ) {}
 
     public List<CintaSinteticaEntry> getCintaTable() {
@@ -55,8 +55,9 @@ public class SlingTableService {
             buildCinta("Amarelo", 3.0),
             buildCinta("Cinza",   4.0),
             buildCinta("Vermelho",5.0),
-            buildCinta("Branco",  6.0),
-            buildCinta("Laranja", 8.0)
+            buildCinta("Marrom",  6.0),
+            buildCinta("Azul",    8.0),
+            buildCinta("Laranja", 10.0)
         );
     }
 
@@ -66,34 +67,36 @@ public class SlingTableService {
             round2(wll),
             round2(wll * 0.8),
             round2(wll * 2.0),
-            round2(wll * 2.0 * Math.sin(Math.toRadians(45))),
-            round2(wll * 2.0 * Math.sin(Math.toRadians(30)))
+            round2(wll * 1.4),
+            round2(wll * 1.0)
         );
     }
 
-    // ── Manilhas (NBR 13545 / ASME B30.26) ──────────────────────────────────
+    // ── Manilhas (ABNT NBR 13545 Grau 6) ──────────────────────────────────
 
     public record ManilhaEntry(
             double diametroMm,
             double swlCurva,   // Manilha tipo Ômega / Curva (t)
-            double swlReta     // Manilha tipo Reta / Ancora (t)
+            double swlReta     // Manilha tipo Reta / Cadeia (t)
     ) {}
 
     public List<ManilhaEntry> getManilhaTable() {
         return List.of(
-            new ManilhaEntry( 9.5,  0.50,  0.50),
-            new ManilhaEntry(11.0,  0.75,  0.75),
-            new ManilhaEntry(12.7,  1.00,  1.00),
-            new ManilhaEntry(16.0,  2.00,  2.00),
-            new ManilhaEntry(19.0,  3.20,  3.20),
-            new ManilhaEntry(22.0,  4.75,  4.75),
-            new ManilhaEntry(25.0,  6.50,  6.50),
-            new ManilhaEntry(29.0,  8.50,  8.50),
-            new ManilhaEntry(32.0, 12.00, 11.00),
-            new ManilhaEntry(35.0, 13.50, 12.50),
-            new ManilhaEntry(38.0, 17.00, 15.00),
-            new ManilhaEntry(44.0, 22.00, 19.50),
-            new ManilhaEntry(51.0, 32.50, 27.50)
+            new ManilhaEntry( 6.5,  0.50,  0.50),
+            new ManilhaEntry( 8.0,  0.75,  0.75),
+            new ManilhaEntry( 9.5,  1.00,  1.00),
+            new ManilhaEntry(11.0,  1.50,  1.50),
+            new ManilhaEntry(12.7,  2.00,  2.00),
+            new ManilhaEntry(16.0,  3.25,  3.25),
+            new ManilhaEntry(19.0,  4.75,  4.75),
+            new ManilhaEntry(22.0,  6.50,  6.50),
+            new ManilhaEntry(25.4,  8.50,  8.50),
+            new ManilhaEntry(29.0,  9.50,  9.50),
+            new ManilhaEntry(32.0, 12.00, 12.00),
+            new ManilhaEntry(35.0, 13.50, 13.50),
+            new ManilhaEntry(38.0, 17.00, 17.00),
+            new ManilhaEntry(44.0, 25.00, 25.00),
+            new ManilhaEntry(51.0, 35.00, 35.00)
         );
     }
 

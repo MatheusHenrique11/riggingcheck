@@ -235,7 +235,7 @@ export const calcMunckMomento = (forcaToneladas, distanciaMetros, limiteCapacida
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TABELA — LAÇOS DE CABO DE AÇO 6×19 AF  (NBR 13541, FS 5:1)
+// TABELA — LAÇOS DE CABO DE AÇO 6×19 AF  (ABNT NBR 13541-1, FS 5:1)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const CABO_ACO_TABLE = [
@@ -253,7 +253,7 @@ export const CABO_ACO_TABLE = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TABELA — LAÇO CABO DE AÇO 6×19 AA/IWRC  (NBR 13541, FS 5:1, alma de aço)
+// TABELA — LAÇO CABO DE AÇO 6×19 AA/IWRC  (ABNT NBR 13541-1, FS 5:1, alma de aço)
 // Capacidade ~7-10 % superior à alma de fibra (AF) pela maior resistência do núcleo.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -272,7 +272,7 @@ export const CABO_ACO_19AA_TABLE = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TABELA — LAÇO CABO DE AÇO 6×37 AF  (NBR 13541, FS 5:1, alma de fibra)
+// TABELA — LAÇO CABO DE AÇO 6×37 AF  (ABNT NBR 13541-1, FS 5:1, alma de fibra)
 // Maior flexibilidade que 6×19; levemente inferior em resistência para o mesmo Ø.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -291,72 +291,77 @@ export const CABO_ACO_37AF_TABLE = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TABELA — CORRENTE DE IÇAMENTO GRAU 80 (EN 818-4 / NBR ISO 3076, FS 4:1)
-// WLL em toneladas para eslinga de 1 perna (simples), 2 pernas e modo choker.
-// Ângulo de referência para 2 pernas: β = 0°–45° / 45°–60° / 60°–90°.
+// TABELA — CORRENTE DE IÇAMENTO GRAU 80 (EN 818-4 / ABNT NBR 15516-1, FS 4:1)
+// Fatores de redução por ângulo (da vertical):
+// 2 pernas: 0-45° (x1.4) / 45-60° (x1.0) | 3 e 4 pernas: 0-45° (x2.1) / 45-60° (x1.5)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const CORRENTE_G80_TABLE = [
-  { mm:  6, simples: 1.12, choker: 0.80, cesto: 2.24, pernas2_ang60: 1.94, pernas2_ang45: 1.58, pernas4_ang60: 3.87, pernas4_ang45: 3.16 },
-  { mm:  7, simples: 1.50, choker: 1.05, cesto: 3.00, pernas2_ang60: 2.60, pernas2_ang45: 2.12, pernas4_ang60: 5.19, pernas4_ang45: 4.24 },
-  { mm:  8, simples: 2.00, choker: 1.40, cesto: 4.00, pernas2_ang60: 3.46, pernas2_ang45: 2.83, pernas4_ang60: 6.93, pernas4_ang45: 5.66 },
-  { mm: 10, simples: 3.15, choker: 2.20, cesto: 6.30, pernas2_ang60: 5.46, pernas2_ang45: 4.45, pernas4_ang60: 10.90,pernas4_ang45: 8.91 },
-  { mm: 13, simples: 5.30, choker: 3.70, cesto: 10.6, pernas2_ang60: 9.19, pernas2_ang45: 7.50, pernas4_ang60: 18.38,pernas4_ang45: 15.0 },
-  { mm: 16, simples: 8.00, choker: 5.60, cesto: 16.0, pernas2_ang60: 13.86,pernas2_ang45: 11.31,pernas4_ang60: 27.71,pernas4_ang45: 22.63},
-  { mm: 20, simples: 12.5, choker: 8.75, cesto: 25.0, pernas2_ang60: 21.65,pernas2_ang45: 17.68,pernas4_ang60: 43.30,pernas4_ang45: 35.36},
-  { mm: 22, simples: 15.0, choker: 10.5, cesto: 30.0, pernas2_ang60: 25.98,pernas2_ang45: 21.21,pernas4_ang60: 51.96,pernas4_ang45: 42.43},
-  { mm: 26, simples: 21.2, choker: 14.84,cesto: 42.4, pernas2_ang60: 36.72,pernas2_ang45: 29.97,pernas4_ang60: 73.44,pernas4_ang45: 59.95},
-  { mm: 32, simples: 31.5, choker: 22.05,cesto: 63.0, pernas2_ang60: 54.56,pernas2_ang45: 44.55,pernas4_ang60:109.12,pernas4_ang45: 89.10},
+  { mm:  6, simples:  1.12, choker:  0.90, cesto:  2.24, pernas2_ang60:  1.12, pernas2_ang45:  1.57, pernas4_ang60:  1.68, pernas4_ang45:  2.35 },
+  { mm:  7, simples:  1.50, choker:  1.20, cesto:  3.00, pernas2_ang60:  1.50, pernas2_ang45:  2.10, pernas4_ang60:  2.25, pernas4_ang45:  3.15 },
+  { mm:  8, simples:  2.00, choker:  1.60, cesto:  4.00, pernas2_ang60:  2.00, pernas2_ang45:  2.80, pernas4_ang60:  3.00, pernas4_ang45:  4.20 },
+  { mm: 10, simples:  3.15, choker:  2.52, cesto:  6.30, pernas2_ang60:  3.15, pernas2_ang45:  4.41, pernas4_ang60:  4.72, pernas4_ang45:  6.62 },
+  { mm: 13, simples:  5.30, choker:  4.24, cesto: 10.60, pernas2_ang60:  5.30, pernas2_ang45:  7.42, pernas4_ang60:  7.95, pernas4_ang45: 11.13 },
+  { mm: 16, simples:  8.00, choker:  6.40, cesto: 16.00, pernas2_ang60:  8.00, pernas2_ang45: 11.20, pernas4_ang60: 12.00, pernas4_ang45: 16.80 },
+  { mm: 20, simples: 12.50, choker: 10.00, cesto: 25.00, pernas2_ang60: 12.50, pernas2_ang45: 17.50, pernas4_ang60: 18.75, pernas4_ang45: 26.25 },
+  { mm: 22, simples: 15.00, choker: 12.00, cesto: 30.00, pernas2_ang60: 15.00, pernas2_ang45: 21.00, pernas4_ang60: 22.50, pernas4_ang45: 31.50 },
+  { mm: 26, simples: 21.20, choker: 16.96, cesto: 42.40, pernas2_ang60: 21.20, pernas2_ang45: 29.68, pernas4_ang60: 31.80, pernas4_ang45: 44.52 },
+  { mm: 32, simples: 31.50, choker: 25.20, cesto: 63.00, pernas2_ang60: 31.50, pernas2_ang45: 44.10, pernas4_ang60: 47.25, pernas4_ang45: 66.15 },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TABELA — CORRENTE DE IÇAMENTO GRAU 100 (EN 818-4 / NBR ISO 3076, FS 4:1)
+// TABELA — CORRENTE DE IÇAMENTO GRAU 100 (EN 818-4 / ABNT NBR 15516-2, FS 4:1)
 // ~25 % superior ao Grau 80 — identificada por elos marcados "100" ou "T".
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const CORRENTE_G100_TABLE = [
-  { mm:  8, simples: 2.50, choker: 1.75, cesto:  5.00, pernas2_ang60:  4.33, pernas2_ang45:  3.54, pernas4_ang60:  8.66, pernas4_ang45:  7.07 },
-  { mm: 10, simples: 4.00, choker: 2.80, cesto:  8.00, pernas2_ang60:  6.93, pernas2_ang45:  5.66, pernas4_ang60: 13.86, pernas4_ang45: 11.31 },
-  { mm: 13, simples: 6.70, choker: 4.69, cesto: 13.40, pernas2_ang60: 11.60, pernas2_ang45:  9.47, pernas4_ang60: 23.19, pernas4_ang45: 18.95 },
-  { mm: 16, simples: 10.0, choker: 7.00, cesto: 20.00, pernas2_ang60: 17.32, pernas2_ang45: 14.14, pernas4_ang60: 34.64, pernas4_ang45: 28.28 },
-  { mm: 20, simples: 16.0, choker: 11.2, cesto: 32.00, pernas2_ang60: 27.71, pernas2_ang45: 22.63, pernas4_ang60: 55.42, pernas4_ang45: 45.25 },
-  { mm: 22, simples: 19.0, choker: 13.3, cesto: 38.00, pernas2_ang60: 32.91, pernas2_ang45: 26.87, pernas4_ang60: 65.82, pernas4_ang45: 53.74 },
-  { mm: 26, simples: 27.0, choker: 18.9, cesto: 54.00, pernas2_ang60: 46.77, pernas2_ang45: 38.18, pernas4_ang60: 93.53, pernas4_ang45: 76.37 },
-  { mm: 32, simples: 40.0, choker: 28.0, cesto: 80.00, pernas2_ang60: 69.28, pernas2_ang45: 56.57, pernas4_ang60:138.56, pernas4_ang45:113.14 },
+  { mm:  8, simples:  2.50, choker:  2.00, cesto:  5.00, pernas2_ang60:  2.50, pernas2_ang45:  3.50, pernas4_ang60:  3.75, pernas4_ang45:  5.25 },
+  { mm: 10, simples:  4.00, choker:  3.20, cesto:  8.00, pernas2_ang60:  4.00, pernas2_ang45:  5.60, pernas4_ang60:  6.00, pernas4_ang45:  8.40 },
+  { mm: 13, simples:  6.70, choker:  5.36, cesto: 13.40, pernas2_ang60:  6.70, pernas2_ang45:  9.38, pernas4_ang60: 10.05, pernas4_ang45: 14.07 },
+  { mm: 16, simples: 10.00, choker:  8.00, cesto: 20.00, pernas2_ang60: 10.00, pernas2_ang45: 14.00, pernas4_ang60: 15.00, pernas4_ang45: 21.00 },
+  { mm: 20, simples: 16.00, choker: 12.80, cesto: 32.00, pernas2_ang60: 16.00, pernas2_ang45: 22.40, pernas4_ang60: 24.00, pernas4_ang45: 33.60 },
+  { mm: 22, simples: 19.00, choker: 15.20, cesto: 38.00, pernas2_ang60: 19.00, pernas2_ang45: 26.60, pernas4_ang60: 28.50, pernas4_ang45: 39.90 },
+  { mm: 26, simples: 27.00, choker: 21.60, cesto: 54.00, pernas2_ang60: 27.00, pernas2_ang45: 37.80, pernas4_ang60: 40.50, pernas4_ang45: 56.70 },
+  { mm: 32, simples: 40.00, choker: 32.00, cesto: 80.00, pernas2_ang60: 40.00, pernas2_ang45: 56.00, pernas4_ang60: 60.00, pernas4_ang45: 84.00 },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TABELA — CINTAS SINTÉTICAS  (NBR 13545:2021, FS 7:1)
+// TABELA — CINTAS SINTÉTICAS  (ABNT NBR 15637-1 e 2, FS 7:1)
+// Fatores de Cesto: U reto (2.0), Angular 0-45º (1.4), Angular 45-60º (1.0)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const CINTA_SINTETICA_TABLE = [
-  { cor: "Violeta", vertical: 1.0, choker: 0.80, cesto: 2.0, ang45: 1.41, ang30: 1.0 },
-  { cor: "Verde",   vertical: 2.0, choker: 1.60, cesto: 4.0, ang45: 2.83, ang30: 2.0 },
-  { cor: "Amarelo", vertical: 3.0, choker: 2.40, cesto: 6.0, ang45: 4.24, ang30: 3.0 },
-  { cor: "Cinza",   vertical: 4.0, choker: 3.20, cesto: 8.0, ang45: 5.66, ang30: 4.0 },
-  { cor: "Vermelho",vertical: 5.0, choker: 4.00, cesto: 10.0,ang45: 7.07, ang30: 5.0 },
-  { cor: "Branco",  vertical: 6.0, choker: 4.80, cesto: 12.0,ang45: 8.49, ang30: 6.0 },
-  { cor: "Laranja", vertical: 8.0, choker: 6.40, cesto: 16.0,ang45: 11.31,ang30: 8.0 },
+  { cor: "Violeta", vertical: 1.0, choker: 0.80, cesto: 2.0, ang45: 1.4,  ang30: 1.0 },
+  { cor: "Verde",   vertical: 2.0, choker: 1.60, cesto: 4.0, ang45: 2.8,  ang30: 2.0 },
+  { cor: "Amarelo", vertical: 3.0, choker: 2.40, cesto: 6.0, ang45: 4.2,  ang30: 3.0 },
+  { cor: "Cinza",   vertical: 4.0, choker: 3.20, cesto: 8.0, ang45: 5.6,  ang30: 4.0 },
+  { cor: "Vermelho",vertical: 5.0, choker: 4.00, cesto: 10.0,ang45: 7.0,  ang30: 5.0 },
+  { cor: "Marrom",  vertical: 6.0, choker: 4.80, cesto: 12.0,ang45: 8.4,  ang30: 6.0 },
+  { cor: "Azul",    vertical: 8.0, choker: 6.40, cesto: 16.0,ang45: 11.2, ang30: 8.0 },
+  { cor: "Laranja", vertical: 10.0,choker: 8.00, cesto: 20.0,ang45: 14.0, ang30: 10.0},
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TABELA — MANILHAS (NBR 13545 / ASME B30.26)
+// TABELA — MANILHAS (ABNT NBR 13545 Grau 6)
+// WLL idêntico para manilha Curva (Âncora) e Reta (Cadeia) do mesmo diâmetro do corpo.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const MANILHA_TABLE = [
-  { pol: '3/8"',   mm:  9.5, swlCurva:  0.50, swlReta:  0.50 },
-  { pol: '7/16"',  mm: 11.0, swlCurva:  0.75, swlReta:  0.75 },
-  { pol: '1/2"',   mm: 12.7, swlCurva:  1.00, swlReta:  1.00 },
-  { pol: '5/8"',   mm: 16.0, swlCurva:  2.00, swlReta:  2.00 },
-  { pol: '3/4"',   mm: 19.0, swlCurva:  3.20, swlReta:  3.20 },
-  { pol: '7/8"',   mm: 22.0, swlCurva:  4.75, swlReta:  4.75 },
-  { pol: '1"',     mm: 25.0, swlCurva:  6.50, swlReta:  6.50 },
-  { pol: '1-1/8"', mm: 29.0, swlCurva:  8.50, swlReta:  8.50 },
-  { pol: '1-1/4"', mm: 32.0, swlCurva: 12.00, swlReta: 11.00 },
-  { pol: '1-3/8"', mm: 35.0, swlCurva: 13.50, swlReta: 12.50 },
-  { pol: '1-1/2"', mm: 38.0, swlCurva: 17.00, swlReta: 15.00 },
-  { pol: '1-3/4"', mm: 44.0, swlCurva: 22.00, swlReta: 19.50 },
-  { pol: '2"',     mm: 51.0, swlCurva: 32.50, swlReta: 27.50 },
+  { pol: '1/4"',   mm:  6.5, swlCurva:  0.50, swlReta:  0.50 },
+  { pol: '5/16"',  mm:  8.0, swlCurva:  0.75, swlReta:  0.75 },
+  { pol: '3/8"',   mm:  9.5, swlCurva:  1.00, swlReta:  1.00 },
+  { pol: '7/16"',  mm: 11.0, swlCurva:  1.50, swlReta:  1.50 },
+  { pol: '1/2"',   mm: 12.7, swlCurva:  2.00, swlReta:  2.00 },
+  { pol: '5/8"',   mm: 16.0, swlCurva:  3.25, swlReta:  3.25 },
+  { pol: '3/4"',   mm: 19.0, swlCurva:  4.75, swlReta:  4.75 },
+  { pol: '7/8"',   mm: 22.0, swlCurva:  6.50, swlReta:  6.50 },
+  { pol: '1"',     mm: 25.4, swlCurva:  8.50, swlReta:  8.50 },
+  { pol: '1-1/8"', mm: 29.0, swlCurva:  9.50, swlReta:  9.50 },
+  { pol: '1-1/4"', mm: 32.0, swlCurva: 12.00, swlReta: 12.00 },
+  { pol: '1-3/8"', mm: 35.0, swlCurva: 13.50, swlReta: 13.50 },
+  { pol: '1-1/2"', mm: 38.0, swlCurva: 17.00, swlReta: 17.00 },
+  { pol: '1-3/4"', mm: 44.0, swlCurva: 25.00, swlReta: 25.00 },
+  { pol: '2"',     mm: 51.0, swlCurva: 35.00, swlReta: 35.00 },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
