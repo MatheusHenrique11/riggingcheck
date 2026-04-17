@@ -197,7 +197,7 @@ describe("openPrintWindow", () => {
 });
 
 // ── canPrintPdf ───────────────────────────────────────────────────────────────────
-// Valida a regra: não logado → pode; logado + GERENTE → pode; outros perfis → não pode
+// Regra: não logado → pode; logado + (GERENTE | LIDER | ADMIN) → pode; outros → não pode
 
 describe("canPrintPdf", () => {
   // ── Usuário não logado ───────────────────────────────────────────────────────
@@ -210,26 +210,25 @@ describe("canPrintPdf", () => {
   });
 
   it("permite impressão quando não logado independente do role informado", () => {
-    // Caso defensivo: role não deveria existir sem login, mas a função não falha
     expect(canPrintPdf(false, "RIGGER")).toBe(true);
   });
 
-  // ── Usuário logado + GERENTE_OPERACOES ───────────────────────────────────────
+  // ── Usuários logados COM permissão ───────────────────────────────────────────
   it("permite impressão quando logado como GERENTE_OPERACOES", () => {
     expect(canPrintPdf(true, "GERENTE_OPERACOES")).toBe(true);
   });
 
-  // ── Usuários logados sem permissão ───────────────────────────────────────────
+  it("permite impressão quando logado como LIDER_EQUIPE", () => {
+    expect(canPrintPdf(true, "LIDER_EQUIPE")).toBe(true);
+  });
+
+  it("permite impressão quando logado como ADMIN_EMPRESA", () => {
+    expect(canPrintPdf(true, "ADMIN_EMPRESA")).toBe(true);
+  });
+
+  // ── Usuários logados SEM permissão ───────────────────────────────────────────
   it("bloqueia impressão para RIGGER logado", () => {
     expect(canPrintPdf(true, "RIGGER")).toBe(false);
-  });
-
-  it("bloqueia impressão para ADMIN_EMPRESA logado", () => {
-    expect(canPrintPdf(true, "ADMIN_EMPRESA")).toBe(false);
-  });
-
-  it("bloqueia impressão para LIDER_EQUIPE logado", () => {
-    expect(canPrintPdf(true, "LIDER_EQUIPE")).toBe(false);
   });
 
   it("bloqueia impressão para OPERADOR logado", () => {
@@ -240,7 +239,7 @@ describe("canPrintPdf", () => {
     expect(canPrintPdf(true, "OPERADOR_GUINDASTE")).toBe(false);
   });
 
-  it("bloqueia impressão para SUPER_ADMIN logado (SUPER_ADMIN não é GERENTE)", () => {
+  it("bloqueia impressão para SUPER_ADMIN logado (não está na lista de impressão)", () => {
     expect(canPrintPdf(true, "SUPER_ADMIN")).toBe(false);
   });
 
@@ -253,12 +252,12 @@ describe("canPrintPdf", () => {
   });
 
   // ── Coerência lógica ─────────────────────────────────────────────────────────
-  it("apenas GERENTE_OPERACOES tem acesso entre todos os perfis logados", () => {
+  it("exatamente GERENTE_OPERACOES, LIDER_EQUIPE e ADMIN_EMPRESA têm acesso entre todos os perfis logados", () => {
     const todosRoles = [
       "SUPER_ADMIN", "ADMIN_EMPRESA", "GERENTE_OPERACOES",
       "LIDER_EQUIPE", "RIGGER", "OPERADOR", "OPERADOR_GUINDASTE",
     ];
     const comAcesso = todosRoles.filter((r) => canPrintPdf(true, r));
-    expect(comAcesso).toEqual(["GERENTE_OPERACOES"]);
+    expect(comAcesso).toEqual(["ADMIN_EMPRESA", "GERENTE_OPERACOES", "LIDER_EQUIPE"]);
   });
 });

@@ -40,6 +40,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers("/api/auth/login").permitAll()
                 .requestMatchers("/api/auth/setup").permitAll()
+                .requestMatchers("/api/calculation/**").permitAll()
                 .requestMatchers("/api/auth/register").hasRole("SUPER_ADMIN")
                 .requestMatchers("/api/admin/**").hasRole("SUPER_ADMIN")
                 .anyRequest().authenticated()

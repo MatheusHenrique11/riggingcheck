@@ -164,8 +164,11 @@ export const getHighVoltageDistance = (kV) => {
  * @param {string|null} role   - perfil do usuário (RoleEnum) ou null
  * @returns {boolean}
  */
+/** Roles com permissão de imprimir relatório PDF quando logados. */
+const ROLES_PODE_IMPRIMIR = new Set(["GERENTE_OPERACOES", "LIDER_EQUIPE", "ADMIN_EMPRESA"]);
+
 export const canPrintPdf = (isLoggedIn, role) =>
-  !isLoggedIn || role === "GERENTE_OPERACOES";
+  !isLoggedIn || ROLES_PODE_IMPRIMIR.has(role);
 
 /**
  * Nome exibível para cada perfil de usuário.
@@ -181,3 +184,134 @@ export const roleLabel = (role) =>
     OPERADOR:           "Operador",
     OPERADOR_GUINDASTE: "Op. Guindaste",
   }[role] || role);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TRIGONOMETRIA DE IÇAMENTO  (ABNT NBR 13541-1:2014)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Ce = √(D² + He²)  — comprimento da eslinga */
+export const calcSlingLength = (distHorizontal, alturaEfetiva) =>
+  Math.sqrt(distHorizontal ** 2 + alturaEfetiva ** 2);
+
+/** D = √(Ce² - He²)  — distância horizontal */
+export const calcHorizontalDist = (ce, he) =>
+  Math.sqrt(ce ** 2 - he ** 2);
+
+/** ang = arcsin(He / Ce) em graus */
+export const calcAngleDeg = (he, ce) =>
+  (180 / Math.PI) * Math.asin(he / ce);
+
+/** Ce = He / sin(ang)  — eslinga a partir do ângulo */
+export const calcSlingFromAngle = (he, angGraus) =>
+  he / Math.sin((Math.PI / 180) * angGraus);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONVERSÕES DE UNIDADE
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const metersToFeet = (m)   => m / 0.3048;
+export const feetToMeters = (ft)  => ft * 0.3048;
+export const kgToLbs      = (kg)  => kg / 0.4536;
+export const lbsToKg      = (lbs) => lbs * 0.4536;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MOMENTO DE CARGA — MUNCK / GUINDASTE ARTICULADO
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * M = F × D  (t·m)
+ * @param {number} forcaToneladas
+ * @param {number} distanciaMetros
+ * @param {number} limiteCapacidade  — limite do diagrama do fabricante (t·m)
+ * @returns {{ momento: number, usoPct: number, risco: string, aprovado: boolean }}
+ */
+export const calcMunckMomento = (forcaToneladas, distanciaMetros, limiteCapacidade) => {
+  const momento = forcaToneladas * distanciaMetros;
+  const usoPct  = (momento / limiteCapacidade) * 100;
+  const risco   = usoPct < 70 ? "SAFE" : usoPct < 90 ? "WARNING" : "DANGER";
+  return { momento, usoPct, risco, aprovado: usoPct < 90 };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TABELA — LAÇOS DE CABO DE AÇO 6×19 AF  (NBR 13541, FS 5:1)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const CABO_ACO_TABLE = [
+  { diametro: '3/8"',    mm: 9.5,  simples: 0.98, forca: 0.69, cesto: 1.96 },
+  { diametro: '1/2"',    mm: 12.7, simples: 1.76, forca: 1.24, cesto: 3.52 },
+  { diametro: '9/16"',   mm: 14.3, simples: 2.22, forca: 1.57, cesto: 4.44 },
+  { diametro: '5/8"',    mm: 15.9, simples: 2.74, forca: 1.94, cesto: 5.48 },
+  { diametro: '3/4"',    mm: 19.1, simples: 3.96, forca: 2.80, cesto: 7.92 },
+  { diametro: '7/8"',    mm: 22.2, simples: 5.40, forca: 3.81, cesto: 10.80 },
+  { diametro: '1"',      mm: 25.4, simples: 7.04, forca: 4.97, cesto: 14.08 },
+  { diametro: '1.1/8"',  mm: 28.6, simples: 8.88, forca: 6.27, cesto: 17.76 },
+  { diametro: '1.1/4"',  mm: 31.8, simples: 11.0, forca: 7.77, cesto: 22.00 },
+  { diametro: '1.3/8"',  mm: 34.9, simples: 13.2, forca: 9.33, cesto: 26.40 },
+  { diametro: '1.1/2"',  mm: 38.1, simples: 15.6, forca: 11.0, cesto: 31.20 },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TABELA — CINTAS SINTÉTICAS  (NBR 13545:2021, FS 7:1)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const CINTA_SINTETICA_TABLE = [
+  { cor: "Violeta", vertical: 1.0, choker: 0.80, cesto: 2.0, ang45: 1.41, ang30: 1.0 },
+  { cor: "Verde",   vertical: 2.0, choker: 1.60, cesto: 4.0, ang45: 2.83, ang30: 2.0 },
+  { cor: "Amarelo", vertical: 3.0, choker: 2.40, cesto: 6.0, ang45: 4.24, ang30: 3.0 },
+  { cor: "Cinza",   vertical: 4.0, choker: 3.20, cesto: 8.0, ang45: 5.66, ang30: 4.0 },
+  { cor: "Vermelho",vertical: 5.0, choker: 4.00, cesto: 10.0,ang45: 7.07, ang30: 5.0 },
+  { cor: "Branco",  vertical: 6.0, choker: 4.80, cesto: 12.0,ang45: 8.49, ang30: 6.0 },
+  { cor: "Laranja", vertical: 8.0, choker: 6.40, cesto: 16.0,ang45: 11.31,ang30: 8.0 },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TABELA — MANILHAS (NBR 13545 / ASME B30.26)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const MANILHA_TABLE = [
+  { mm:  9.5, swlCurva:  0.50, swlReta:  0.50 },
+  { mm: 11.0, swlCurva:  0.75, swlReta:  0.75 },
+  { mm: 12.7, swlCurva:  1.00, swlReta:  1.00 },
+  { mm: 16.0, swlCurva:  2.00, swlReta:  2.00 },
+  { mm: 19.0, swlCurva:  3.20, swlReta:  3.20 },
+  { mm: 22.0, swlCurva:  4.75, swlReta:  4.75 },
+  { mm: 25.0, swlCurva:  6.50, swlReta:  6.50 },
+  { mm: 29.0, swlCurva:  8.50, swlReta:  8.50 },
+  { mm: 32.0, swlCurva: 12.00, swlReta: 11.00 },
+  { mm: 35.0, swlCurva: 13.50, swlReta: 12.50 },
+  { mm: 38.0, swlCurva: 17.00, swlReta: 15.00 },
+  { mm: 44.0, swlCurva: 22.00, swlReta: 19.50 },
+  { mm: 51.0, swlCurva: 32.50, swlReta: 27.50 },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// N-2869 PETROBRAS — classificação de içamento
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Classifica o içamento conforme N-2869 Rev.B item 7.4.
+ * Retorna "CRITICO", "NAO_ROTINEIRO" ou "ROTINEIRO".
+ *
+ * Critérios de içamento CRÍTICO (qualquer um):
+ *  - Carga > 75% da capacidade nominal do guindaste no raio de operação
+ *  - Dois ou mais guindastes em tandem
+ *  - Içamento sobre área habitada / área de processo
+ *  - Carga com características especiais (frágil, perigosa, alta planta)
+ */
+export const classificarIcamento = ({
+  usoPct,
+  tandem = false,
+  sobreAreaHabitada = false,
+  cargaEspecial = false,
+}) => {
+  if (usoPct > 75 || tandem || sobreAreaHabitada || cargaEspecial) return "CRITICO";
+  if (usoPct > 50) return "NAO_ROTINEIRO";
+  return "ROTINEIRO";
+};
+
+/** Documentos obrigatórios por classificação (N-2869 Tabela 2). */
+export const N2869_DOCUMENTOS = {
+  ROTINEIRO:     ["Permissão de Trabalho (PT)", "AST"],
+  NAO_ROTINEIRO: ["Permissão de Trabalho (PT)", "Análise de Risco (ART/AST)", "Plano de Comunicação"],
+  CRITICO:       ["Permissão de Trabalho (PT)", "Análise de Risco (ART/AST)", "Plano de Rigging Detalhado", "Plano de Comunicação"],
+};

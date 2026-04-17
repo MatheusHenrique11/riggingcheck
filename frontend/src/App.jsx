@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { openPrintWindow } from "./utils/pdf.js";
-import { canPrintPdf }     from "./utils/calculations.js";
+import { canPrintPdf, classificarIcamento, N2869_DOCUMENTOS } from "./utils/calculations.js";
 
 function useIsMobile() {
   const [mobile, setMobile] = useState(() => window.innerWidth < 640);
@@ -3325,17 +3325,48 @@ function TabChecklistCampo({ planData }) {
     if (!jobId.trim()) { setSolError("Preencha o número da OS."); return; }
     setSolLoading(true); setSolError(null);
     try {
+      const ug  = planData?.utilizacaoGuindaste;
+      const cb  = planData?.cargaBruta;
+      const te  = planData?.tensao;
+
+      // Mapeamento correto planData → LiberacaoRequest DTO (campos do backend)
+      const dadosCapacidade = {
+        capGuindasteKg:  ug?.capacidade   ?? null,
+        capCargaKg:      cb?.inputs?.liq  ?? ug?.cargaTotal ?? null,
+        capAparelhoKg:   cb?.inputs
+          ? (Number(cb.inputs.esl || 0) + Number(cb.inputs.man || 0) + Number(cb.inputs.disp || 0))
+          : null,
+        capTotalKg:      ug?.cargaTotal   ?? cb?.total ?? null,
+        capUsoPercent:   ug?.pct          ?? null,
+        capRisco:        ug?.risk         ?? null,
+      };
+
+      const dadosEslinga = {
+        eslNumPernas:           te?.inputs?.pernas  ? parseInt(te.inputs.pernas)    : null,
+        eslAnguloGraus:         te?.inputs?.angulo  ? parseFloat(te.inputs.angulo)  : null,
+        eslTensaoPorPernaKg:    te?.tensao           ?? null,
+        eslFatorCarga:          te?.mult             ?? null,
+        eslRisco:               te?.status           ?? null,
+        eslAnguloAviso:         te?.inputs?.angulo   ? parseFloat(te.inputs.angulo) < 45 : null,
+        eslWllKg:               te?.wll              ?? null,
+        eslWllUsoPercent:       te?.taxa             ?? null,
+        eslTemManilha:          false,
+        eslManilhaCapacidadeKg: null,
+        eslManilhaUsoPercent:   null,
+        eslManilhaCompativel:   null,
+      };
+
       const res = await authFetch(`${API}/api/liberacoes`, {
         method: "POST",
         body: JSON.stringify({
-          operacaoOs:      jobId.trim(),
-          riggerNome:      user?.userName || resp || "—",
-          dadosCapacidade: planData?.utilizacaoGuindaste || planData?.cargaBruta || null,
-          dadosEslinga:    planData?.tensao || null,
+          operacaoOs:  jobId.trim(),
+          riggerNome:  user?.userName || "—",
+          dadosCapacidade,
+          dadosEslinga,
         }),
       });
       const data = await res.json();
-      if (!res.ok) { setSolError(data.error || "Erro ao enviar solicitação."); return; }
+      if (!res.ok) { setSolError(data.error || data.message || "Erro ao enviar solicitação."); return; }
       setSolicitacao(data);
       setPolling(true);
     } catch { setSolError("Não foi possível conectar à API."); }
@@ -3708,13 +3739,208 @@ function TabChecklistCampo({ planData }) {
   );
 }
 
+// ── ABA PETROBRAS — N-2869 Rev.B ─────────────────────────────────────────────────
+function TabPetrobras({ planData = {} }) {
+  const usoPct = planData.usoPct ?? 0;
+
+  const [classificacao, setClassificacao] = useState(() =>
+    classificarIcamento({ usoPct, tandem: false, sobreAreaHabitada: false, cargaEspecial: false })
+  );
+  const [tandem,            setTandem]            = useState(false);
+  const [sobreAreaHabitada, setSobreAreaHabitada] = useState(false);
+  const [cargaEspecial,     setCargaEspecial]     = useState(false);
+  const [projetista,        setProjetista]        = useState({ nome: "", registro: "" });
+  const [supervisor,        setSupervisor]        = useState({ nome: "", registro: "" });
+  const [checklist,         setChecklist]         = useState({});
+
+  useEffect(() => {
+    setClassificacao(classificarIcamento({ usoPct, tandem, sobreAreaHabitada, cargaEspecial }));
+  }, [usoPct, tandem, sobreAreaHabitada, cargaEspecial]);
+
+  const toggleCheck = (key) => setChecklist(prev => ({ ...prev, [key]: !prev[key] }));
+
+  const corClass = {
+    ROTINEIRO:     { bg: "#052e16", border: "#22c55e44", color: "#22c55e", label: "ROTINEIRO" },
+    NAO_ROTINEIRO: { bg: "#2d1900", border: "#f59e0b44", color: "#f59e0b", label: "NÃO ROTINEIRO" },
+    CRITICO:       { bg: "#1c0a0a", border: "#ef444444", color: "#ef4444", label: "IÇAMENTO CRÍTICO" },
+  }[classificacao];
+
+  const docs = N2869_DOCUMENTOS[classificacao] ?? [];
+
+  const CHECKLIST_ITEMS = [
+    { key: "pt",          label: "Permissão de Trabalho (PT) emitida e assinada" },
+    { key: "ast",         label: "AST / Análise de Risco (ART) realizada" },
+    { key: "plano",       label: "Plano de Rigging aprovado pelo Projetista (PLH)" },
+    { key: "anemometro",  label: "Anemômetro funcional verificado na cabine" },
+    { key: "caboGuia",    label: "Cabo guia instalado na carga" },
+    { key: "bastao",      label: "Bastão balizador (mãos livres) disponível" },
+    { key: "preUso",      label: "Checklist de verificação pré-uso executado (item 9.1.14)" },
+    { key: "comunicacao", label: "Plano de comunicação distribuído à equipe" },
+    { key: "equipe",      label: "Equipe mínima confirmada: Projetista, Supervisor, Operador, Sinaleiro" },
+    { key: "capacidade",  label: `Utilização do guindaste ≤ 90% confirmada (atual: ${usoPct.toFixed(1)}%)` },
+  ];
+
+  const sBase = { fontFamily: "Arial, sans-serif", fontSize: 14, color: "#cbd5e1" };
+  const sCard = { background: "#0f172a", border: "1px solid #1e293b", borderRadius: 10, padding: "18px 20px", marginBottom: 16 };
+  const sLabel = { display: "block", fontSize: 12, color: "#64748b", marginBottom: 4 };
+  const sInput = { width: "100%", background: "#0a0a0f", border: "1px solid #1e293b", borderRadius: 6, padding: "8px 12px", color: "#e2e8f0", fontSize: 14, boxSizing: "border-box" };
+  const sRow = { display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 };
+  const sToggle = (active) => ({
+    padding: "6px 14px", borderRadius: 6, fontSize: 13, cursor: "pointer", border: "none",
+    background: active ? "#1e40af" : "#1e293b", color: active ? "#93c5fd" : "#64748b",
+  });
+
+  const todosMarcados = CHECKLIST_ITEMS.every(i => checklist[i.key]);
+
+  return (
+    <div style={sBase}>
+      {/* Banner N-2869 */}
+      <div style={{ ...sCard, background: "#0f0a1f", borderColor: "#7c3aed44", marginBottom: 20 }}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: "#a78bfa", marginBottom: 4 }}>
+          ⚙️ Módulo Petrobras — N-2869 Rev.B (06/2025)
+        </div>
+        <div style={{ fontSize: 13, color: "#64748b" }}>
+          Requisitos para içamentos em unidades e instalações do sistema Petrobras.
+          Preencha os campos abaixo para gerar o relatório de conformidade.
+        </div>
+      </div>
+
+      {/* Classificação */}
+      <div style={sCard}>
+        <div style={{ fontWeight: 600, color: "#94a3b8", marginBottom: 12 }}>Classificação da Movimentação (Item 7.4)</div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#94a3b8", cursor: "pointer" }}>
+            <input type="checkbox" checked={tandem} onChange={e => setTandem(e.target.checked)} />
+            Içamento em Tandem (2+ guindastes)
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#94a3b8", cursor: "pointer" }}>
+            <input type="checkbox" checked={sobreAreaHabitada} onChange={e => setSobreAreaHabitada(e.target.checked)} />
+            Sobre área habitada / área de processo
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#94a3b8", cursor: "pointer" }}>
+            <input type="checkbox" checked={cargaEspecial} onChange={e => setCargaEspecial(e.target.checked)} />
+            Carga especial (frágil, perigosa ou de grande porte)
+          </label>
+        </div>
+
+        <div style={{ padding: "12px 16px", borderRadius: 8, background: corClass.bg, border: `1px solid ${corClass.border}`, display: "inline-flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: corClass.color }} />
+          <span style={{ fontWeight: 700, color: corClass.color, fontSize: 15 }}>{corClass.label}</span>
+          {usoPct > 75 && <span style={{ fontSize: 12, color: "#f59e0b" }}> · Utilização {usoPct.toFixed(1)}% &gt; 75%</span>}
+        </div>
+      </div>
+
+      {/* Documentação Obrigatória */}
+      <div style={sCard}>
+        <div style={{ fontWeight: 600, color: "#94a3b8", marginBottom: 10 }}>Documentação Obrigatória — Tabela 2</div>
+        {docs.map(d => (
+          <div key={d} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid #1e293b", fontSize: 13, color: "#cbd5e1" }}>
+            <span style={{ color: "#22c55e", fontSize: 16 }}>✓</span> {d}
+          </div>
+        ))}
+        {classificacao === "CRITICO" && (
+          <div style={{ marginTop: 10, padding: "10px 14px", background: "#1c0a0a", borderRadius: 6, border: "1px solid #ef444433", fontSize: 13, color: "#ef4444" }}>
+            ⚠️ Içamento Crítico exige Plano de Rigging Detalhado aprovado pelo Projetista (PLH) antes do início.
+          </div>
+        )}
+      </div>
+
+      {/* Equipe Mínima */}
+      <div style={sCard}>
+        <div style={{ fontWeight: 600, color: "#94a3b8", marginBottom: 12 }}>Equipe Mínima (Item 4.3)</div>
+        <div style={sRow}>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <label style={sLabel}>Nome do Projetista (PLH)</label>
+            <input style={sInput} value={projetista.nome} onChange={e => setProjetista(p => ({ ...p, nome: e.target.value }))} placeholder="Nome completo" />
+          </div>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <label style={sLabel}>Registro de Classe (CREA/CFT)</label>
+            <input style={sInput} value={projetista.registro} onChange={e => setProjetista(p => ({ ...p, registro: e.target.value }))} placeholder="Ex: CREA-RJ 123456/D" />
+          </div>
+        </div>
+        <div style={sRow}>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <label style={sLabel}>Nome do Supervisor de Içamento</label>
+            <input style={sInput} value={supervisor.nome} onChange={e => setSupervisor(p => ({ ...p, nome: e.target.value }))} placeholder="Nome completo" />
+          </div>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <label style={sLabel}>Registro de Classe (CREA/CFT)</label>
+            <input style={sInput} value={supervisor.registro} onChange={e => setSupervisor(p => ({ ...p, registro: e.target.value }))} placeholder="Ex: CREA-SP 654321/D" />
+          </div>
+        </div>
+        <div style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>
+          Equipe obrigatória: Projetista · Supervisor · Operador de Guindaste · Sinaleiro/Amarrador
+        </div>
+      </div>
+
+      {/* Segurança em Equipamentos */}
+      <div style={sCard}>
+        <div style={{ fontWeight: 600, color: "#94a3b8", marginBottom: 12 }}>Segurança em Equipamentos</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 10 }}>
+          {[
+            { icon: "🌬️", titulo: "Anemômetro", desc: "Obrigatório e funcional na cabine do guindaste terrestre/offshore. Operar dentro dos limites de vento da tabela do fabricante." },
+            { icon: "🧵", titulo: "Cabo Guia",   desc: "Uso obrigatório para estabilização e direcionamento da carga durante o içamento." },
+            { icon: "🦯", titulo: "Bastão Balizador", desc: "Uso obrigatório (mãos livres). Proibido segurar a carga diretamente." },
+            { icon: "📋", titulo: "Checklist Pré-uso", desc: "Executar a cada início de turno conforme item 9.1.14 da N-2869." },
+          ].map(item => (
+            <div key={item.titulo} style={{ background: "#0a0a0f", border: "1px solid #1e293b", borderRadius: 8, padding: "12px 14px" }}>
+              <div style={{ fontSize: 20, marginBottom: 4 }}>{item.icon}</div>
+              <div style={{ fontWeight: 600, color: "#94a3b8", fontSize: 13, marginBottom: 4 }}>{item.titulo}</div>
+              <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5 }}>{item.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Checklist de Conformidade */}
+      <div style={sCard}>
+        <div style={{ fontWeight: 600, color: "#94a3b8", marginBottom: 12 }}>
+          Checklist de Conformidade N-2869
+          {todosMarcados && <span style={{ marginLeft: 10, color: "#22c55e", fontSize: 13 }}>✓ Todos os itens verificados</span>}
+        </div>
+        {CHECKLIST_ITEMS.map(item => (
+          <label key={item.key} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 0", borderBottom: "1px solid #1e293b", cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={!!checklist[item.key]}
+              onChange={() => toggleCheck(item.key)}
+              style={{ marginTop: 2, accentColor: "#22c55e", width: 16, height: 16 }}
+            />
+            <span style={{ fontSize: 13, color: checklist[item.key] ? "#22c55e" : "#94a3b8", lineHeight: 1.5 }}>
+              {item.label}
+            </span>
+          </label>
+        ))}
+      </div>
+
+      {/* Fator de Segurança */}
+      <div style={{ ...sCard, background: "#0a0f1a", borderColor: "#0ea5e944" }}>
+        <div style={{ fontWeight: 600, color: "#38bdf8", marginBottom: 8 }}>Fatores de Segurança — N-2869</div>
+        <div style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.8 }}>
+          <div>• Utilização máxima: <strong style={{ color: "#f59e0b" }}>90% da capacidade nominal</strong> no raio de operação</div>
+          <div>• Içamentos acima de 75% são classificados como Críticos por este critério</div>
+          <div>• Içamentos em tandem exigem coordenação documentada e Plano de Rigging</div>
+          <div>• FS mínimo para cabos de aço: <strong>5:1</strong> (NR-11 / NBR 13541)</div>
+          <div>• FS mínimo para cintas sintéticas: <strong>7:1</strong> (NBR 13545)</div>
+        </div>
+      </div>
+
+      <div style={{ textAlign: "center", fontSize: 12, color: "#334155", marginTop: 8 }}>
+        Norma N-2869 Rev.B (06/2025) · Petrobras · Uso exclusivo para planejamento de içamento
+      </div>
+    </div>
+  );
+}
+
 // ── WRAPPER: PLANEJAMENTO BÁSICO ──────────────────────────────────────────────────
 function PlanejamentoBasico({ onVoltar, isMobile }) {
   const [aba, setAba] = useState("guindaste");
+  const [petrobras, setPetrobras] = useState(false);
   const ABAS = [
     { id:"guindaste", label: isMobile ? "Guindaste" : "Guindaste & Carga" },
     { id:"lingada",   label: isMobile ? "Lingada"   : "Lingada & Carga"   },
     { id:"checklist", label: isMobile ? "Checklist" : "Checklist de Campo" },
+    ...(petrobras ? [{ id:"petrobras", label: isMobile ? "⚙️ N-2869" : "⚙️ Módulo Petrobras" }] : []),
   ];
   return (
     <div style={S.app}>
@@ -3728,6 +3954,13 @@ function PlanejamentoBasico({ onVoltar, isMobile }) {
             </div>
           </div>
           <div style={S.userInfo(isMobile)}>
+            <button
+              onClick={() => { setPetrobras(p => !p); if (petrobras) setAba("guindaste"); }}
+              style={{ ...S.logoutBtn(isMobile), borderColor: petrobras ? "#7c3aed44" : "#47556944", color: petrobras ? "#a78bfa" : "#64748b" }}
+              title="Habilitar requisitos N-2869 para içamentos em ambiente Petrobras"
+            >
+              {petrobras ? "⚙️ Petrobras ON" : "⚙️ Petrobras?"}
+            </button>
             <button onClick={onVoltar} style={{...S.logoutBtn(isMobile), borderColor:"#f59e0b44", color:"#f59e0b"}}>
               ← Voltar
             </button>
@@ -3742,9 +3975,10 @@ function PlanejamentoBasico({ onVoltar, isMobile }) {
         </div>
       </div>
       <div style={{...S.container, maxWidth:960}}>
-        {aba==="guindaste" && <TabGuindasteCarga />}
-        {aba==="lingada"   && <TabLingadaCarga />}
-        {aba==="checklist" && <TabChecklistCampo />}
+        {aba==="guindaste"  && <TabGuindasteCarga />}
+        {aba==="lingada"    && <TabLingadaCarga />}
+        {aba==="checklist"  && <TabChecklistCampo />}
+        {aba==="petrobras"  && <TabPetrobras />}
         <div style={{...S.normaBox, textAlign:"center", marginTop:32}}>
           RiggingCheck · Planejamento Básico &nbsp;·&nbsp; ABNT NBR 13541 / NR-11 / Petrobrás N-2869
         </div>
@@ -3761,6 +3995,7 @@ export default function App() {
   const [aba, setAba]     = useState("guindaste");
   const [planData, setPlanData] = useState({});
   const [showModalSenha, setShowModalSenha] = useState(false);
+  const [petrobras, setPetrobras] = useState(false);
   const user          = getUser();
   const isSuperAdmin  = IS_SUPER(user?.role);
   const isAdminEmpresa = user?.role === "ADMIN_EMPRESA";
@@ -3788,6 +4023,7 @@ export default function App() {
     { id: "guindaste", label: isMobile ? "Guindaste"  : "Guindaste & Carga"  },
     { id: "lingada",   label: isMobile ? "Lingada"    : "Lingada & Carga"    },
     { id: "checklist", label: isMobile ? "Checklist"  : "Checklist de Campo" },
+    ...(petrobras ? [{ id: "petrobras", label: isMobile ? "⚙️ N-2869" : "⚙️ Módulo Petrobras" }] : []),
   ];
 
   return (
@@ -3809,6 +4045,13 @@ export default function App() {
             {isAdminEmpresa && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#f59e0b44", color: "#f59e0b" }} onClick={() => setView("admin")}>{isMobile ? "🔑" : "🔑 Painel Admin"}</button>}
             {isLider        && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#22c55e44", color: "#22c55e" }} onClick={() => setView("admin")}>{isMobile ? "📋" : "📋 Solicitações"}</button>}
             {isGerente      && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => setView("admin")}>{isMobile ? "📊" : "📊 Painel Gerente"}</button>}
+            <button
+              onClick={() => { setPetrobras(p => !p); if (petrobras) setAba("guindaste"); }}
+              style={{ ...S.logoutBtn(isMobile), borderColor: petrobras ? "#7c3aed44" : "#47556944", color: petrobras ? "#a78bfa" : "#64748b" }}
+              title="Habilitar requisitos N-2869 para içamentos em ambiente Petrobras"
+            >
+              {petrobras ? "⚙️ Petrobras ON" : "⚙️ Petrobras?"}
+            </button>
             {authenticated ? (
               <>
                 <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => setShowModalSenha(true)}>{isMobile ? "🔑" : "Alterar Senha"}</button>
@@ -3831,6 +4074,7 @@ export default function App() {
         {aba === "guindaste" && <TabGuindasteCarga onSave={(k,v) => setPlanData(p=>({...p,[k]:v}))} />}
         {aba === "lingada"   && <TabLingadaCarga   onSave={(k,v) => setPlanData(p=>({...p,[k]:v}))} />}
         {aba === "checklist" && <TabChecklistCampo planData={planData} />}
+        {aba === "petrobras" && <TabPetrobras planData={planData} />}
         <div style={{ ...S.normaBox, textAlign: "center", marginTop: 32 }}>
           v2.1.0 — RiggingCheck &nbsp;·&nbsp; React + Java Spring Boot + PostgreSQL
           <br />
