@@ -224,7 +224,8 @@ describe("MANILHA_TABLE", () => {
     }
   });
 
-  it("primeira entrada: ∅9.5mm, SWL 0.5t", () => {
+  it("primeira entrada: 3/8\", SWL 0.5t", () => {
+    expect(MANILHA_TABLE[0].pol).toBe('3/8"');
     expect(MANILHA_TABLE[0].mm).toBeCloseTo(9.5, 1);
     expect(MANILHA_TABLE[0].swlCurva).toBeCloseTo(0.5, 2);
   });

@@ -5,6 +5,7 @@ import {
   CABO_ACO_TABLE, CABO_ACO_19AA_TABLE, CABO_ACO_37AF_TABLE,
   CINTA_SINTETICA_TABLE, MANILHA_TABLE,
   CORRENTE_G80_TABLE, CORRENTE_G100_TABLE,
+  lookupWllFromMaterial,
 } from "./utils/calculations.js";
 
 function useIsMobile() {
@@ -3061,6 +3062,12 @@ function TabLingadaCarga({ onSave }) {
   const [te, setTe] = useState({ carga:"", pernas:"2", angulo:"60", tipo:"CABO", wll:"" });
   const [resTe, setResTe] = useState(null);
 
+  // Seletor de WLL pela tabela de materiais
+  const [matSel, setMatSel] = useState({ tipo: "", id: "", modo: "simples" });
+
+  // Conversão de unidades
+  const [conv, setConv] = useState({ pol: "", ft: "", lb: "" });
+
   // N-2869 extras
   const [n2869, setN2869] = useState({
     vento:"", utilizacao:"", usaDoisGuindastes:false,
@@ -3181,6 +3188,121 @@ function TabLingadaCarga({ onSave }) {
               value={te.wll} onChange={e=>setTe(p=>({...p,wll:e.target.value}))} />
           </Campo>
         </div>
+        {/* ── Seletor por tabela ── */}
+        <div style={{...S.normaBox, marginTop:12, padding:"10px 14px"}}>
+          <div style={{color:"#94a3b8", fontSize:11, marginBottom:8, fontWeight:600}}>🔍 Preencher WLL pela tabela de materiais</div>
+          <div style={{display:"flex", flexWrap:"wrap", gap:"8px 12px", alignItems:"flex-end"}}>
+            {/* Tipo */}
+            <div>
+              <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Tipo de material</div>
+              <select style={{...S.select, fontSize:11, padding:"4px 8px"}}
+                value={matSel.tipo}
+                onChange={e => setMatSel({ tipo: e.target.value, id: "", modo: "simples" })}>
+                <option value="">— selecionar —</option>
+                <optgroup label="Cintas Sintéticas (NBR 13545)">
+                  <option value="CINTA">Cinta Têxtil</option>
+                </optgroup>
+                <optgroup label="Laços de Cabo de Aço (NBR 13541)">
+                  <option value="CABO_AF19">6×19 AF (alma de fibra)</option>
+                  <option value="CABO_AA19">6×19 AA/IWRC (alma de aço)</option>
+                  <option value="CABO_AF37">6×37 AF (alta flexibilidade)</option>
+                </optgroup>
+                <optgroup label="Correntes (EN 818-4)">
+                  <option value="CORRENTE_G80">Corrente Grau 80</option>
+                  <option value="CORRENTE_G100">Corrente Grau 100</option>
+                </optgroup>
+                <optgroup label="Manilhas (ASME B30.26)">
+                  <option value="MANILHA_CURVA">Manilha Curva (bow)</option>
+                  <option value="MANILHA_RETA">Manilha Reta (dee)</option>
+                </optgroup>
+              </select>
+            </div>
+            {/* Tamanho / Cor */}
+            {matSel.tipo && (
+              <div>
+                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>
+                  {matSel.tipo === "CINTA" ? "Cor / Capacidade" : "Diâmetro (mm)"}
+                </div>
+                <select style={{...S.select, fontSize:11, padding:"4px 8px"}}
+                  value={matSel.id}
+                  onChange={e => {
+                    const v = e.target.value;
+                    const isStr = ["CINTA","MANILHA_CURVA","MANILHA_RETA"].includes(matSel.tipo);
+                    setMatSel(p => ({ ...p, id: v === "" ? "" : (isStr ? v : parseFloat(v)) }));
+                  }}>
+                  <option value="">— selecionar —</option>
+                  {matSel.tipo === "CINTA" && CINTA_SINTETICA_TABLE.map(r => (
+                    <option key={r.cor} value={r.cor}>{r.cor} — {r.vertical}t vertical</option>
+                  ))}
+                  {(matSel.tipo === "CABO_AF19") && CABO_ACO_TABLE.map(r => (
+                    <option key={r.mm} value={r.mm}>Ø{r.diametro} ({r.mm} mm) — {r.simples}t simples</option>
+                  ))}
+                  {(matSel.tipo === "CABO_AA19") && CABO_ACO_19AA_TABLE.map(r => (
+                    <option key={r.mm} value={r.mm}>Ø{r.diametro} ({r.mm} mm) — {r.simples}t simples</option>
+                  ))}
+                  {(matSel.tipo === "CABO_AF37") && CABO_ACO_37AF_TABLE.map(r => (
+                    <option key={r.mm} value={r.mm}>Ø{r.diametro} ({r.mm} mm) — {r.simples}t simples</option>
+                  ))}
+                  {(matSel.tipo === "CORRENTE_G80") && CORRENTE_G80_TABLE.map(r => (
+                    <option key={r.mm} value={r.mm}>Ø{r.mm} mm — {r.simples}t simples</option>
+                  ))}
+                  {(matSel.tipo === "CORRENTE_G100") && CORRENTE_G100_TABLE.map(r => (
+                    <option key={r.mm} value={r.mm}>Ø{r.mm} mm — {r.simples}t simples</option>
+                  ))}
+                  {(matSel.tipo === "MANILHA_CURVA" || matSel.tipo === "MANILHA_RETA") && MANILHA_TABLE.map(r => (
+                    <option key={r.pol} value={r.pol}>{r.pol} ({r.mm} mm) — SWL {matSel.tipo === "MANILHA_CURVA" ? r.swlCurva : r.swlReta}t</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {/* Modo de uso */}
+            {matSel.tipo && matSel.id !== "" && !["MANILHA_CURVA","MANILHA_RETA"].includes(matSel.tipo) && (
+              <div>
+                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Modo de uso</div>
+                <select style={{...S.select, fontSize:11, padding:"4px 8px"}}
+                  value={matSel.modo}
+                  onChange={e => setMatSel(p => ({ ...p, modo: e.target.value }))}>
+                  {matSel.tipo === "CINTA" && <>
+                    <option value="vertical">Vertical (simples)</option>
+                    <option value="choker">Choker (abraçado)</option>
+                    <option value="cesto">Cesto (2 pernas)</option>
+                    <option value="ang45">Cesto 45°</option>
+                    <option value="ang30">Cesto 30°</option>
+                  </>}
+                  {(matSel.tipo === "CABO_AF19" || matSel.tipo === "CABO_AA19" || matSel.tipo === "CABO_AF37") && <>
+                    <option value="simples">Simples (vertical)</option>
+                    <option value="forca">Choker (abraçado)</option>
+                    <option value="cesto">Cesto (2 pernas 0°)</option>
+                  </>}
+                  {(matSel.tipo === "CORRENTE_G80" || matSel.tipo === "CORRENTE_G100") && <>
+                    <option value="simples">1 Perna (simples)</option>
+                    <option value="choker">Choker</option>
+                    <option value="cesto">Cesto (0°)</option>
+                    <option value="pernas2_ang60">2 Pernas 60°</option>
+                    <option value="pernas2_ang45">2 Pernas 45°</option>
+                    <option value="pernas4_ang60">4 Pernas 60°</option>
+                    <option value="pernas4_ang45">4 Pernas 45°</option>
+                  </>}
+                </select>
+              </div>
+            )}
+            {/* Botão aplicar */}
+            {matSel.tipo && matSel.id !== "" && (() => {
+              const wll = lookupWllFromMaterial(matSel);
+              if (!wll) return null;
+              return (
+                <div>
+                  <div style={{fontSize:10, color:"#22c55e", marginBottom:3}}>WLL encontrado</div>
+                  <button
+                    style={{...S.btn(false), padding:"4px 12px", fontSize:11, background:"#052e16", borderColor:"#22c55e44", color:"#22c55e"}}
+                    onClick={() => setTe(p => ({ ...p, wll: String(wll) }))}>
+                    Usar {(wll/1000).toFixed(3)} t ({wll.toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo"})} kg)
+                  </button>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
         <div style={{...S.normaBox, marginTop:12, fontSize:11, color:"#64748b"}}>
           💡 Informe o WLL (Carga de Trabalho) da eslinga para calcular a utilização real. Se omitido,
           a utilização será estimada pelo FS mínimo da norma ({te.tipo==="CINTA"?"7:1":"5:1"}).
@@ -3252,6 +3374,103 @@ function TabLingadaCarga({ onSave }) {
             {resN2.alertas.length===0 && <div style={{...S.successBox, marginTop:8}}>Todos os parâmetros N-2869 dentro dos limites.</div>}
           </>
         )}
+      </div>
+
+      {/* Conversão de Unidades */}
+      <div style={S.card}>
+        <div style={S.cardTitle}>📐 Conversão de Unidades</div>
+        <div style={{display:"flex", flexDirection:"column", gap:12}}>
+          {/* Polegadas → mm */}
+          <div>
+            <div style={{fontSize:11, color:"#94a3b8", marginBottom:6, fontWeight:600}}>Polegadas → Milímetros</div>
+            <div style={{display:"flex", gap:8, alignItems:"center", flexWrap:"wrap"}}>
+              <div style={{flex:1, minWidth:110}}>
+                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Polegadas (in)</div>
+                <input style={S.input} type="number" placeholder="ex: 1.5" step="0.001"
+                  value={conv.pol} onChange={e=>setConv(p=>({...p,pol:e.target.value}))} />
+              </div>
+              <div style={{color:"#475569", fontSize:16, paddingTop:18}}>→</div>
+              <div style={{flex:1, minWidth:110}}>
+                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Milímetros (mm)</div>
+                <input style={{...S.input, color:"#22c55e"}} readOnly
+                  value={conv.pol !== "" && !isNaN(parseFloat(conv.pol)) ? (parseFloat(conv.pol)*25.4).toFixed(3) : ""} />
+              </div>
+              <div style={{color:"#475569", fontSize:16, paddingTop:18}}>·</div>
+              <div style={{flex:1, minWidth:110}}>
+                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Milímetros (mm)</div>
+                <input style={S.input} type="number" placeholder="ex: 25.4" step="0.01"
+                  value={conv.mmPol ?? ""} onChange={e=>setConv(p=>({...p,mmPol:e.target.value}))} />
+              </div>
+              <div style={{color:"#475569", fontSize:16, paddingTop:18}}>→</div>
+              <div style={{flex:1, minWidth:110}}>
+                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Polegadas (in)</div>
+                <input style={{...S.input, color:"#22c55e"}} readOnly
+                  value={conv.mmPol !== undefined && conv.mmPol !== "" && !isNaN(parseFloat(conv.mmPol)) ? (parseFloat(conv.mmPol)/25.4).toFixed(5) : ""} />
+              </div>
+            </div>
+          </div>
+          {/* Pés → metros */}
+          <div>
+            <div style={{fontSize:11, color:"#94a3b8", marginBottom:6, fontWeight:600}}>Pés → Metros</div>
+            <div style={{display:"flex", gap:8, alignItems:"center", flexWrap:"wrap"}}>
+              <div style={{flex:1, minWidth:110}}>
+                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Pés (ft)</div>
+                <input style={S.input} type="number" placeholder="ex: 10" step="0.01"
+                  value={conv.ft} onChange={e=>setConv(p=>({...p,ft:e.target.value}))} />
+              </div>
+              <div style={{color:"#475569", fontSize:16, paddingTop:18}}>→</div>
+              <div style={{flex:1, minWidth:110}}>
+                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Metros (m)</div>
+                <input style={{...S.input, color:"#22c55e"}} readOnly
+                  value={conv.ft !== "" && !isNaN(parseFloat(conv.ft)) ? (parseFloat(conv.ft)*0.3048).toFixed(4) : ""} />
+              </div>
+              <div style={{color:"#475569", fontSize:16, paddingTop:18}}>·</div>
+              <div style={{flex:1, minWidth:110}}>
+                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Metros (m)</div>
+                <input style={S.input} type="number" placeholder="ex: 3.048" step="0.001"
+                  value={conv.m ?? ""} onChange={e=>setConv(p=>({...p,m:e.target.value}))} />
+              </div>
+              <div style={{color:"#475569", fontSize:16, paddingTop:18}}>→</div>
+              <div style={{flex:1, minWidth:110}}>
+                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Pés (ft)</div>
+                <input style={{...S.input, color:"#22c55e"}} readOnly
+                  value={conv.m !== undefined && conv.m !== "" && !isNaN(parseFloat(conv.m)) ? (parseFloat(conv.m)/0.3048).toFixed(4) : ""} />
+              </div>
+            </div>
+          </div>
+          {/* Libras → kg */}
+          <div>
+            <div style={{fontSize:11, color:"#94a3b8", marginBottom:6, fontWeight:600}}>Libras → Quilogramas</div>
+            <div style={{display:"flex", gap:8, alignItems:"center", flexWrap:"wrap"}}>
+              <div style={{flex:1, minWidth:110}}>
+                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Libras (lb)</div>
+                <input style={S.input} type="number" placeholder="ex: 2000" step="0.1"
+                  value={conv.lb} onChange={e=>setConv(p=>({...p,lb:e.target.value}))} />
+              </div>
+              <div style={{color:"#475569", fontSize:16, paddingTop:18}}>→</div>
+              <div style={{flex:1, minWidth:110}}>
+                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Quilogramas (kg)</div>
+                <input style={{...S.input, color:"#22c55e"}} readOnly
+                  value={conv.lb !== "" && !isNaN(parseFloat(conv.lb)) ? (parseFloat(conv.lb)*0.4536).toFixed(3) : ""} />
+              </div>
+              <div style={{color:"#475569", fontSize:16, paddingTop:18}}>·</div>
+              <div style={{flex:1, minWidth:110}}>
+                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Quilogramas (kg)</div>
+                <input style={S.input} type="number" placeholder="ex: 907.18" step="0.1"
+                  value={conv.kg ?? ""} onChange={e=>setConv(p=>({...p,kg:e.target.value}))} />
+              </div>
+              <div style={{color:"#475569", fontSize:16, paddingTop:18}}>→</div>
+              <div style={{flex:1, minWidth:110}}>
+                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Libras (lb)</div>
+                <input style={{...S.input, color:"#22c55e"}} readOnly
+                  value={conv.kg !== undefined && conv.kg !== "" && !isNaN(parseFloat(conv.kg)) ? (parseFloat(conv.kg)/0.4536).toFixed(3) : ""} />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style={{...S.normaBox, marginTop:12, fontSize:10, color:"#475569"}}>
+          1 pol = 25,4 mm · 1 ft = 0,3048 m · 1 lb = 0,4536 kg
+        </div>
       </div>
     </div>
   );
@@ -4016,7 +4235,7 @@ function TabEquipamentos() {
             <table style={sTable}>
               <thead>
                 <tr style={{ background: "#0a0a0f" }}>
-                  <th style={sTh}>Diâmetro do Pino (mm)</th>
+                  <th style={sTh}>Diâmetro do Pino (pol)</th>
                   <th style={sTh}>SWL Curva (Bow)</th>
                   <th style={sTh}>SWL Reta (Straight)</th>
                   <th style={sTh}>Diferença</th>
@@ -4026,8 +4245,8 @@ function TabEquipamentos() {
                 {MANILHA_TABLE.map((e, i) => {
                   const diff = ((e.swlCurva - e.swlReta) / e.swlReta * 100).toFixed(0);
                   return (
-                    <tr key={e.mm} style={{ background: i % 2 === 0 ? "#0f172a" : "#0a0a0f" }}>
-                      <td style={{ ...sTd, fontWeight: 700, color: "#e2e8f0" }}>∅ {e.mm} mm</td>
+                    <tr key={e.pol} style={{ background: i % 2 === 0 ? "#0f172a" : "#0a0a0f" }}>
+                      <td style={{ ...sTd, fontWeight: 700, color: "#e2e8f0" }}>{e.pol}<span style={{color:"#475569",fontSize:10,marginLeft:4}}>({e.mm} mm)</span></td>
                       <td style={sTdNum}><Num v={e.swlCurva} /></td>
                       <td style={sTdNum}><Num v={e.swlReta} /></td>
                       <td style={{ ...sTdNum, color: e.swlCurva > e.swlReta ? "#22c55e" : "#94a3b8" }}>

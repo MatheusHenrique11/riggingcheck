@@ -209,10 +209,12 @@ export const calcSlingFromAngle = (he, angGraus) =>
 // CONVERSÕES DE UNIDADE
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const metersToFeet = (m)   => m / 0.3048;
-export const feetToMeters = (ft)  => ft * 0.3048;
-export const kgToLbs      = (kg)  => kg / 0.4536;
-export const lbsToKg      = (lbs) => lbs * 0.4536;
+export const metersToFeet  = (m)   => m / 0.3048;
+export const feetToMeters  = (ft)  => ft * 0.3048;
+export const kgToLbs       = (kg)  => kg / 0.4536;
+export const lbsToKg       = (lbs) => lbs * 0.4536;
+export const inchesToMm    = (pol) => pol * 25.4;
+export const mmToInches    = (mm)  => mm / 25.4;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MOMENTO DE CARGA — MUNCK / GUINDASTE ARTICULADO
@@ -342,20 +344,79 @@ export const CINTA_SINTETICA_TABLE = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const MANILHA_TABLE = [
-  { mm:  9.5, swlCurva:  0.50, swlReta:  0.50 },
-  { mm: 11.0, swlCurva:  0.75, swlReta:  0.75 },
-  { mm: 12.7, swlCurva:  1.00, swlReta:  1.00 },
-  { mm: 16.0, swlCurva:  2.00, swlReta:  2.00 },
-  { mm: 19.0, swlCurva:  3.20, swlReta:  3.20 },
-  { mm: 22.0, swlCurva:  4.75, swlReta:  4.75 },
-  { mm: 25.0, swlCurva:  6.50, swlReta:  6.50 },
-  { mm: 29.0, swlCurva:  8.50, swlReta:  8.50 },
-  { mm: 32.0, swlCurva: 12.00, swlReta: 11.00 },
-  { mm: 35.0, swlCurva: 13.50, swlReta: 12.50 },
-  { mm: 38.0, swlCurva: 17.00, swlReta: 15.00 },
-  { mm: 44.0, swlCurva: 22.00, swlReta: 19.50 },
-  { mm: 51.0, swlCurva: 32.50, swlReta: 27.50 },
+  { pol: '3/8"',   mm:  9.5, swlCurva:  0.50, swlReta:  0.50 },
+  { pol: '7/16"',  mm: 11.0, swlCurva:  0.75, swlReta:  0.75 },
+  { pol: '1/2"',   mm: 12.7, swlCurva:  1.00, swlReta:  1.00 },
+  { pol: '5/8"',   mm: 16.0, swlCurva:  2.00, swlReta:  2.00 },
+  { pol: '3/4"',   mm: 19.0, swlCurva:  3.20, swlReta:  3.20 },
+  { pol: '7/8"',   mm: 22.0, swlCurva:  4.75, swlReta:  4.75 },
+  { pol: '1"',     mm: 25.0, swlCurva:  6.50, swlReta:  6.50 },
+  { pol: '1-1/8"', mm: 29.0, swlCurva:  8.50, swlReta:  8.50 },
+  { pol: '1-1/4"', mm: 32.0, swlCurva: 12.00, swlReta: 11.00 },
+  { pol: '1-3/8"', mm: 35.0, swlCurva: 13.50, swlReta: 12.50 },
+  { pol: '1-1/2"', mm: 38.0, swlCurva: 17.00, swlReta: 15.00 },
+  { pol: '1-3/4"', mm: 44.0, swlCurva: 22.00, swlReta: 19.50 },
+  { pol: '2"',     mm: 51.0, swlCurva: 32.50, swlReta: 27.50 },
 ];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOOKUP WLL POR MATERIAL
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Busca o WLL (kg) na tabela de materiais a partir do tipo, identificador e modo.
+ *
+ * @param {{ tipo: string, id: string|number, modo: string }} cfg
+ *   tipo: "CINTA" | "CABO_AF19" | "CABO_AA19" | "CABO_AF37"
+ *       | "CORRENTE_G80" | "CORRENTE_G100" | "MANILHA_CURVA" | "MANILHA_RETA"
+ *   id  : cor (cintas) ou mm numérico (demais)
+ *   modo: "vertical"|"choker"|"cesto"|"ang45"|"ang30"   (cintas)
+ *         "simples"|"forca"|"cesto"                      (cabos)
+ *         "simples"|"choker"|"cesto"|"pernas2_ang60"
+ *         |"pernas2_ang45"|"pernas4_ang60"|"pernas4_ang45" (correntes)
+ *         ignorado para manilhas (usa swlCurva ou swlReta pelo tipo)
+ * @returns {number|null} WLL em kg, ou null se não encontrado
+ */
+export const lookupWllFromMaterial = ({ tipo, id, modo }) => {
+  const t2kg = (t) => t * 1000;
+
+  if (tipo === "CINTA") {
+    const row = CINTA_SINTETICA_TABLE.find(r => r.cor === id);
+    if (!row) return null;
+    const val = { vertical: row.vertical, choker: row.choker, cesto: row.cesto, ang45: row.ang45, ang30: row.ang30 }[modo];
+    return val != null ? t2kg(val) : null;
+  }
+
+  if (tipo === "CABO_AF19" || tipo === "CABO_AA19" || tipo === "CABO_AF37") {
+    const table = tipo === "CABO_AF19" ? CABO_ACO_TABLE
+                : tipo === "CABO_AA19" ? CABO_ACO_19AA_TABLE
+                : CABO_ACO_37AF_TABLE;
+    const row = table.find(r => r.mm === id || r.diametro === id);
+    if (!row) return null;
+    const val = { simples: row.simples, forca: row.forca, cesto: row.cesto }[modo];
+    return val != null ? t2kg(val) : null;
+  }
+
+  if (tipo === "CORRENTE_G80" || tipo === "CORRENTE_G100") {
+    const table = tipo === "CORRENTE_G80" ? CORRENTE_G80_TABLE : CORRENTE_G100_TABLE;
+    const row = table.find(r => r.mm === id);
+    if (!row) return null;
+    const val = {
+      simples: row.simples, choker: row.choker, cesto: row.cesto,
+      pernas2_ang60: row.pernas2_ang60, pernas2_ang45: row.pernas2_ang45,
+      pernas4_ang60: row.pernas4_ang60, pernas4_ang45: row.pernas4_ang45,
+    }[modo];
+    return val != null ? t2kg(val) : null;
+  }
+
+  if (tipo === "MANILHA_CURVA" || tipo === "MANILHA_RETA") {
+    const row = MANILHA_TABLE.find(r => r.pol === id || r.mm === id);
+    if (!row) return null;
+    return t2kg(tipo === "MANILHA_CURVA" ? row.swlCurva : row.swlReta);
+  }
+
+  return null;
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // N-2869 PETROBRAS — classificação de içamento
