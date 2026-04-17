@@ -251,6 +251,79 @@ export const CABO_ACO_TABLE = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
+// TABELA — LAÇO CABO DE AÇO 6×19 AA/IWRC  (NBR 13541, FS 5:1, alma de aço)
+// Capacidade ~7-10 % superior à alma de fibra (AF) pela maior resistência do núcleo.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const CABO_ACO_19AA_TABLE = [
+  { diametro: '3/8"',    mm: 9.5,  simples: 1.08, forca: 0.76, cesto: 2.16 },
+  { diametro: '1/2"',    mm: 12.7, simples: 1.94, forca: 1.37, cesto: 3.88 },
+  { diametro: '9/16"',   mm: 14.3, simples: 2.46, forca: 1.74, cesto: 4.92 },
+  { diametro: '5/8"',    mm: 15.9, simples: 3.04, forca: 2.15, cesto: 6.08 },
+  { diametro: '3/4"',    mm: 19.1, simples: 4.38, forca: 3.09, cesto: 8.76 },
+  { diametro: '7/8"',    mm: 22.2, simples: 5.98, forca: 4.22, cesto: 11.96 },
+  { diametro: '1"',      mm: 25.4, simples: 7.80, forca: 5.50, cesto: 15.60 },
+  { diametro: '1.1/8"',  mm: 28.6, simples: 9.84, forca: 6.95, cesto: 19.68 },
+  { diametro: '1.1/4"',  mm: 31.8, simples: 12.18,forca: 8.60, cesto: 24.36 },
+  { diametro: '1.3/8"',  mm: 34.9, simples: 14.64,forca: 10.34,cesto: 29.28 },
+  { diametro: '1.1/2"',  mm: 38.1, simples: 17.30,forca: 12.21,cesto: 34.60 },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TABELA — LAÇO CABO DE AÇO 6×37 AF  (NBR 13541, FS 5:1, alma de fibra)
+// Maior flexibilidade que 6×19; levemente inferior em resistência para o mesmo Ø.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const CABO_ACO_37AF_TABLE = [
+  { diametro: '3/8"',    mm: 9.5,  simples: 0.93, forca: 0.66, cesto: 1.86 },
+  { diametro: '1/2"',    mm: 12.7, simples: 1.67, forca: 1.18, cesto: 3.34 },
+  { diametro: '9/16"',   mm: 14.3, simples: 2.11, forca: 1.49, cesto: 4.22 },
+  { diametro: '5/8"',    mm: 15.9, simples: 2.60, forca: 1.84, cesto: 5.20 },
+  { diametro: '3/4"',    mm: 19.1, simples: 3.76, forca: 2.66, cesto: 7.52 },
+  { diametro: '7/8"',    mm: 22.2, simples: 5.13, forca: 3.62, cesto: 10.26 },
+  { diametro: '1"',      mm: 25.4, simples: 6.69, forca: 4.72, cesto: 13.38 },
+  { diametro: '1.1/8"',  mm: 28.6, simples: 8.44, forca: 5.96, cesto: 16.88 },
+  { diametro: '1.1/4"',  mm: 31.8, simples: 10.45,forca: 7.38, cesto: 20.90 },
+  { diametro: '1.3/8"',  mm: 34.9, simples: 12.54,forca: 8.86, cesto: 25.08 },
+  { diametro: '1.1/2"',  mm: 38.1, simples: 14.82,forca: 10.47,cesto: 29.64 },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TABELA — CORRENTE DE IÇAMENTO GRAU 80 (EN 818-4 / NBR ISO 3076, FS 4:1)
+// WLL em toneladas para eslinga de 1 perna (simples), 2 pernas e modo choker.
+// Ângulo de referência para 2 pernas: β = 0°–45° / 45°–60° / 60°–90°.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const CORRENTE_G80_TABLE = [
+  { mm:  6, simples: 1.12, choker: 0.80, cesto: 2.24, pernas2_ang60: 1.94, pernas2_ang45: 1.58, pernas4_ang60: 3.87, pernas4_ang45: 3.16 },
+  { mm:  7, simples: 1.50, choker: 1.05, cesto: 3.00, pernas2_ang60: 2.60, pernas2_ang45: 2.12, pernas4_ang60: 5.19, pernas4_ang45: 4.24 },
+  { mm:  8, simples: 2.00, choker: 1.40, cesto: 4.00, pernas2_ang60: 3.46, pernas2_ang45: 2.83, pernas4_ang60: 6.93, pernas4_ang45: 5.66 },
+  { mm: 10, simples: 3.15, choker: 2.20, cesto: 6.30, pernas2_ang60: 5.46, pernas2_ang45: 4.45, pernas4_ang60: 10.90,pernas4_ang45: 8.91 },
+  { mm: 13, simples: 5.30, choker: 3.70, cesto: 10.6, pernas2_ang60: 9.19, pernas2_ang45: 7.50, pernas4_ang60: 18.38,pernas4_ang45: 15.0 },
+  { mm: 16, simples: 8.00, choker: 5.60, cesto: 16.0, pernas2_ang60: 13.86,pernas2_ang45: 11.31,pernas4_ang60: 27.71,pernas4_ang45: 22.63},
+  { mm: 20, simples: 12.5, choker: 8.75, cesto: 25.0, pernas2_ang60: 21.65,pernas2_ang45: 17.68,pernas4_ang60: 43.30,pernas4_ang45: 35.36},
+  { mm: 22, simples: 15.0, choker: 10.5, cesto: 30.0, pernas2_ang60: 25.98,pernas2_ang45: 21.21,pernas4_ang60: 51.96,pernas4_ang45: 42.43},
+  { mm: 26, simples: 21.2, choker: 14.84,cesto: 42.4, pernas2_ang60: 36.72,pernas2_ang45: 29.97,pernas4_ang60: 73.44,pernas4_ang45: 59.95},
+  { mm: 32, simples: 31.5, choker: 22.05,cesto: 63.0, pernas2_ang60: 54.56,pernas2_ang45: 44.55,pernas4_ang60:109.12,pernas4_ang45: 89.10},
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TABELA — CORRENTE DE IÇAMENTO GRAU 100 (EN 818-4 / NBR ISO 3076, FS 4:1)
+// ~25 % superior ao Grau 80 — identificada por elos marcados "100" ou "T".
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const CORRENTE_G100_TABLE = [
+  { mm:  8, simples: 2.50, choker: 1.75, cesto:  5.00, pernas2_ang60:  4.33, pernas2_ang45:  3.54, pernas4_ang60:  8.66, pernas4_ang45:  7.07 },
+  { mm: 10, simples: 4.00, choker: 2.80, cesto:  8.00, pernas2_ang60:  6.93, pernas2_ang45:  5.66, pernas4_ang60: 13.86, pernas4_ang45: 11.31 },
+  { mm: 13, simples: 6.70, choker: 4.69, cesto: 13.40, pernas2_ang60: 11.60, pernas2_ang45:  9.47, pernas4_ang60: 23.19, pernas4_ang45: 18.95 },
+  { mm: 16, simples: 10.0, choker: 7.00, cesto: 20.00, pernas2_ang60: 17.32, pernas2_ang45: 14.14, pernas4_ang60: 34.64, pernas4_ang45: 28.28 },
+  { mm: 20, simples: 16.0, choker: 11.2, cesto: 32.00, pernas2_ang60: 27.71, pernas2_ang45: 22.63, pernas4_ang60: 55.42, pernas4_ang45: 45.25 },
+  { mm: 22, simples: 19.0, choker: 13.3, cesto: 38.00, pernas2_ang60: 32.91, pernas2_ang45: 26.87, pernas4_ang60: 65.82, pernas4_ang45: 53.74 },
+  { mm: 26, simples: 27.0, choker: 18.9, cesto: 54.00, pernas2_ang60: 46.77, pernas2_ang45: 38.18, pernas4_ang60: 93.53, pernas4_ang45: 76.37 },
+  { mm: 32, simples: 40.0, choker: 28.0, cesto: 80.00, pernas2_ang60: 69.28, pernas2_ang45: 56.57, pernas4_ang60:138.56, pernas4_ang45:113.14 },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
 // TABELA — CINTAS SINTÉTICAS  (NBR 13545:2021, FS 7:1)
 // ─────────────────────────────────────────────────────────────────────────────
 
