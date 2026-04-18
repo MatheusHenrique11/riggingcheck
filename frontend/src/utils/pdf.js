@@ -137,30 +137,66 @@ export const formatPetrobrasSection = (data) => {
 };
 
 /**
- * Abre uma nova janela do navegador e imprime o relatório nela.
- *
- * Recebe `opener` como parâmetro injetável para permitir testes unitários
- * sem dependência de `window.open` real.
+ * Imprime o relatório HTML.
+ * Utiliza um iframe oculto por padrão (mais robusto, evita tela em branco e bloqueadores de pop-up).
+ * Fallback para nova janela via `opener` (usado primariamente nos testes).
  *
  * @param {string} innerHtml - Conteúdo HTML do relatório (element.outerHTML)
  * @param {object} [options]
- * @param {number} [options.delay=400] - Ms antes de chamar win.print()
- * @param {Function} [options.opener]  - Substituto para window.open (injeção em testes)
+ * @param {number} [options.delay=500] - Ms antes de chamar print()
+ * @param {Function} [options.opener]  - Opcional. Se fornecido, usa a estratégia de janela (para testes)
  * @returns {{ success: boolean, reason?: string }}
  */
 export const openPrintWindow = (
   innerHtml,
-  { delay = 400, opener = (...args) => window.open(...args) } = {}
+  { delay = 500, opener } = {}
 ) => {
-  const win = opener("", "_blank", "width=900,height=700");
-  if (!win) return { success: false, reason: "popup-blocked" };
-
   const html = buildPrintHtml(innerHtml);
-  win.document.write(html);
-  win.document.close();
-  win.focus();
+
+  // Se um opener customizado for passado (ex: nos testes), usa a estratégia antiga de popup
+  if (opener) {
+    const win = opener("", "_blank", "width=900,height=700");
+    if (!win) return { success: false, reason: "popup-blocked" };
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+    setTimeout(() => {
+      try { win.print(); } catch (_) { }
+    }, delay);
+    return { success: true };
+  }
+
+  // Estratégia Iframe Oculto (Produção)
+  // Evita problemas de "tela em branco" em Safari/Chrome e contorna bloqueadores de pop-up
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow?.document;
+  if (!doc) {
+    document.body.removeChild(iframe);
+    return { success: false, reason: "iframe-creation-failed" };
+  }
+
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  // Foca no iframe e aguarda o browser renderizar o DOM antes de imprimir
+  iframe.contentWindow.focus();
   setTimeout(() => {
-    try { win.print(); } catch (_) { /* ignorado em ambiente sem UI */ }
+    try {
+      iframe.contentWindow.print();
+    } catch (_) { }
+    // Limpa o iframe do DOM após a janela de impressão ser resolvida
+    setTimeout(() => {
+      try { document.body.removeChild(iframe); } catch (_) { }
+    }, 2000);
   }, delay);
 
   return { success: true };

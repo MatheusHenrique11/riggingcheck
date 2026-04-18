@@ -165,10 +165,15 @@ export const getHighVoltageDistance = (kV) => {
  * @returns {boolean}
  */
 /** Roles com permissão de imprimir relatório PDF quando logados. */
-const ROLES_PODE_IMPRIMIR = new Set(["GERENTE_OPERACOES", "LIDER_EQUIPE", "ADMIN_EMPRESA"]);
+const ROLES_PODE_IMPRIMIR = new Set(["GERENTE_OPERACOES", "LIDER_EQUIPE", "ADMIN_EMPRESA", "GERENTE"]);
 
-export const canPrintPdf = (isLoggedIn, role) =>
-  !isLoggedIn || ROLES_PODE_IMPRIMIR.has(role);
+export const canPrintPdf = (isLoggedIn, role) => {
+  if (!isLoggedIn) return true;
+  if (!role) return false;
+  const upperRole = String(role).toUpperCase();
+  if (upperRole === "SUPER_ADMIN") return false;
+  return ROLES_PODE_IMPRIMIR.has(upperRole) || upperRole.includes("GERENTE") || upperRole === "ADMIN_EMPRESA";
+};
 
 /**
  * Nome exibível para cada perfil de usuário.
