@@ -291,6 +291,54 @@ describe("openPrintWindow", () => {
   });
 });
 
+// ── Impressão de OS do Gerente (OSDetalhadaModal) ────────────────────────────
+// Raiz do bug: o modal usava window.print() no documento principal (tema escuro)
+// em vez de openPrintWindow(el.outerHTML) que cria uma janela branca separada.
+
+describe("openPrintWindow — OS do Gerente de Operações", () => {
+  it("captura o conteúdo do OS e escreve em janela branca", () => {
+    const mockWin = {
+      document: { write: mockFn(), close: mockFn() },
+      focus: mockFn(),
+      print: mockFn(),
+    };
+    const osHtml = `
+      <div id="os-print-area" style="background:#fff;color:#111;padding:32px">
+        <div style="font-size:20px;font-weight:800;color:#1e3a5f">RIGGINGCHECK</div>
+        <div>OS: OP-2024-001</div>
+        <div style="background:#e8f0fe;color:#1e3a5f;border-left:3px solid #1e3a5f">AUTORIZAÇÃO</div>
+        <div>Status: AUTORIZADO — PROSSEGUIR</div>
+        <div>Autorizado por: João Gerente</div>
+      </div>`;
+    openPrintWindow(osHtml, { opener: () => mockWin, delay: 0 });
+    const written = mockWin.document.write.mock.calls[0][0];
+    expect(written).toContain("<!DOCTYPE html>");
+    expect(written).toContain("OP-2024-001");
+    expect(written).toContain("AUTORIZADO — PROSSEGUIR");
+    expect(written).toContain("João Gerente");
+    // fundo branco na janela de impressão
+    expect(written).toMatch(/background:\s*#fff/);
+  });
+
+  it("cabeçalho de seção da OS usa texto escuro (visível sem imprimir fundos)", () => {
+    const osHtml = `
+      <div id="os-print-area">
+        <div style="background:#e8f0fe;color:#1e3a5f;border-left:3px solid #1e3a5f">IDENTIFICAÇÃO</div>
+        <div>Empresa: Petrobrás</div>
+      </div>`;
+    const mockWin = {
+      document: { write: mockFn(), close: mockFn() },
+      focus: mockFn(),
+      print: mockFn(),
+    };
+    openPrintWindow(osHtml, { opener: () => mockWin, delay: 0 });
+    const written = mockWin.document.write.mock.calls[0][0];
+    // texto escuro (#1e3a5f) visível mesmo sem fundo impresso
+    expect(written).toContain("color:#1e3a5f");
+    expect(written).not.toContain("color:#fff"); // sem texto branco invisível
+  });
+});
+
 // ── Visibilidade de impressão (causa raiz do relatório em branco) ─────────────
 // Raiz do bug: cabeçalhos de seção usavam color:#fff em fundo escuro.
 // Com "Imprimir fundos" desativado (padrão dos navegadores), o fundo não

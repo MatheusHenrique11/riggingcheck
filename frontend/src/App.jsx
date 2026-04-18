@@ -2454,9 +2454,10 @@ function OSDetalhadaModal({ sol, onFechar }) {
     </div>
   );
 
+  // Cabeçalhos de seção com texto escuro — visíveis sem "imprimir fundos"
   const Section = ({ title, children }) => (
     <div style={{ marginBottom: 20 }}>
-      <div style={{ background: "#1e3a5f", color: "#fff", fontWeight: 700, fontSize: 12, letterSpacing: "1.5px", textTransform: "uppercase", padding: "6px 12px", borderRadius: "6px 6px 0 0" }}>
+      <div style={{ background: "#e8f0fe", color: "#1e3a5f", fontWeight: 700, fontSize: 12, letterSpacing: "1.5px", textTransform: "uppercase", padding: "6px 12px", borderRadius: "6px 6px 0 0", borderLeft: "3px solid #1e3a5f" }}>
         {title}
       </div>
       <div style={{ border: "1px solid #d1d5db", borderTop: "none", borderRadius: "0 0 6px 6px", padding: "4px 12px" }}>
@@ -2465,17 +2466,15 @@ function OSDetalhadaModal({ sol, onFechar }) {
     </div>
   );
 
+  const imprimirOS = () => {
+    const el = document.getElementById("os-print-area");
+    if (!el) return;
+    const result = openPrintWindow(el.outerHTML);
+    if (!result.success) alert("Pop-up bloqueado. Permita pop-ups neste site para imprimir.");
+  };
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "24px 16px" }}>
-      <style>{`
-        @media print {
-          body > * { display: none !important; }
-          #os-print-area { display: block !important; position: static !important; background: white !important; }
-          #os-print-area * { color: black !important; }
-          .no-print { display: none !important; }
-        }
-      `}</style>
-
       <div id="os-print-area" style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: 720, padding: 32, color: "#111" }}>
         {/* Cabeçalho */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
@@ -2536,12 +2535,12 @@ function OSDetalhadaModal({ sol, onFechar }) {
           <div style={{ fontSize: 11, color: "#9ca3af" }}>
             Documento gerado pelo sistema RiggingCheck · Válido apenas para a OS indicada
           </div>
-          <div style={{ display: "flex", gap: 10 }} className="no-print">
+          <div style={{ display: "flex", gap: 10 }}>
             <button
-              onClick={() => window.print()}
+              onClick={imprimirOS}
               style={{ background: "#1e3a5f", color: "#fff", border: "none", borderRadius: 8, padding: "9px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
             >
-              Imprimir / PDF
+              🖨 Imprimir / PDF
             </button>
             <button
               onClick={onFechar}
