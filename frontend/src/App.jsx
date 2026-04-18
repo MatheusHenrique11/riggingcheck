@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { openPrintWindow } from "./utils/pdf.js";
+import { openPrintWindow, formatPetrobrasSection } from "./utils/pdf.js";
 import {
   canPrintPdf, classificarIcamento, N2869_DOCUMENTOS,
   CABO_ACO_TABLE, CABO_ACO_19AA_TABLE, CABO_ACO_37AF_TABLE,
@@ -3379,91 +3379,108 @@ function TabLingadaCarga({ onSave }) {
       {/* Conversão de Unidades */}
       <div style={S.card}>
         <div style={S.cardTitle}>📐 Conversão de Unidades</div>
-        <div style={{display:"flex", flexDirection:"column", gap:12}}>
-          {/* Polegadas → mm */}
+        {/* grid: 2 colunas em telas largas, 1 em telas estreitas */}
+        <style>{`
+          .conv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+          .conv-pair { display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; align-items: end; }
+          .conv-pair input { width: 100%; box-sizing: border-box; min-width: 0; }
+          .conv-arrow { color: #475569; font-size: 16px; text-align: center; padding-bottom: 8px; }
+          .conv-label { font-size: 10px; color: #64748b; margin-bottom: 3px; }
+        `}</style>
+        <div style={{display:"flex", flexDirection:"column", gap:14}}>
+          {/* Polegadas ↔ Milímetros */}
           <div>
-            <div style={{fontSize:11, color:"#94a3b8", marginBottom:6, fontWeight:600}}>Polegadas → Milímetros</div>
-            <div style={{display:"flex", gap:8, alignItems:"center", flexWrap:"wrap"}}>
-              <div style={{flex:1, minWidth:110}}>
-                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Polegadas (in)</div>
-                <input style={S.input} type="number" placeholder="ex: 1.5" step="0.001"
-                  value={conv.pol} onChange={e=>setConv(p=>({...p,pol:e.target.value}))} />
+            <div style={{fontSize:11, color:"#94a3b8", marginBottom:7, fontWeight:600}}>Polegadas ↔ Milímetros</div>
+            <div className="conv-grid">
+              <div className="conv-pair">
+                <div>
+                  <div className="conv-label">Polegadas (in)</div>
+                  <input style={S.input} type="number" placeholder="ex: 1.5" step="0.001"
+                    value={conv.pol} onChange={e=>setConv(p=>({...p,pol:e.target.value}))} />
+                </div>
+                <div className="conv-arrow">→</div>
+                <div>
+                  <div className="conv-label">Milímetros (mm)</div>
+                  <input style={{...S.input, color:"#22c55e"}} readOnly
+                    value={conv.pol !== "" && !isNaN(parseFloat(conv.pol)) ? (parseFloat(conv.pol)*25.4).toFixed(3) : ""} />
+                </div>
               </div>
-              <div style={{color:"#475569", fontSize:16, paddingTop:18}}>→</div>
-              <div style={{flex:1, minWidth:110}}>
-                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Milímetros (mm)</div>
-                <input style={{...S.input, color:"#22c55e"}} readOnly
-                  value={conv.pol !== "" && !isNaN(parseFloat(conv.pol)) ? (parseFloat(conv.pol)*25.4).toFixed(3) : ""} />
-              </div>
-              <div style={{color:"#475569", fontSize:16, paddingTop:18}}>·</div>
-              <div style={{flex:1, minWidth:110}}>
-                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Milímetros (mm)</div>
-                <input style={S.input} type="number" placeholder="ex: 25.4" step="0.01"
-                  value={conv.mmPol ?? ""} onChange={e=>setConv(p=>({...p,mmPol:e.target.value}))} />
-              </div>
-              <div style={{color:"#475569", fontSize:16, paddingTop:18}}>→</div>
-              <div style={{flex:1, minWidth:110}}>
-                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Polegadas (in)</div>
-                <input style={{...S.input, color:"#22c55e"}} readOnly
-                  value={conv.mmPol !== undefined && conv.mmPol !== "" && !isNaN(parseFloat(conv.mmPol)) ? (parseFloat(conv.mmPol)/25.4).toFixed(5) : ""} />
+              <div className="conv-pair">
+                <div>
+                  <div className="conv-label">Milímetros (mm)</div>
+                  <input style={S.input} type="number" placeholder="ex: 25.4" step="0.01"
+                    value={conv.mmPol ?? ""} onChange={e=>setConv(p=>({...p,mmPol:e.target.value}))} />
+                </div>
+                <div className="conv-arrow">→</div>
+                <div>
+                  <div className="conv-label">Polegadas (in)</div>
+                  <input style={{...S.input, color:"#22c55e"}} readOnly
+                    value={conv.mmPol !== undefined && conv.mmPol !== "" && !isNaN(parseFloat(conv.mmPol)) ? (parseFloat(conv.mmPol)/25.4).toFixed(5) : ""} />
+                </div>
               </div>
             </div>
           </div>
-          {/* Pés → metros */}
+          {/* Pés ↔ Metros */}
           <div>
-            <div style={{fontSize:11, color:"#94a3b8", marginBottom:6, fontWeight:600}}>Pés → Metros</div>
-            <div style={{display:"flex", gap:8, alignItems:"center", flexWrap:"wrap"}}>
-              <div style={{flex:1, minWidth:110}}>
-                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Pés (ft)</div>
-                <input style={S.input} type="number" placeholder="ex: 10" step="0.01"
-                  value={conv.ft} onChange={e=>setConv(p=>({...p,ft:e.target.value}))} />
+            <div style={{fontSize:11, color:"#94a3b8", marginBottom:7, fontWeight:600}}>Pés ↔ Metros</div>
+            <div className="conv-grid">
+              <div className="conv-pair">
+                <div>
+                  <div className="conv-label">Pés (ft)</div>
+                  <input style={S.input} type="number" placeholder="ex: 10" step="0.01"
+                    value={conv.ft} onChange={e=>setConv(p=>({...p,ft:e.target.value}))} />
+                </div>
+                <div className="conv-arrow">→</div>
+                <div>
+                  <div className="conv-label">Metros (m)</div>
+                  <input style={{...S.input, color:"#22c55e"}} readOnly
+                    value={conv.ft !== "" && !isNaN(parseFloat(conv.ft)) ? (parseFloat(conv.ft)*0.3048).toFixed(4) : ""} />
+                </div>
               </div>
-              <div style={{color:"#475569", fontSize:16, paddingTop:18}}>→</div>
-              <div style={{flex:1, minWidth:110}}>
-                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Metros (m)</div>
-                <input style={{...S.input, color:"#22c55e"}} readOnly
-                  value={conv.ft !== "" && !isNaN(parseFloat(conv.ft)) ? (parseFloat(conv.ft)*0.3048).toFixed(4) : ""} />
-              </div>
-              <div style={{color:"#475569", fontSize:16, paddingTop:18}}>·</div>
-              <div style={{flex:1, minWidth:110}}>
-                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Metros (m)</div>
-                <input style={S.input} type="number" placeholder="ex: 3.048" step="0.001"
-                  value={conv.m ?? ""} onChange={e=>setConv(p=>({...p,m:e.target.value}))} />
-              </div>
-              <div style={{color:"#475569", fontSize:16, paddingTop:18}}>→</div>
-              <div style={{flex:1, minWidth:110}}>
-                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Pés (ft)</div>
-                <input style={{...S.input, color:"#22c55e"}} readOnly
-                  value={conv.m !== undefined && conv.m !== "" && !isNaN(parseFloat(conv.m)) ? (parseFloat(conv.m)/0.3048).toFixed(4) : ""} />
+              <div className="conv-pair">
+                <div>
+                  <div className="conv-label">Metros (m)</div>
+                  <input style={S.input} type="number" placeholder="ex: 3.048" step="0.001"
+                    value={conv.m ?? ""} onChange={e=>setConv(p=>({...p,m:e.target.value}))} />
+                </div>
+                <div className="conv-arrow">→</div>
+                <div>
+                  <div className="conv-label">Pés (ft)</div>
+                  <input style={{...S.input, color:"#22c55e"}} readOnly
+                    value={conv.m !== undefined && conv.m !== "" && !isNaN(parseFloat(conv.m)) ? (parseFloat(conv.m)/0.3048).toFixed(4) : ""} />
+                </div>
               </div>
             </div>
           </div>
-          {/* Libras → kg */}
+          {/* Libras ↔ Quilogramas */}
           <div>
-            <div style={{fontSize:11, color:"#94a3b8", marginBottom:6, fontWeight:600}}>Libras → Quilogramas</div>
-            <div style={{display:"flex", gap:8, alignItems:"center", flexWrap:"wrap"}}>
-              <div style={{flex:1, minWidth:110}}>
-                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Libras (lb)</div>
-                <input style={S.input} type="number" placeholder="ex: 2000" step="0.1"
-                  value={conv.lb} onChange={e=>setConv(p=>({...p,lb:e.target.value}))} />
+            <div style={{fontSize:11, color:"#94a3b8", marginBottom:7, fontWeight:600}}>Libras ↔ Quilogramas</div>
+            <div className="conv-grid">
+              <div className="conv-pair">
+                <div>
+                  <div className="conv-label">Libras (lb)</div>
+                  <input style={S.input} type="number" placeholder="ex: 2000" step="0.1"
+                    value={conv.lb} onChange={e=>setConv(p=>({...p,lb:e.target.value}))} />
+                </div>
+                <div className="conv-arrow">→</div>
+                <div>
+                  <div className="conv-label">Quilogramas (kg)</div>
+                  <input style={{...S.input, color:"#22c55e"}} readOnly
+                    value={conv.lb !== "" && !isNaN(parseFloat(conv.lb)) ? (parseFloat(conv.lb)*0.4536).toFixed(3) : ""} />
+                </div>
               </div>
-              <div style={{color:"#475569", fontSize:16, paddingTop:18}}>→</div>
-              <div style={{flex:1, minWidth:110}}>
-                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Quilogramas (kg)</div>
-                <input style={{...S.input, color:"#22c55e"}} readOnly
-                  value={conv.lb !== "" && !isNaN(parseFloat(conv.lb)) ? (parseFloat(conv.lb)*0.4536).toFixed(3) : ""} />
-              </div>
-              <div style={{color:"#475569", fontSize:16, paddingTop:18}}>·</div>
-              <div style={{flex:1, minWidth:110}}>
-                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Quilogramas (kg)</div>
-                <input style={S.input} type="number" placeholder="ex: 907.18" step="0.1"
-                  value={conv.kg ?? ""} onChange={e=>setConv(p=>({...p,kg:e.target.value}))} />
-              </div>
-              <div style={{color:"#475569", fontSize:16, paddingTop:18}}>→</div>
-              <div style={{flex:1, minWidth:110}}>
-                <div style={{fontSize:10, color:"#64748b", marginBottom:3}}>Libras (lb)</div>
-                <input style={{...S.input, color:"#22c55e"}} readOnly
-                  value={conv.kg !== undefined && conv.kg !== "" && !isNaN(parseFloat(conv.kg)) ? (parseFloat(conv.kg)/0.4536).toFixed(3) : ""} />
+              <div className="conv-pair">
+                <div>
+                  <div className="conv-label">Quilogramas (kg)</div>
+                  <input style={S.input} type="number" placeholder="ex: 907.18" step="0.1"
+                    value={conv.kg ?? ""} onChange={e=>setConv(p=>({...p,kg:e.target.value}))} />
+                </div>
+                <div className="conv-arrow">→</div>
+                <div>
+                  <div className="conv-label">Libras (lb)</div>
+                  <input style={{...S.input, color:"#22c55e"}} readOnly
+                    value={conv.kg !== undefined && conv.kg !== "" && !isNaN(parseFloat(conv.kg)) ? (parseFloat(conv.kg)/0.4536).toFixed(3) : ""} />
+                </div>
               </div>
             </div>
           </div>
@@ -3625,16 +3642,19 @@ function TabChecklistCampo({ planData }) {
   const stColor = s => s==="SEGURO"?"#16a34a":s==="ATENCAO"?"#d97706":"#dc2626";
 
   const Relatorio = () => {
-    const { cargaBruta, volume, swl, cg, tensao, n2869 } = planData || {};
+    const { cargaBruta, volume, swl, cg, tensao, n2869, petrobrasData } = planData || {};
     const emitido = new Date().toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo"});
+    const temDados = !!(cargaBruta || volume || swl || cg || tensao || n2869 || petrobrasData);
+    // Sec usa texto escuro sobre fundo claro para garantir visibilidade ao imprimir
+    // (browsers desativam fundos por padrão → texto branco em fundo escuro ficaria invisível)
     const Sec = ({title, children}) => (
       <div style={{marginBottom:18}}>
-        <div style={{background:"#1e3a5f",color:"#fff",fontWeight:700,fontSize:11,letterSpacing:"1.5px",textTransform:"uppercase",padding:"5px 12px",borderRadius:"6px 6px 0 0"}}>{title}</div>
+        <div style={{background:"#e8f0fe",color:"#1e3a5f",fontWeight:700,fontSize:11,letterSpacing:"1.5px",textTransform:"uppercase",padding:"5px 12px",borderRadius:"6px 6px 0 0",borderLeft:"3px solid #1e3a5f"}}>{title}</div>
         <div style={{border:"1px solid #d1d5db",borderTop:"none",borderRadius:"0 0 6px 6px",padding:"4px 12px"}}>{children}</div>
       </div>
     );
     const Row = ({l,v,bold}) => (
-      <div style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid #f3f4f6"}}>
+      <div style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid #e5e7eb"}}>
         <span style={{color:"#374151",fontSize:12}}>{l}</span>
         <span style={{fontWeight:bold?700:500,color:"#111827",fontSize:12}}>{v}</span>
       </div>
@@ -3728,7 +3748,7 @@ function TabChecklistCampo({ planData }) {
           </Sec>
         )}
 
-        {/* N-2869 */}
+        {/* N-2869 (Lingada tab) */}
         {n2869 && (
           <Sec title="Validação N-2869 (Petrobras)">
             <Row l="Classificação"      v={n2869.critico?"IÇAMENTO CRÍTICO":"Içamento Normal"} bold />
@@ -3745,6 +3765,11 @@ function TabChecklistCampo({ planData }) {
           </Sec>
         )}
 
+        {/* N-2869 — Módulo Petrobras (dados do TabPetrobras) */}
+        {petrobrasData && (
+          <div dangerouslySetInnerHTML={{ __html: formatPetrobrasSection(petrobrasData) }} />
+        )}
+
         {/* Patolamento */}
         {resPat && (
           <Sec title="Patolamento">
@@ -3758,11 +3783,16 @@ function TabChecklistCampo({ planData }) {
         )}
 
         {/* Checklist */}
+        {!temDados && (
+          <div style={{background:"#fef9c3",border:"1px solid #fde047",borderRadius:6,padding:"10px 14px",marginBottom:18,fontSize:12,color:"#713f12"}}>
+            ⚠ Nenhum cálculo de içamento registrado. Para obter o relatório completo, preencha e calcule os dados nas abas <strong>Guindaste &amp; Carga</strong> e <strong>Lingada &amp; Carga</strong>.
+          </div>
+        )}
         <Sec title={`Checklist de Campo — ${done}/${total} itens (${pct}%)`}>
           {CHECKLIST_CAMPO.map(item=>(
-            <div key={item.id} style={{display:"flex",gap:8,padding:"3px 0",borderBottom:"1px solid #f3f4f6",alignItems:"flex-start"}}>
-              <span style={{color:checked[item.id]?"#16a34a":"#9ca3af",fontWeight:700,fontSize:13,minWidth:16}}>{checked[item.id]?"✓":"○"}</span>
-              <span style={{fontSize:11,color:checked[item.id]?"#374151":"#9ca3af"}}>{item.item}</span>
+            <div key={item.id} style={{display:"flex",gap:8,padding:"3px 0",borderBottom:"1px solid #e5e7eb",alignItems:"flex-start"}}>
+              <span style={{color:checked[item.id]?"#16a34a":"#374151",fontWeight:700,fontSize:13,minWidth:16}}>{checked[item.id]?"✓":"○"}</span>
+              <span style={{fontSize:11,color:"#374151"}}>{item.item}</span>
             </div>
           ))}
         </Sec>
@@ -3830,6 +3860,11 @@ function TabChecklistCampo({ planData }) {
           </div>
         ))}
 
+        {canPrintPdf(isLoggedIn, user?.role) && !(planData?.cargaBruta || planData?.tensao || planData?.volume || planData?.swl || planData?.cg) && (
+          <div style={{...S.normaBox, marginTop:16, fontSize:11, color:"#d97706", borderColor:"#d9770633", background:"#451a0308"}}>
+            ⚠ Nenhum cálculo encontrado. Para um relatório completo, calcule os dados nas abas <strong>Guindaste &amp; Carga</strong> e <strong>Lingada &amp; Carga</strong> antes de gerar o PDF.
+          </div>
+        )}
         <div style={{display:"flex",gap:10,marginTop:24,flexWrap:"wrap"}}>
           {canPrintPdf(isLoggedIn, user?.role) && (
             <button
@@ -3848,7 +3883,7 @@ function TabChecklistCampo({ planData }) {
         </div>
         {isLoggedIn && !canPrintPdf(isLoggedIn, user?.role) && (
           <div style={{...S.normaBox,marginTop:12,fontSize:11}}>
-            Relatório PDF disponível apenas para usuários com perfil <strong>Gerente de Operações</strong>.
+            Relatório PDF disponível para perfis: <strong>Gerente de Operações</strong>, <strong>Líder de Equipe</strong> e <strong>Admin Empresa</strong>.
           </div>
         )}
         <div style={{...S.normaBox,marginTop:8}}>
@@ -4291,7 +4326,7 @@ function TabEquipamentos() {
 }
 
 // ── ABA PETROBRAS — N-2869 Rev.B ─────────────────────────────────────────────────
-function TabPetrobras({ planData = {} }) {
+function TabPetrobras({ planData = {}, onSave }) {
   const usoPct = planData.usoPct ?? 0;
 
   const [classificacao, setClassificacao] = useState(() =>
@@ -4307,6 +4342,24 @@ function TabPetrobras({ planData = {} }) {
   useEffect(() => {
     setClassificacao(classificarIcamento({ usoPct, tandem, sobreAreaHabitada, cargaEspecial }));
   }, [usoPct, tandem, sobreAreaHabitada, cargaEspecial]);
+
+  // Persiste dados para o relatório sempre que o estado muda
+  useEffect(() => {
+    const docs = N2869_DOCUMENTOS[classificacao] ?? [];
+    const KEYS = ["pt","ast","plano","anemometro","caboGuia","bastao","preUso","comunicacao","equipe","capacidade"];
+    const todosMarcados = KEYS.every(k => !!checklist[k]);
+    onSave?.("petrobrasData", {
+      classificacao,
+      tandem,
+      sobreAreaHabitada,
+      cargaEspecial,
+      projetista: { ...projetista },
+      supervisor: { ...supervisor },
+      checklist:  { ...checklist },
+      todosMarcados,
+      docs,
+    });
+  }, [classificacao, tandem, sobreAreaHabitada, cargaEspecial, projetista, supervisor, checklist]);
 
   const toggleCheck = (key) => setChecklist(prev => ({ ...prev, [key]: !prev[key] }));
 
@@ -4629,7 +4682,7 @@ export default function App() {
         {aba === "lingada"   && <TabLingadaCarga   onSave={(k,v) => setPlanData(p=>({...p,[k]:v}))} />}
         {aba === "checklist"    && <TabChecklistCampo planData={planData} />}
         {aba === "equipamentos" && <TabEquipamentos />}
-        {aba === "petrobras"    && <TabPetrobras planData={planData} />}
+        {aba === "petrobras"    && <TabPetrobras planData={planData} onSave={(k,v) => setPlanData(p=>({...p,[k]:v}))} />}
         <div style={{ ...S.normaBox, textAlign: "center", marginTop: 32 }}>
           v2.1.0 — RiggingCheck &nbsp;·&nbsp; React + Java Spring Boot + PostgreSQL
           <br />

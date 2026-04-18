@@ -171,8 +171,8 @@ describe("CABO_ACO_TABLE", () => {
 // ── Tabela Cinta Sintética ────────────────────────────────────────────────────
 
 describe("CINTA_SINTETICA_TABLE", () => {
-  it("tem 7 cores (Violeta → Laranja)", () => {
-    expect(CINTA_SINTETICA_TABLE).toHaveLength(7);
+  it("tem 8 cores (Violeta → Laranja)", () => {
+    expect(CINTA_SINTETICA_TABLE).toHaveLength(8);
   });
 
   it("primeira cor: Violeta 1t vertical", () => {
@@ -180,10 +180,10 @@ describe("CINTA_SINTETICA_TABLE", () => {
     expect(CINTA_SINTETICA_TABLE[0].vertical).toBe(1.0);
   });
 
-  it("última cor: Laranja 8t vertical", () => {
+  it("última cor: Laranja 10t vertical", () => {
     const last = CINTA_SINTETICA_TABLE[CINTA_SINTETICA_TABLE.length - 1];
     expect(last.cor).toBe("Laranja");
-    expect(last.vertical).toBe(8.0);
+    expect(last.vertical).toBe(10.0);
   });
 
   it("choker = 0.8 × vertical", () => {
@@ -208,8 +208,8 @@ describe("CINTA_SINTETICA_TABLE", () => {
 // ── Tabela Manilhas ───────────────────────────────────────────────────────────
 
 describe("MANILHA_TABLE", () => {
-  it("tem 13 entradas", () => {
-    expect(MANILHA_TABLE).toHaveLength(13);
+  it("tem 15 entradas (1/4\" a 2\")", () => {
+    expect(MANILHA_TABLE).toHaveLength(15);
   });
 
   it("swlCurva ≥ swlReta para todos os diâmetros", () => {
@@ -224,9 +224,9 @@ describe("MANILHA_TABLE", () => {
     }
   });
 
-  it("primeira entrada: 3/8\", SWL 0.5t", () => {
-    expect(MANILHA_TABLE[0].pol).toBe('3/8"');
-    expect(MANILHA_TABLE[0].mm).toBeCloseTo(9.5, 1);
+  it("primeira entrada: 1/4\", SWL 0.5t", () => {
+    expect(MANILHA_TABLE[0].pol).toBe('1/4"');
+    expect(MANILHA_TABLE[0].mm).toBeCloseTo(6.5, 1);
     expect(MANILHA_TABLE[0].swlCurva).toBeCloseTo(0.5, 2);
   });
 });
