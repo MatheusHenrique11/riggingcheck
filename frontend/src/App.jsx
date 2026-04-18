@@ -4598,7 +4598,25 @@ export default function App() {
   const [authenticated, setAuthenticated] = useState(() => !!getToken());
   const [view, setView]   = useState("app"); // "app" | "admin"
   const [aba, setAba]     = useState("guindaste");
-  const [planData, setPlanData] = useState({});
+  const [planData, setPlanData] = useState(() => {
+    try {
+      const saved = localStorage.getItem("rc_plan_data");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("rc_plan_data", JSON.stringify(planData));
+  }, [planData]);
+
+  const limparNovoPlano = () => {
+    if (!window.confirm("Tem certeza que deseja apagar todos os dados e iniciar um novo plano?")) return;
+    setPlanData({});
+    localStorage.removeItem("rc_plan_data");
+    setAba("guindaste");
+  };
   const [showModalSenha, setShowModalSenha] = useState(false);
   const [petrobras, setPetrobras] = useState(false);
   const user          = getUser();
@@ -4631,6 +4649,10 @@ export default function App() {
     { id: "equipamentos", label: isMobile ? "📊 Tabelas" : "📊 Tabelas de Capacidade" },
     ...(petrobras ? [{ id: "petrobras", label: isMobile ? "⚙️ N-2869" : "⚙️ Módulo Petrobras" }] : []),
   ];
+
+  const currentIndex = ABAS.findIndex(a => a.id === aba);
+  const prevAba = currentIndex > 0 ? ABAS[currentIndex - 1] : null;
+  const nextAba = currentIndex !== -1 && currentIndex < ABAS.length - 1 ? ABAS[currentIndex + 1] : null;
 
   return (
     <div style={S.app}>
@@ -4682,6 +4704,37 @@ export default function App() {
         {aba === "checklist"    && <TabChecklistCampo planData={planData} />}
         {aba === "equipamentos" && <TabEquipamentos />}
         {aba === "petrobras"    && <TabPetrobras planData={planData} onSave={(k,v) => setPlanData(p=>({...p,[k]:v}))} />}
+
+        {/* --- Wizard Navigation --- */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 32, padding: "24px 0", borderTop: "1px solid #334155", flexWrap: "wrap", gap: 16 }}>
+          <div>
+            {prevAba && (
+              <button 
+                onClick={() => setAba(prevAba.id)}
+                style={{ background: "transparent", color: "#94a3b8", border: "1px solid #475569", borderRadius: 8, padding: "10px 20px", fontWeight: 600, fontSize: 14, cursor: "pointer" }}
+              >
+                ← Anterior ({prevAba.label})
+              </button>
+            )}
+          </div>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+            <button 
+              onClick={limparNovoPlano}
+              style={{ background: "transparent", color: "#ef4444", border: "1px solid #ef444455", borderRadius: 8, padding: "10px 20px", fontWeight: 600, fontSize: 14, cursor: "pointer" }}
+            >
+              🗑 Limpar Novo Plano
+            </button>
+            {nextAba && (
+              <button 
+                onClick={() => setAba(nextAba.id)}
+                style={{ background: "#38bdf8", color: "#0f172a", border: "none", borderRadius: 8, padding: "10px 24px", fontWeight: 700, fontSize: 14, cursor: "pointer", boxShadow: "0 4px 14px rgba(56,189,248,0.2)" }}
+              >
+                Próximo ({nextAba.label}) →
+              </button>
+            )}
+          </div>
+        </div>
+
         <div style={{ ...S.normaBox, textAlign: "center", marginTop: 32 }}>
           v2.1.0 — RiggingCheck &nbsp;·&nbsp; React + Java Spring Boot + PostgreSQL
           <br />
