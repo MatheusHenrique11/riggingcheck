@@ -2821,24 +2821,24 @@ function Campo({ label, children }) {
 }
 
 // ── TAB 1: GUINDASTE & CARGA ──────────────────────────────────────────────────────
-function TabGuindasteCarga({ onSave }) {
+function TabGuindasteCarga({ planData = {}, onSave }) {
   // Carga Bruta
-  const [cb, setCb] = useState({ liq: "", esl: "", man: "", disp: "" });
-  const [resCb, setResCb] = useState(null);
+  const [cb, setCb] = useState(() => planData.cargaBruta?.inputs || { liq: "", esl: "", man: "", disp: "" });
+  const [resCb, setResCb] = useState(() => planData.cargaBruta || null);
 
   // Volume / Peso
-  const [forma, setForma] = useState("PARALELEPIPEDO");
-  const [dims, setDims] = useState({ L: "", C: "", H: "", D: "" });
-  const [matIdx, setMatIdx] = useState(0);
-  const [resVol, setResVol] = useState(null);
+  const [forma, setForma] = useState(() => planData.volume?.forma || "PARALELEPIPEDO");
+  const [dims, setDims] = useState(() => planData.volume?.dims || { L: "", C: "", H: "", D: "" });
+  const [matIdx, setMatIdx] = useState(() => planData.volume?.matIdx || 0);
+  const [resVol, setResVol] = useState(() => planData.volume || null);
 
   // Taxa de Utilização do Guindaste
-  const [ug, setUg] = useState({ capacidade: "", cargaTotal: "" });
-  const [resUg, setResUg] = useState(null);
+  const [ug, setUg] = useState(() => planData.utilizacaoGuindaste?.inputs || { capacidade: "", cargaTotal: "" });
+  const [resUg, setResUg] = useState(() => planData.utilizacaoGuindaste || null);
 
   // SWL
-  const [swl, setSwl] = useState({ crm: "", fsIdx: 2, forca: "" });
-  const [resSwl, setResSwl] = useState(null);
+  const [swl, setSwl] = useState(() => planData.swl?.inputs || { crm: "", fsIdx: 2, forca: "" });
+  const [resSwl, setResSwl] = useState(() => planData.swl || null);
 
   const calcCargaBruta = () => {
     const v = Object.values(cb).map(Number);
@@ -2859,7 +2859,7 @@ function TabGuindasteCarga({ onSave }) {
     const status = pct < 70 ? "SEGURO" : pct < 90 ? "ATENCAO" : "REPROVADO";
     const approved = pct < 90;
     const margem = cap - ct;
-    const r = { capacidade: cap, cargaTotal: ct, pct, risk, status, approved, margem };
+    const r = { capacidade: cap, cargaTotal: ct, pct, risk, status, approved, margem, inputs: { ...ug } };
     setResUg(r);
     onSave?.("utilizacaoGuindaste", r);
   };
@@ -3052,14 +3052,14 @@ function TabGuindasteCarga({ onSave }) {
 }
 
 // ── TAB 2: LINGADA & CARGA ────────────────────────────────────────────────────────
-function TabLingadaCarga({ onSave }) {
+function TabLingadaCarga({ planData = {}, onSave }) {
   // Centro de Gravidade
-  const [cg, setCg] = useState({ p1:"", p2:"", dt:"" });
-  const [resCg, setResCg] = useState(null);
+  const [cg, setCg] = useState(() => planData.cg?.inputs || { p1:"", p2:"", dt:"" });
+  const [resCg, setResCg] = useState(() => planData.cg || null);
 
   // Tensão nas Eslingas
-  const [te, setTe] = useState({ carga:"", pernas:"2", angulo:"60", tipo:"CABO", wll:"" });
-  const [resTe, setResTe] = useState(null);
+  const [te, setTe] = useState(() => planData.tensao?.inputs || { carga:"", pernas:"2", angulo:"60", tipo:"CABO", wll:"" });
+  const [resTe, setResTe] = useState(() => planData.tensao || null);
 
   // Seletor de WLL pela tabela de materiais
   const [matSel, setMatSel] = useState({ tipo: "", id: "", modo: "simples" });
@@ -3068,11 +3068,11 @@ function TabLingadaCarga({ onSave }) {
   const [conv, setConv] = useState({ pol: "", ft: "", lb: "" });
 
   // N-2869 extras
-  const [n2869, setN2869] = useState({
+  const [n2869, setN2869] = useState(() => planData.n2869?.inputs || {
     vento:"", utilizacao:"", usaDoisGuindastes:false,
     sobreInstalacoes:false, areaClassificada:false,
   });
-  const [resN2, setResN2] = useState(null);
+  const [resN2, setResN2] = useState(() => planData.n2869 || null);
 
   const calcCG = () => {
     const p1=parseFloat(cg.p1), p2=parseFloat(cg.p2), dt=parseFloat(cg.dt);
@@ -4611,6 +4611,10 @@ export default function App() {
     localStorage.setItem("rc_plan_data", JSON.stringify(planData));
   }, [planData]);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [aba]);
+
   const limparNovoPlano = () => {
     if (!window.confirm("Tem certeza que deseja apagar todos os dados e iniciar um novo plano?")) return;
     setPlanData({});
@@ -4686,7 +4690,7 @@ export default function App() {
                 <button style={S.logoutBtn(isMobile)} onClick={handleLogout}>Sair</button>
               </>
             ) : (
-              <button style={{ ...S.logoutBtn(isMobile), borderColor: "#47556944", color: "#94a3b8" }} onClick={() => setView("admin")}>{isMobile ? "🔐" : "Acesso Admin"}</button>
+              <button style={{ ...S.logoutBtn(isMobile), borderColor: "#47556944", color: "#94a3b8" }} onClick={() => setView("admin")}>{isMobile ? "🔐" : "Acesso"}</button>
             )}
           </div>
         </div>
@@ -4699,8 +4703,8 @@ export default function App() {
         </div>
       </div>
       <div style={{ ...S.container, maxWidth: 960 }}>
-        {aba === "guindaste" && <TabGuindasteCarga onSave={(k,v) => setPlanData(p=>({...p,[k]:v}))} />}
-        {aba === "lingada"   && <TabLingadaCarga   onSave={(k,v) => setPlanData(p=>({...p,[k]:v}))} />}
+        {aba === "guindaste" && <TabGuindasteCarga planData={planData} onSave={(k,v) => setPlanData(p=>({...p,[k]:v}))} />}
+        {aba === "lingada"   && <TabLingadaCarga   planData={planData} onSave={(k,v) => setPlanData(p=>({...p,[k]:v}))} />}
         {aba === "checklist"    && <TabChecklistCampo planData={planData} />}
         {aba === "equipamentos" && <TabEquipamentos />}
         {aba === "petrobras"    && <TabPetrobras planData={planData} onSave={(k,v) => setPlanData(p=>({...p,[k]:v}))} />}
