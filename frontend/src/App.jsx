@@ -1124,6 +1124,10 @@ function AdminDashboard({ onVoltar, isMobile }) {
   const [painel, setPainel] = useState("solicitacoes"); // "solicitacoes" | "equipe"
   const [showModalSenha, setShowModalSenha] = useState(false);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [painel]);
+
   // ── Solicitações ──
   const [statusFiltro, setStatusFiltro] = useState("ANALISAR");
   const [lista, setLista] = useState([]);
@@ -1519,6 +1523,10 @@ function SuperAdminDashboard({ onVoltar, isMobile }) {
   const [painel, setPainel] = useState("visao-geral");
   const [showModalSenha, setShowModalSenha] = useState(false);
   const C = "#a78bfa"; // cor SaaS
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [painel]);
 
   // ── Estado global ──
   const [empresas, setEmpresas]     = useState([]);
@@ -2475,79 +2483,84 @@ function OSDetalhadaModal({ sol, onFechar }) {
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 1000, display: "flex", alignItems: "flex-start", justifyContent: "center", overflowY: "auto", padding: "24px 16px" }}>
-      <div id="os-print-area" style={{ background: "#fff", borderRadius: 12, width: "100%", maxWidth: 720, padding: 32, color: "#111" }}>
-        {/* Cabeçalho */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#1e3a5f", letterSpacing: 1 }}>RIGGINGCHECK</div>
-            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>Ordem de Serviço de Içamento</div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "#1e3a5f" }}>OS: {sol.operacaoOs}</div>
-            <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>Emitido em: {fmtDt(new Date().toISOString())}</div>
-          </div>
+      <div style={{ width: "100%", maxWidth: 720 }}>
+        {/* Botões FORA do #os-print-area para não aparecerem no PDF */}
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginBottom: 12 }}>
+          <button
+            onClick={imprimirOS}
+            style={{ background: "#1e3a5f", color: "#fff", border: "none", borderRadius: 8, padding: "9px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer", boxShadow: "0 2px 8px rgba(30,58,95,0.4)" }}
+          >
+            🖨 Imprimir / PDF
+          </button>
+          <button
+            onClick={onFechar}
+            style={{ background: "rgba(255,255,255,0.12)", color: "#e2e8f0", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 8, padding: "9px 20px", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+          >
+            ✕ Fechar
+          </button>
         </div>
 
-        <div style={{ borderTop: "3px solid #1e3a5f", marginBottom: 20 }} />
-
-        <Section title="Identificação">
-          <Row label="Empresa" value={sol.empresaNome} />
-          <Row label="Rigger / Responsável" value={sol.riggerNome} bold />
-          <Row label="Data da Solicitação" value={fmtDt(sol.criadoEm)} />
-        </Section>
-
-        <Section title="Capacidade do Equipamento">
-          <Row label="Capacidade do Guindaste" value={`${fmt(sol.capGuindasteKg)} kg`} />
-          <Row label="Capacidade da Carga" value={`${fmt(sol.capCargaKg)} kg`} />
-          <Row label="Capacidade do Aparelho de Içamento" value={`${fmt(sol.capAparelhoKg)} kg`} />
-          <Row label="Capacidade Total (carga + aparelho)" value={`${fmt(sol.capTotalKg)} kg`} bold />
-          <Row label="Percentual de Uso do Guindaste" value={fmtP(sol.capUsoPercent)} bold />
-          <Row label="Classificação de Risco" value={sol.capRisco || "—"} bold />
-        </Section>
-
-        <Section title="Dados da Lingada">
-          <Row label="Número de Pernas" value={sol.eslNumPernas ?? "—"} />
-          <Row label="Ângulo da Lingada" value={sol.eslAnguloGraus != null ? `${sol.eslAnguloGraus}°` : "—"} />
-          <Row label="Tensão por Perna" value={`${fmt(sol.eslTensaoPorPernaKg)} kg`} bold />
-          <Row label="Fator de Carga (ângulo)" value={sol.eslFatorCarga != null ? Number(sol.eslFatorCarga).toLocaleString("pt-BR", { minimumFractionDigits: 2, timeZone: "America/Sao_Paulo" }) : "—"} />
-          <Row label="WLL da Eslinga" value={`${fmt(sol.eslWllKg)} kg`} />
-          <Row label="Percentual de Uso da WLL" value={fmtP(sol.eslWllUsoPercent)} bold />
-          <Row label="Classificação de Risco da Lingada" value={sol.eslRisco || "—"} bold />
-          <Row label="Aviso de Ângulo Crítico" value={sol.eslAnguloAviso ? "SIM — verificar ângulo" : "Não"} />
-        </Section>
-
-        {sol.eslTemManilha && (
-          <Section title="Manilha">
-            <Row label="Capacidade da Manilha" value={`${fmt(sol.eslManilhaCapacidadeKg)} kg`} />
-            <Row label="Percentual de Uso da Manilha" value={fmtP(sol.eslManilhaUsoPercent)} bold />
-            <Row label="Compatível com a Carga" value={sol.eslManilhaCompativel ? "SIM" : "NÃO — verificar"} bold />
-          </Section>
-        )}
-
-        <Section title="Autorização">
-          <Row label="Status" value="AUTORIZADO — PROSSEGUIR" bold />
-          <Row label="Autorizado por" value={sol.aprovadoPorNome || "—"} bold />
-          <Row label="Data / Hora da Autorização" value={fmtDt(sol.resolvidoEm)} />
-          {sol.observacao && <Row label="Observações" value={sol.observacao} />}
-        </Section>
-
-        <div style={{ borderTop: "1px solid #d1d5db", marginTop: 24, paddingTop: 14, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-          <div style={{ fontSize: 11, color: "#9ca3af" }}>
-            Documento gerado pelo sistema RiggingCheck · Válido apenas para a OS indicada
+        {/* Área de impressão — somente conteúdo do documento */}
+        <div id="os-print-area" style={{ background: "#fff", borderRadius: 12, width: "100%", padding: 32, color: "#111" }}>
+          {/* Cabeçalho */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "#1e3a5f", letterSpacing: 1 }}>RIGGINGCHECK</div>
+              <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>Ordem de Serviço de Içamento</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "#1e3a5f" }}>OS: {sol.operacaoOs}</div>
+              <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>Emitido em: {fmtDt(new Date().toISOString())}</div>
+            </div>
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button
-              onClick={imprimirOS}
-              style={{ background: "#1e3a5f", color: "#fff", border: "none", borderRadius: 8, padding: "9px 20px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
-            >
-              🖨 Imprimir / PDF
-            </button>
-            <button
-              onClick={onFechar}
-              style={{ background: "transparent", color: "#6b7280", border: "1px solid #d1d5db", borderRadius: 8, padding: "9px 20px", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
-            >
-              Fechar
-            </button>
+
+          <div style={{ borderTop: "3px solid #1e3a5f", marginBottom: 20 }} />
+
+          <Section title="Identificação">
+            <Row label="Empresa" value={sol.empresaNome} />
+            <Row label="Rigger / Responsável" value={sol.riggerNome} bold />
+            <Row label="Data da Solicitação" value={fmtDt(sol.criadoEm)} />
+          </Section>
+
+          <Section title="Capacidade do Equipamento">
+            <Row label="Capacidade do Guindaste" value={`${fmt(sol.capGuindasteKg)} kg`} />
+            <Row label="Capacidade da Carga" value={`${fmt(sol.capCargaKg)} kg`} />
+            <Row label="Capacidade do Aparelho de Içamento" value={`${fmt(sol.capAparelhoKg)} kg`} />
+            <Row label="Capacidade Total (carga + aparelho)" value={`${fmt(sol.capTotalKg)} kg`} bold />
+            <Row label="Percentual de Uso do Guindaste" value={fmtP(sol.capUsoPercent)} bold />
+            <Row label="Classificação de Risco" value={sol.capRisco || "—"} bold />
+          </Section>
+
+          <Section title="Dados da Lingada">
+            <Row label="Número de Pernas" value={sol.eslNumPernas ?? "—"} />
+            <Row label="Ângulo da Lingada" value={sol.eslAnguloGraus != null ? `${sol.eslAnguloGraus}°` : "—"} />
+            <Row label="Tensão por Perna" value={`${fmt(sol.eslTensaoPorPernaKg)} kg`} bold />
+            <Row label="Fator de Carga (ângulo)" value={sol.eslFatorCarga != null ? Number(sol.eslFatorCarga).toLocaleString("pt-BR", { minimumFractionDigits: 2, timeZone: "America/Sao_Paulo" }) : "—"} />
+            <Row label="WLL da Eslinga" value={`${fmt(sol.eslWllKg)} kg`} />
+            <Row label="Percentual de Uso da WLL" value={fmtP(sol.eslWllUsoPercent)} bold />
+            <Row label="Classificação de Risco da Lingada" value={sol.eslRisco || "—"} bold />
+            <Row label="Aviso de Ângulo Crítico" value={sol.eslAnguloAviso ? "SIM — verificar ângulo" : "Não"} />
+          </Section>
+
+          {sol.eslTemManilha && (
+            <Section title="Manilha">
+              <Row label="Capacidade da Manilha" value={`${fmt(sol.eslManilhaCapacidadeKg)} kg`} />
+              <Row label="Percentual de Uso da Manilha" value={fmtP(sol.eslManilhaUsoPercent)} bold />
+              <Row label="Compatível com a Carga" value={sol.eslManilhaCompativel ? "SIM" : "NÃO — verificar"} bold />
+            </Section>
+          )}
+
+          <Section title="Autorização">
+            <Row label="Status" value="AUTORIZADO — PROSSEGUIR" bold />
+            <Row label="Autorizado por" value={sol.aprovadoPorNome || "—"} bold />
+            <Row label="Data / Hora da Autorização" value={fmtDt(sol.resolvidoEm)} />
+            {sol.observacao && <Row label="Observações" value={sol.observacao} />}
+          </Section>
+
+          <div style={{ borderTop: "1px solid #d1d5db", marginTop: 24, paddingTop: 14 }}>
+            <div style={{ fontSize: 11, color: "#9ca3af", textAlign: "center" }}>
+              Documento gerado pelo sistema RiggingCheck · Válido apenas para a OS indicada
+            </div>
           </div>
         </div>
       </div>
@@ -2564,6 +2577,10 @@ function GerenteDashboard({ onVoltar, isMobile }) {
   const [statusFiltro, setStatusFiltro] = useState("TODOS");
   const [osAberta, setOsAberta] = useState(null);
   const user = getUser();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [painel]);
 
   useEffect(() => {
     const init = async () => {
@@ -4539,6 +4556,11 @@ function TabPetrobras({ planData = {}, onSave }) {
 function PlanejamentoBasico({ onVoltar, isMobile }) {
   const [aba, setAba] = useState("guindaste");
   const [petrobras, setPetrobras] = useState(false);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [aba]);
+
   const ABAS = [
     { id:"guindaste",    label: isMobile ? "Guindaste" : "Guindaste & Carga" },
     { id:"lingada",      label: isMobile ? "Lingada"   : "Lingada & Carga"   },
