@@ -1,5 +1,6 @@
 /**
  * Utilitários de autenticação e comunicação com a API RiggingCheck.
+ * Inclui funções para LGPD (Epic 1) e Billing/Stripe (Epic 2).
  */
 
 export const API =
@@ -56,3 +57,25 @@ export const authFetch = async (url, options = {}) => {
 
   return res;
 };
+
+// ── LGPD ─────────────────────────────────────────────────────────────────────
+
+export const lgpdAtualizarConsentimento = (acceptedTerms, acceptedPrivacyPolicy) =>
+  authFetch(`${API}/api/lgpd/consentimento`, {
+    method: "POST",
+    body: JSON.stringify({ acceptedTerms, acceptedPrivacyPolicy }),
+  });
+
+export const lgpdExportarDados = () =>
+  authFetch(`${API}/api/lgpd/exportar`);
+
+export const lgpdExcluirConta = () =>
+  authFetch(`${API}/api/lgpd/excluir-conta`, { method: "POST" });
+
+// ── BILLING ───────────────────────────────────────────────────────────────────
+
+export const billingCriarCheckout = (planId) =>
+  authFetch(`${API}/api/billing/checkout`, {
+    method: "POST",
+    body: JSON.stringify({ planId }),
+  });

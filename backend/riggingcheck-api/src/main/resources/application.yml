@@ -24,6 +24,15 @@ jwt:
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
 
+stripe:
+  secret-key: ${STRIPE_SECRET_KEY:sk_test_placeholder}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_placeholder}
+  price:
+    basic: ${STRIPE_PRICE_BASIC:price_placeholder_basic}
+    unlimited: ${STRIPE_PRICE_UNLIMITED:price_placeholder_unlimited}
+  success-url: ${STRIPE_SUCCESS_URL:http://localhost:5173}
+  cancel-url: ${STRIPE_CANCEL_URL:http://localhost:5173/pricing}
+
 logging:
   level:
     org.springframework.security: INFO

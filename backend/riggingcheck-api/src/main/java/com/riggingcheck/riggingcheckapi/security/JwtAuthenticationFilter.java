@@ -1,6 +1,8 @@
 package com.riggingcheck.riggingcheckapi.security;
 
+import com.riggingcheck.riggingcheckapi.domain.enums.RoleEnum;
 import com.riggingcheck.riggingcheckapi.service.JwtService;
+import com.riggingcheck.riggingcheckapi.tenant.TenantContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -53,9 +55,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 );
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
+
+                // SUPER_ADMIN recebe null → sem filtro de tenant (acessa todos os dados).
+                // Todos os outros papéis recebem o empresaId do JWT → filtro aplicado.
+                RoleEnum role = jwtService.getRoleFromToken(jwt);
+                if (role != RoleEnum.SUPER_ADMIN) {
+                    TenantContext.set(jwtService.getEmpresaIdFromToken(jwt));
+                }
             }
         }
 
-        filterChain.doFilter(request, response);
+        try {
+            filterChain.doFilter(request, response);
+        } finally {
+            // Garante limpeza ao final de cada request independente de exceção,
+            // evitando vazamento de contexto em thread pools reutilizadas.
+            TenantContext.clear();
+        }
     }
 }

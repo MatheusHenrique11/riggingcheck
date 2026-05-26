@@ -3,12 +3,14 @@ package com.riggingcheck.riggingcheckapi.domain;
 import com.riggingcheck.riggingcheckapi.domain.enums.StatusLiberacao;
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.Filter;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "solicitacoes_liberacao")
 @Data
+@Filter(name = "tenantFilter", condition = "empresa_id = :empresaId")
 public class SolicitacaoLiberacao {
 
     @Id

@@ -14,6 +14,8 @@ public interface EmpresaRepository extends JpaRepository<Empresa, UUID> {
     Optional<Empresa> findByCnpj(String cnpj);
     List<Empresa> findAllByOrderByCriadoEmDesc();
 
+    Optional<Empresa> findByStripeSubscriptionId(String stripeSubscriptionId);
+
     @Query("SELECT COUNT(f) FROM Funcionario f WHERE f.empresaId = :empresaId AND f.ativo = true")
     long countFuncionariosAtivos(UUID empresaId);
 }

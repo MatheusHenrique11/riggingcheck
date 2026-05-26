@@ -1,5 +1,6 @@
 package com.riggingcheck.riggingcheckapi.domain;
 
+import com.riggingcheck.riggingcheckapi.domain.enums.SubscriptionStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
@@ -24,6 +25,19 @@ public class Empresa {
 
     @Column(name = "ativo")
     private Boolean ativo = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "subscription_status", columnDefinition = "VARCHAR(20)")
+    private SubscriptionStatus subscriptionStatus = SubscriptionStatus.TRIALING;
+
+    @Column(name = "stripe_customer_id")
+    private String stripeCustomerId;
+
+    @Column(name = "stripe_subscription_id")
+    private String stripeSubscriptionId;
+
+    @Column(name = "subscription_expires_at")
+    private LocalDateTime subscriptionExpiresAt;
 
     @Column(name = "criado_em", nullable = false)
     private LocalDateTime criadoEm;

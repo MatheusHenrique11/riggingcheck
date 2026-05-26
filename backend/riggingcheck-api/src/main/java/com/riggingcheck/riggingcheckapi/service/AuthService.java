@@ -69,6 +69,9 @@ public class AuthService {
                 .empresaId(empresa.getId())
                 .empresaName(empresa.getRazaoSocial())
                 .empresaCnpj(empresa.getCnpj())
+                .subscriptionStatus(empresa.getSubscriptionStatus())
+                .acceptedTerms(funcionario.getAcceptedTerms())
+                .acceptedPrivacyPolicy(funcionario.getAcceptedPrivacyPolicy())
                 .build();
     }
 

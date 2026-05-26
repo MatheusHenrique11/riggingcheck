@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { openPrintWindow, formatPetrobrasSection } from "./utils/pdf.js";
 import {
   canPrintPdf, classificarIcamento, N2869_DOCUMENTOS,
@@ -7,6 +8,8 @@ import {
   CORRENTE_G80_TABLE, CORRENTE_G100_TABLE,
   lookupWllFromMaterial,
 } from "./utils/calculations.js";
+import CookieConsentModal from "./components/CookieConsentModal.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 function useIsMobile() {
   const [mobile, setMobile] = useState(() => window.innerWidth < 640);
@@ -133,12 +136,11 @@ const S = {
   }),
   loginLogo: { textAlign: "center", marginBottom: 36 },
   loginIcon: {
-    width: 56, height: 56,
-    background: "linear-gradient(135deg, #f59e0b, #ef4444)",
+    width: 72, height: 72,
     borderRadius: 12,
     display: "inline-flex", alignItems: "center", justifyContent: "center",
-    fontSize: 28, marginBottom: 14,
-    boxShadow: "0 0 30px rgba(245,158,11,0.3)",
+    marginBottom: 14,
+    overflow: "hidden",
   },
   loginTitle: {
     fontSize: 26, fontWeight: 700, lineHeight: 1.3,
@@ -175,10 +177,9 @@ const S = {
   logo: { display: "flex", alignItems: "center", gap: 14 },
   logoIcon: {
     width: 42, height: 42,
-    background: "linear-gradient(135deg, #f59e0b, #ef4444)",
     borderRadius: 8, display: "flex", alignItems: "center",
-    justifyContent: "center", fontSize: 22,
-    boxShadow: "0 0 20px rgba(245,158,11,0.3)",
+    justifyContent: "center",
+    overflow: "hidden",
     flexShrink: 0,
   },
   logoText: (mobile) => ({
@@ -379,7 +380,7 @@ function LoginScreen({ onAuth }) {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Credenciais inválidas"); return; }
-      saveAuth(data.token, { userId: data.userId, userName: data.userName, role: data.role, empresaId: data.empresaId, empresaName: data.empresaName, empresaCnpj: data.empresaCnpj });
+      saveAuth(data.token, { userId: data.userId, userName: data.userName, role: data.role, empresaId: data.empresaId, empresaName: data.empresaName, empresaCnpj: data.empresaCnpj, subscriptionStatus: data.subscriptionStatus, acceptedTerms: data.acceptedTerms, acceptedPrivacyPolicy: data.acceptedPrivacyPolicy });
       onAuth();
     } catch {
       setError("Não foi possível conectar ao servidor.");
@@ -425,7 +426,7 @@ function LoginScreen({ onAuth }) {
       <div style={S.loginWrap}>
         <div style={{ width: "100%", maxWidth: 480, padding: isMobile ? "0 16px" : 0 }}>
           <div style={{ textAlign: "center", marginBottom: 40 }}>
-            <div style={S.loginIcon}>🏗</div>
+            <div style={S.loginIcon}><img src="/logo.jpeg" alt="RiggingCheck" style={{ width: "100%", height: "100%", objectFit: "contain" }} /></div>
             <div style={S.loginTitle}>RiggingCheck</div>
             <div style={S.loginSub}>Segurança em Içamento</div>
           </div>
@@ -4573,7 +4574,7 @@ function PlanejamentoBasico({ onVoltar, isMobile }) {
       <div style={S.header(isMobile)}>
         <div style={S.headerTop(isMobile)}>
           <div style={S.logo}>
-            <div style={S.logoIcon}>🏗</div>
+            <div style={S.logoIcon}><img src="/logo.jpeg" alt="RiggingCheck" style={{ width: "100%", height: "100%", objectFit: "contain" }} /></div>
             <div>
               <div style={S.logoText(isMobile)}>RiggingCheck</div>
               <div style={S.logoSub(isMobile)}>Planejamento Básico de Içamento</div>
@@ -4615,10 +4616,11 @@ function PlanejamentoBasico({ onVoltar, isMobile }) {
 }
 
 // ── ROOT ─────────────────────────────────────────────────────────────────────────
-export default function App() {
+export default function App({ adminMode = false }) {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const [authenticated, setAuthenticated] = useState(() => !!getToken());
-  const [view, setView]   = useState("app"); // "app" | "admin"
+  const [view, setView] = useState(adminMode ? "admin" : "app");
   const [aba, setAba]     = useState("guindaste");
   const [planData, setPlanData] = useState(() => {
     try {
@@ -4663,10 +4665,10 @@ export default function App() {
   if (view === "admin" && !authenticated) {
     return <LoginScreen onAuth={() => setAuthenticated(true)} />;
   }
-  if (view === "admin" && isSuperAdmin)   return <SuperAdminDashboard   onVoltar={() => setView("app")} isMobile={isMobile} />;
-  if (view === "admin" && isAdminEmpresa) return <AdminDashboard         onVoltar={() => setView("app")} isMobile={isMobile} />;
-  if (view === "admin" && isLider)        return <LiderEquipeDashboard   onVoltar={() => setView("app")} isMobile={isMobile} />;
-  if (view === "admin" && isGerente)      return <GerenteDashboard       onVoltar={() => setView("app")} isMobile={isMobile} />;
+  if (view === "admin" && isSuperAdmin)   return <SuperAdminDashboard   onVoltar={() => navigate("/")} isMobile={isMobile} />;
+  if (view === "admin" && isAdminEmpresa) return <AdminDashboard         onVoltar={() => navigate("/")} isMobile={isMobile} />;
+  if (view === "admin" && isLider)        return <LiderEquipeDashboard   onVoltar={() => navigate("/")} isMobile={isMobile} />;
+  if (view === "admin" && isGerente)      return <GerenteDashboard       onVoltar={() => navigate("/")} isMobile={isMobile} />;
 
   const ABAS = [
     { id: "guindaste",    label: isMobile ? "Guindaste"  : "Guindaste & Carga"  },
@@ -4682,11 +4684,12 @@ export default function App() {
 
   return (
     <div style={S.app}>
+      <CookieConsentModal />
       {showModalSenha && <ModalAlterarSenha onFechar={() => setShowModalSenha(false)} />}
       <div style={S.header(isMobile)}>
         <div style={S.headerTop(isMobile)}>
           <div style={S.logo}>
-            <div style={S.logoIcon}>🏗</div>
+            <div style={S.logoIcon}><img src="/logo.jpeg" alt="RiggingCheck" style={{ width: "100%", height: "100%", objectFit: "contain" }} /></div>
             <div>
               <div style={S.logoText(isMobile)}>RiggingCheck</div>
               <div style={S.logoSub(isMobile)}>Planejamento de Içamento</div>
@@ -4695,10 +4698,10 @@ export default function App() {
           <div style={S.userInfo(isMobile)}>
             {user && <div style={S.roleBadge(isMobile)}>{roleLabel(user.role)}</div>}
             {user && <div style={S.userBadge(isMobile)}>{user.userName}</div>}
-            {isSuperAdmin   && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#a78bfa44", color: "#a78bfa" }} onClick={() => setView("admin")}>{isMobile ? "⚙️" : "⚙️ Painel SaaS"}</button>}
-            {isAdminEmpresa && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#f59e0b44", color: "#f59e0b" }} onClick={() => setView("admin")}>{isMobile ? "🔑" : "🔑 Painel Admin"}</button>}
-            {isLider        && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#22c55e44", color: "#22c55e" }} onClick={() => setView("admin")}>{isMobile ? "📋" : "📋 Solicitações"}</button>}
-            {isGerente      && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => setView("admin")}>{isMobile ? "📊" : "📊 Painel Gerente"}</button>}
+            {isSuperAdmin   && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#a78bfa44", color: "#a78bfa" }} onClick={() => navigate("/admin")}>{isMobile ? "⚙️" : "⚙️ Painel SaaS"}</button>}
+            {isAdminEmpresa && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#f59e0b44", color: "#f59e0b" }} onClick={() => navigate("/admin")}>{isMobile ? "🔑" : "🔑 Painel Admin"}</button>}
+            {isLider        && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#22c55e44", color: "#22c55e" }} onClick={() => navigate("/admin")}>{isMobile ? "📋" : "📋 Solicitações"}</button>}
+            {isGerente      && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => navigate("/admin")}>{isMobile ? "📊" : "📊 Painel Gerente"}</button>}
             <button
               onClick={() => { setPetrobras(p => !p); if (petrobras) setAba("guindaste"); }}
               style={{ ...S.logoutBtn(isMobile), borderColor: petrobras ? "#7c3aed44" : "#47556944", color: petrobras ? "#a78bfa" : "#64748b" }}
@@ -4709,10 +4712,14 @@ export default function App() {
             {authenticated ? (
               <>
                 <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => setShowModalSenha(true)}>{isMobile ? "🔑" : "Alterar Senha"}</button>
+                <button style={{ ...S.logoutBtn(isMobile), borderColor: "#47556944", color: "#64748b" }} onClick={() => navigate("/privacidade")} title="Central de Privacidade LGPD">{isMobile ? "🔒" : "Privacidade"}</button>
+                {(user?.subscriptionStatus === "PAST_DUE" || user?.subscriptionStatus === "CANCELED") && (
+                  <button style={{ ...S.logoutBtn(isMobile), borderColor: "#ef444444", color: "#ef4444" }} onClick={() => navigate("/pricing")}>Renovar Assinatura</button>
+                )}
                 <button style={S.logoutBtn(isMobile)} onClick={handleLogout}>Sair</button>
               </>
             ) : (
-              <button style={{ ...S.logoutBtn(isMobile), borderColor: "#47556944", color: "#94a3b8" }} onClick={() => setView("admin")}>{isMobile ? "🔐" : "Acesso"}</button>
+              <button style={{ ...S.logoutBtn(isMobile), borderColor: "#47556944", color: "#94a3b8" }} onClick={() => navigate("/admin")}>{isMobile ? "🔐" : "Acesso"}</button>
             )}
           </div>
         </div>
@@ -4727,7 +4734,11 @@ export default function App() {
       <div style={{ ...S.container, maxWidth: 960 }}>
         {aba === "guindaste" && <TabGuindasteCarga planData={planData} onSave={(k,v) => setPlanData(p=>({...p,[k]:v}))} />}
         {aba === "lingada"   && <TabLingadaCarga   planData={planData} onSave={(k,v) => setPlanData(p=>({...p,[k]:v}))} />}
-        {aba === "checklist"    && <TabChecklistCampo planData={planData} />}
+        {aba === "checklist" && (
+          <ProtectedRoute subscriptionStatus={user?.subscriptionStatus} onGoToPricing={() => navigate("/pricing")}>
+            <TabChecklistCampo planData={planData} />
+          </ProtectedRoute>
+        )}
         {aba === "equipamentos" && <TabEquipamentos />}
         {aba === "petrobras"    && <TabPetrobras planData={planData} onSave={(k,v) => setPlanData(p=>({...p,[k]:v}))} />}
 

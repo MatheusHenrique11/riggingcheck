@@ -22,4 +22,7 @@ public interface SolicitacaoLiberacaoRepository extends JpaRepository<Solicitaca
     // contagens para stats
     long countByEmpresaId(UUID empresaId);
     long countByEmpresaIdAndStatus(UUID empresaId, StatusLiberacao status);
+
+    // LGPD: exportação de dados pessoais por operador
+    List<SolicitacaoLiberacao> findBySolicitadoPorIdOrderByCriadoEmDesc(UUID solicitadoPorId);
 }

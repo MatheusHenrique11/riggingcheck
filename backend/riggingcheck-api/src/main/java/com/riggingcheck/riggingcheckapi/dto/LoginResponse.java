@@ -1,6 +1,7 @@
 package com.riggingcheck.riggingcheckapi.dto;
 
 import com.riggingcheck.riggingcheckapi.domain.enums.RoleEnum;
+import com.riggingcheck.riggingcheckapi.domain.enums.SubscriptionStatus;
 import lombok.Builder;
 import lombok.Data;
 
@@ -16,4 +17,7 @@ public class LoginResponse {
     private UUID empresaId;
     private String empresaName;
     private String empresaCnpj;
+    private SubscriptionStatus subscriptionStatus;
+    private Boolean acceptedTerms;
+    private Boolean acceptedPrivacyPolicy;
 }
