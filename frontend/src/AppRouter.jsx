@@ -17,12 +17,13 @@ import PublicPlanValidation   from "./pages/public/PublicPlanValidation.jsx";
 
 /**
  * Guard: exige autenticação ativa.
+ * Redireciona para /admin (que exibe o LoginScreen) se não autenticado.
  */
 function RequireAuth() {
   const { authenticated } = useAuth();
   const location = useLocation();
   if (!authenticated) {
-    return <Navigate to="/" state={{ from: location }} replace />;
+    return <Navigate to="/admin" state={{ from: location }} replace />;
   }
   return <Outlet />;
 }
@@ -67,6 +68,10 @@ export default function AppRouter() {
           {/* Validação pública de plano aprovado via QR Code — sem autenticação */}
           <Route path="/public/planos/:token"     element={<PublicPlanValidation />} />
 
+          {/* Legado — gerencia auth internamente, fora do RequireAuth */}
+          <Route path="/admin"     element={<App adminMode />} />
+          <Route path="/checklist" element={<App checklistMode />} />
+
           {/* ── Rotas autenticadas ──────────────────────────────────────────────── */}
           <Route element={<RequireAuth />}>
             <Route path="/privacidade" element={<PrivacyCenterRouted />} />
@@ -76,10 +81,6 @@ export default function AppRouter() {
 
             {/* Rotas enterprise — exigem assinatura ativa */}
             <Route element={<RequireActiveSubscription />}>
-
-              {/* Legado mantido para links/bookmarks existentes */}
-              <Route path="/admin"     element={<App adminMode />} />
-              <Route path="/checklist" element={<App checklistMode />} />
 
               {/* ── Nova estrutura /app ────────────────────────────────────────── */}
 

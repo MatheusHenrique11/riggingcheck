@@ -91,10 +91,12 @@ function DecisionModal({ plan, userRole, onClose, onRefresh }) {
     <div style={{
       position: "fixed", inset: 0, background: "#000a",
       display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+      padding: "16px",
     }}>
       <div style={{
-        background: "#1e293b", borderRadius: 12, padding: 28,
-        width: "min(520px, 92vw)", border: "1px solid #334155",
+        background: "#1e293b", borderRadius: 12, padding: "24px 20px",
+        width: "min(520px, 100%)", border: "1px solid #334155",
+        maxHeight: "90vh", overflowY: "auto",
       }}>
         <h3 style={{ color: "#f1f5f9", margin: "0 0 16px" }}>
           Decisão — OS: {plan.operacaoOs}

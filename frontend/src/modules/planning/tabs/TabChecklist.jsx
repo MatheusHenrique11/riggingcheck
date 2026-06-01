@@ -1,12 +1,13 @@
 /**
  * Tab Checklist de Campo — extraída de App.jsx.
- * Lógica e JSX preservados sem alterações.
+ * Contém apenas verificações operacionais (sem cálculos).
+ * Patolamento → TabGuindasteCarga | Tabela elétrica → TabTabelas.
  */
 
 import { useState, useEffect } from "react";
 import { S } from "../shared/planningStyles";
-import { HIGH_VOLTAGE_TABLE, CHECKLIST_CAMPO, CL_KEY } from "../shared/planningConstants";
-import { ResultBox, Campo } from "../shared/PlanningComponents";
+import { CHECKLIST_CAMPO, CL_KEY } from "../shared/planningConstants";
+import { Campo } from "../shared/PlanningComponents";
 import { openPrintWindow, formatPetrobrasSection } from "../../../utils/pdf";
 import { canPrintPdf } from "../../../utils/calculations";
 import { getToken, getUser, authFetch } from "../../../utils/api";
@@ -28,11 +29,8 @@ const roleLabel = (role) => {
 };
 
 export default function TabChecklistCampo({ planData }) {
-  const [checked, setChecked]       = useState(() => { try { return JSON.parse(localStorage.getItem(CL_KEY)||"{}"); } catch { return {}; } });
-  const [resp, setResp]             = useState("");
-  const [pat, setPat]               = useState({ cargaTotal:"", pesoGuindaste:"", areaPatolas:"" });
-  const [resPat, setResPat]         = useState(null);
-  const [resistSolo, setResistSolo] = useState("1.5");
+  const [checked, setChecked] = useState(() => { try { return JSON.parse(localStorage.getItem(CL_KEY)||"{}"); } catch { return {}; } });
+  const [resp, setResp]       = useState("");
   const [showRelatorio, setShowRelatorio] = useState(false);
 
   const user       = getUser();
@@ -123,21 +121,11 @@ export default function TabChecklistCampo({ planData }) {
   const done   = Object.values(checked).filter(Boolean).length;
   const pct    = Math.round((done/total)*100);
 
-  const calcPatolamento = () => {
-    const ct=parseFloat(pat.cargaTotal), pg=parseFloat(pat.pesoGuindaste), area=parseFloat(pat.areaPatolas);
-    if([ct,pg,area].some(isNaN)||area<=0) return;
-    const pressao = (ct+pg)/area;
-    const resist  = parseFloat(resistSolo);
-    const ok      = !isNaN(resist) && pressao <= resist;
-    setResPat({ pressao, status: ok?"SEGURO":"REPROVADO",
-      msg: ok ? `${pressao.toFixed(3)} t/m² ≤ resistência ${resist} t/m²` : `${pressao.toFixed(3)} t/m² EXCEDE ${resist} t/m² — ampliar pranchas!` });
-  };
-
   const categorias = [...new Set(CHECKLIST_CAMPO.map(i=>i.cat))];
   const fmt = (v, dec=1) => v != null ? Number(v).toLocaleString("pt-BR",{maximumFractionDigits:dec,timeZone:"America/Sao_Paulo"}) : "—";
 
   const Relatorio = () => {
-    const { cargaBruta, volume, swl, cg, tensao, n2869, petrobrasData } = planData || {};
+    const { cargaBruta, volume, swl, cg, tensao, n2869, petrobrasData, patolamento } = planData || {};
     const emitido = new Date().toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo"});
     const temDados = !!(cargaBruta || volume || swl || cg || tensao || n2869 || petrobrasData);
     const Sec = ({title, children}) => (
@@ -194,6 +182,13 @@ export default function TabChecklistCampo({ planData }) {
             <Row l="Status"            v={swl.status} bold />
           </Sec>
         )}
+        {patolamento && (
+          <Sec title="Patolamento">
+            <Row l="Pressão calculada" v={`${patolamento.pressao.toFixed(3)} t/m²`} bold />
+            <Row l="Resistência do solo" v={`${patolamento.resistSolo} t/m²`} />
+            <Row l="Status"            v={patolamento.status} bold />
+          </Sec>
+        )}
         {cg && (
           <Sec title="Centro de Gravidade">
             <Row l="Peso total"         v={`${fmt(cg.pt)} kg`} bold />
@@ -229,12 +224,6 @@ export default function TabChecklistCampo({ planData }) {
         {petrobrasData && (
           <div dangerouslySetInnerHTML={{ __html: formatPetrobrasSection(petrobrasData) }} />
         )}
-        {resPat && (
-          <Sec title="Patolamento">
-            <Row l="Pressão calculada" v={`${resPat.pressao.toFixed(3)} t/m²`} bold />
-            <Row l="Status"            v={resPat.status} bold />
-          </Sec>
-        )}
         {!temDados && (
           <div style={{background:"#fef9c3",border:"1px solid #fde047",borderRadius:6,padding:"10px 14px",marginBottom:18,fontSize:12,color:"#713f12"}}>
             ⚠ Nenhum cálculo registrado. Preencha as abas <strong>Guindaste &amp; Carga</strong> e <strong>Lingada &amp; Carga</strong> para relatório completo.
@@ -260,27 +249,13 @@ export default function TabChecklistCampo({ planData }) {
     <div>
       {showRelatorio && (
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:1000,overflowY:"auto",padding:"24px 16px"}}>
-          <div style={{display:"flex",gap:10,justifyContent:"center",marginBottom:16}}>
+          <div style={{display:"flex",gap:10,justifyContent:"center",marginBottom:16,position:"sticky",top:0,background:"rgba(0,0,0,0.85)",padding:"12px 0",zIndex:10}}>
             <button onClick={imprimirRelatorio} style={{background:"#1e3a5f",color:"#fff",border:"none",borderRadius:8,padding:"10px 24px",fontWeight:700,fontSize:13,cursor:"pointer"}}>🖨 Imprimir / Salvar PDF</button>
-            <button onClick={()=>setShowRelatorio(false)} style={{background:"transparent",color:"#94a3b8",border:"1px solid #374151",borderRadius:8,padding:"10px 24px",fontSize:13,cursor:"pointer"}}>Fechar</button>
+            <button onClick={()=>setShowRelatorio(false)} style={{background:"transparent",color:"#94a3b8",border:"1px solid #374151",borderRadius:8,padding:"10px 24px",fontSize:13,cursor:"pointer"}}>✕ Fechar</button>
           </div>
           <Relatorio />
         </div>
       )}
-
-      {/* Patolamento */}
-      <div style={S.card}>
-        <div style={S.cardTitle}>🦺 Cálculo de Patolamento (N-2869)</div>
-        <div style={{fontSize:11,color:"#64748b",marginBottom:14}}>P = (Carga total + Peso do guindaste) ÷ Área de apoio das patolas</div>
-        <div style={S.grid()}>
-          <Campo label="Carga total (t)"><input style={S.input} type="number" min="0" step="0.1" value={pat.cargaTotal} onChange={e=>setPat(p=>({...p,cargaTotal:e.target.value}))} /></Campo>
-          <Campo label="Peso do guindaste (t)"><input style={S.input} type="number" min="0" step="0.1" value={pat.pesoGuindaste} onChange={e=>setPat(p=>({...p,pesoGuindaste:e.target.value}))} /></Campo>
-          <Campo label="Área de apoio das patolas (m²)"><input style={S.input} type="number" min="0" step="0.01" value={pat.areaPatolas} onChange={e=>setPat(p=>({...p,areaPatolas:e.target.value}))} /></Campo>
-          <Campo label="Resistência do solo (t/m²)"><input style={S.input} type="number" min="0" step="0.1" value={resistSolo} onChange={e=>setResistSolo(e.target.value)} /></Campo>
-        </div>
-        <button style={{...S.btn(false),marginTop:16}} onClick={calcPatolamento}>Calcular Pressão</button>
-        {resPat && <ResultBox status={resPat.status} label="Pressão nas Patolas" valor={resPat.pressao.toFixed(3)} unidade="t/m²" msg={resPat.msg} />}
-      </div>
 
       {/* Checklist */}
       <div style={S.card}>
@@ -329,33 +304,6 @@ export default function TabChecklistCampo({ planData }) {
         )}
         <div style={{...S.normaBox,marginTop:8}}>
           {resp&&<span>Supervisor: {resp} · </span>}{new Date().toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo"})}
-        </div>
-      </div>
-
-      {/* Alta Tensão */}
-      <div style={S.card}>
-        <div style={S.cardTitle}>⚡ Distâncias Seguras — Redes de Alta Tensão</div>
-        <div style={{overflowX:"auto"}}>
-          <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-            <thead>
-              <tr style={{background:"#1e1e35"}}>
-                <th style={{padding:"8px 12px",textAlign:"left",color:"#94a3b8",fontWeight:600,borderBottom:"1px solid #2d2d4a"}}>Tensão da rede</th>
-                <th style={{padding:"8px 12px",textAlign:"center",color:"#94a3b8",fontWeight:600,borderBottom:"1px solid #2d2d4a"}}>Distância mínima</th>
-                <th style={{padding:"8px 12px",textAlign:"left",color:"#94a3b8",fontWeight:600,borderBottom:"1px solid #2d2d4a"}}>Norma</th>
-              </tr>
-            </thead>
-            <tbody>
-              {HIGH_VOLTAGE_TABLE.map((row,i)=>(
-                <tr key={i} style={{background:i%2===0?"#0f0f1a":"#141424",borderBottom:"1px solid #1e1e35"}}>
-                  <td style={{padding:"7px 12px",color:"#cbd5e1"}}>{row.faixa}</td>
-                  <td style={{padding:"7px 12px",textAlign:"center",fontWeight:700,color:row.minDist===null?"#ef4444":row.minDist>=8?"#f59e0b":"#22c55e"}}>
-                    {row.minDist!==null ? `${row.minDist.toFixed(1).replace(".",",")} m` : "⚠ "+row.norma}
-                  </td>
-                  <td style={{padding:"7px 12px",color:"#64748b",fontSize:11}}>{row.minDist!==null?row.norma:"—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </div>
 

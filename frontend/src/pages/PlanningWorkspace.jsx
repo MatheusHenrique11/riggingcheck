@@ -55,8 +55,8 @@ export default function PlanningWorkspace() {
         </button>
       </div>
 
-      {/* Workspace legado preservado integralmente */}
-      <App />
+      {/* Workspace legado — embedded=true suprime o header duplicado */}
+      <App embedded />
     </AppShell>
   );
 }

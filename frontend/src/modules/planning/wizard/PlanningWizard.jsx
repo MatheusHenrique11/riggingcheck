@@ -61,7 +61,13 @@ export default function PlanningWizard() {
   const StepComponent = STEP_COMPONENTS[currentStep.id] ?? StepPlaceholder;
 
   return (
-    <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
+    <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }} className="rc-wizard-root">
+      <style>{`
+        @media (max-width: 768px) {
+          .rc-wizard-root { flex-direction: column !important; gap: 0 !important; }
+          .wizard-mobile-nav { width: 100%; margin-bottom: 16px; }
+        }
+      `}</style>
 
       {/* Navegação lateral (desktop) / chips (mobile) */}
       <WizardProgress

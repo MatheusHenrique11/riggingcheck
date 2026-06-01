@@ -23,6 +23,10 @@ export default function TabGuindasteCarga({ planData = {}, onSave }) {
   const [swl, setSwl] = useState(() => planData.swl?.inputs || { crm: "", fsIdx: 2, forca: "" });
   const [resSwl, setResSwl] = useState(() => planData.swl || null);
 
+  const [pat, setPat] = useState(() => planData.patolamento?.inputs || { cargaTotal: "", pesoGuindaste: "", areaPatolas: "" });
+  const [resPat, setResPat] = useState(() => planData.patolamento || null);
+  const [resistSolo, setResistSolo] = useState(() => String(planData.patolamento?.resistSolo ?? "1.5"));
+
   const calcCargaBruta = () => {
     const v = Object.values(cb).map(Number);
     if (v.some(isNaN)) return;
@@ -73,6 +77,25 @@ export default function TabGuindasteCarga({ planData = {}, onSave }) {
     const r = { swlVal, taxa, fs, status, crm, forca, tipoAplicacao: FATORES_SEG[swl.fsIdx].tipo };
     setResSwl(r);
     onSave?.("swl", r);
+  };
+
+  const calcPatolamento = () => {
+    const ct = parseFloat(pat.cargaTotal), pg = parseFloat(pat.pesoGuindaste), area = parseFloat(pat.areaPatolas);
+    if ([ct, pg, area].some(isNaN) || area <= 0) return;
+    const pressao = (ct + pg) / area;
+    const resist  = parseFloat(resistSolo);
+    const ok      = !isNaN(resist) && pressao <= resist;
+    const r = {
+      pressao,
+      status:    ok ? "SEGURO" : "REPROVADO",
+      resistSolo: resist,
+      inputs:    { ...pat },
+      msg:       ok
+        ? `${pressao.toFixed(3)} t/m² ≤ resistência ${resist} t/m²`
+        : `${pressao.toFixed(3)} t/m² EXCEDE ${resist} t/m² — ampliar pranchas!`,
+    };
+    setResPat(r);
+    onSave?.("patolamento", r);
   };
 
   const formaFields = {
@@ -188,6 +211,41 @@ export default function TabGuindasteCarga({ planData = {}, onSave }) {
             <ResultBox status={resVol.peso >= 20000 ? "ATENCAO" : "SEGURO"} label="Peso estimado" valor={resVol.peso.toLocaleString("pt-BR",{maximumFractionDigits:1,timeZone:"America/Sao_Paulo"})} unidade="kg"
               msg={resVol.peso>=20000?"N-2869: Içamento Crítico":undefined}/>
           </div>
+        )}
+      </div>
+
+      <div style={S.card}>
+        <div style={S.cardTitle}>🦺 3 — Patolamento (N-2869)</div>
+        <div style={{ fontSize: 11, color: "#64748b", marginBottom: 14 }}>
+          P = (Carga total + Peso do guindaste) ÷ Área de apoio das patolas. Se pressão &gt; resistência do solo, operação será BLOQUEADA.
+        </div>
+        <div style={S.grid()}>
+          <Campo label="Carga total (t)">
+            <input style={S.input} type="number" min="0" step="0.1" value={pat.cargaTotal}
+              onChange={e => setPat(p => ({ ...p, cargaTotal: e.target.value }))} />
+          </Campo>
+          <Campo label="Peso do guindaste (t)">
+            <input style={S.input} type="number" min="0" step="0.1" value={pat.pesoGuindaste}
+              onChange={e => setPat(p => ({ ...p, pesoGuindaste: e.target.value }))} />
+          </Campo>
+          <Campo label="Área de apoio das patolas (m²)">
+            <input style={S.input} type="number" min="0" step="0.01" value={pat.areaPatolas}
+              onChange={e => setPat(p => ({ ...p, areaPatolas: e.target.value }))} />
+          </Campo>
+          <Campo label="Resistência do solo (t/m²)">
+            <input style={S.input} type="number" min="0" step="0.1" value={resistSolo}
+              onChange={e => setResistSolo(e.target.value)} />
+          </Campo>
+        </div>
+        <button style={{ ...S.btn(false), marginTop: 16 }} onClick={calcPatolamento}>Calcular Pressão</button>
+        {resPat && (
+          <ResultBox
+            status={resPat.status}
+            label="Pressão nas Patolas"
+            valor={resPat.pressao.toFixed(3)}
+            unidade="t/m²"
+            msg={resPat.msg}
+          />
         )}
       </div>
 

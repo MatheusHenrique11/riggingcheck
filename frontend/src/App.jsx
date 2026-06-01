@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useAuth } from "./context/AuthContext.jsx";
 import { useNavigate } from "react-router-dom";
 import CookieConsentModal from "./components/CookieConsentModal.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
@@ -31,9 +32,10 @@ function useIsMobile() {
   return mobile;
 }
 
-export default function App({ adminMode = false, tabInicial = "guindaste" }) {
+export default function App({ adminMode = false, tabInicial = "guindaste", embedded = false }) {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const { login: authLogin } = useAuth();
   const [authenticated, setAuthenticated] = useState(() => !!getToken());
   const view = adminMode ? "admin" : "app";
   const [aba, setAba]     = useState(tabInicial);
@@ -78,7 +80,17 @@ export default function App({ adminMode = false, tabInicial = "guindaste" }) {
 
   // Painel admin — login exigido apenas aqui
   if (view === "admin" && !authenticated) {
-    return <LoginScreen onAuth={() => setAuthenticated(true)} />;
+    return (
+      <LoginScreen
+        onAuth={() => {
+          const tok = getToken();
+          const usr = getUser();
+          setAuthenticated(true);
+          if (tok && usr) authLogin(tok, usr);
+          navigate("/app/dashboard", { replace: true });
+        }}
+      />
+    );
   }
   if (view === "admin" && isSuperAdmin)   return <SuperAdminDashboard   onVoltar={() => navigate("/")} isMobile={isMobile} />;
   if (view === "admin" && isAdminEmpresa) return <AdminDashboard         onVoltar={() => navigate("/")} isMobile={isMobile} />;
@@ -98,11 +110,14 @@ export default function App({ adminMode = false, tabInicial = "guindaste" }) {
   const nextAba = currentIndex !== -1 && currentIndex < ABAS.length - 1 ? ABAS[currentIndex + 1] : null;
 
   return (
-    <div style={S.app}>
-      <CookieConsentModal />
-      {showModalSenha && <ModalAlterarSenha onFechar={() => setShowModalSenha(false)} />}
-      <div style={S.header(isMobile)}>
-        <div style={S.headerTop(isMobile)}>
+    <div style={embedded ? { color: "#e2e8f0", fontFamily: S.app.fontFamily } : S.app}>
+      {!embedded && <CookieConsentModal />}
+      {!embedded && showModalSenha && <ModalAlterarSenha onFechar={() => setShowModalSenha(false)} />}
+      <div style={embedded
+        ? { padding: "0 0 8px", marginBottom: 12, borderBottom: "1px solid #1e293b" }
+        : S.header(isMobile)
+      }>
+        {!embedded && <div style={S.headerTop(isMobile)}>
           <div style={S.logo}>
             <div style={S.logoIcon}><img src="/logo.jpeg" alt="RiggingCheck" style={{ width: "100%", height: "100%", objectFit: "contain" }} /></div>
             <div>
@@ -137,7 +152,7 @@ export default function App({ adminMode = false, tabInicial = "guindaste" }) {
               <button style={{ ...S.logoutBtn(isMobile), borderColor: "#47556944", color: "#94a3b8" }} onClick={() => navigate("/admin")}>{isMobile ? "🔐" : "Acesso"}</button>
             )}
           </div>
-        </div>
+        </div>}
         <div style={S.tabs(isMobile)}>
           {ABAS.map(a => (
             <button key={a.id} style={S.tab(aba === a.id, isMobile)} onClick={() => setAba(a.id)}>
@@ -146,7 +161,7 @@ export default function App({ adminMode = false, tabInicial = "guindaste" }) {
           ))}
         </div>
       </div>
-      <div style={{ ...S.container, maxWidth: 960 }}>
+      <div style={{ ...S.container, maxWidth: 960, paddingTop: embedded ? 0 : undefined }}>
         {aba === "guindaste" && <TabGuindasteCarga planData={planData} onSave={(k,v) => setPlanData(p=>({...p,[k]:v}))} />}
         {aba === "lingada"   && <TabLingadaCarga   planData={planData} onSave={(k,v) => setPlanData(p=>({...p,[k]:v}))} />}
         {aba === "checklist" && (
@@ -187,11 +202,13 @@ export default function App({ adminMode = false, tabInicial = "guindaste" }) {
           </div>
         </div>
 
-        <div style={{ ...S.normaBox, textAlign: "center", marginTop: 32 }}>
-          v2.1.0 — RiggingCheck &nbsp;·&nbsp; React + Java Spring Boot + PostgreSQL
-          <br />
-          <span style={{ color: "#475569" }}>NR-11 · ABNT NBR 13541 · ISO 4308-1 · Petrobrás N-2869</span>
-        </div>
+        {!embedded && (
+          <div style={{ ...S.normaBox, textAlign: "center", marginTop: 32 }}>
+            v2.1.0 — RiggingCheck &nbsp;·&nbsp; React + Java Spring Boot + PostgreSQL
+            <br />
+            <span style={{ color: "#475569" }}>NR-11 · ABNT NBR 13541 · ISO 4308-1 · Petrobrás N-2869</span>
+          </div>
+        )}
       </div>
     </div>
   );

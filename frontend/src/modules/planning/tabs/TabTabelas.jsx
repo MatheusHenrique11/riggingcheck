@@ -9,6 +9,7 @@ import {
   CINTA_SINTETICA_TABLE, MANILHA_TABLE,
   CORRENTE_G80_TABLE, CORRENTE_G100_TABLE,
 } from "../../../utils/calculations";
+import { HIGH_VOLTAGE_TABLE } from "../shared/planningConstants";
 
 export default function TabEquipamentos() {
   const [secao, setSecao] = useState("cintas");
@@ -33,6 +34,7 @@ export default function TabEquipamentos() {
     { id: "cabos",     label: "🔩 Cabos de Aço"     },
     { id: "correntes", label: "⛓ Correntes"         },
     { id: "manilhas",  label: "🔗 Manilhas"          },
+    { id: "eletrica",  label: "⚡ Rede Elétrica"     },
   ];
   const CABOS = [
     { id: "af19",  label: "6×19 Alma de Fibra (AF)"   },
@@ -47,6 +49,7 @@ export default function TabEquipamentos() {
     cabos:     "ABNT NBR 13541-1:2014 — Eslingas de Cabo de Aço / FS 5:1",
     correntes: "EN 818-4 / NBR ISO 3076 — Correntes de Elevação / FS 4:1",
     manilhas:  "NBR 13545 / ASME B30.26 — Manilhas de Elevação",
+    eletrica:  "NR-10 Anexo II / ABNT NBR 5422 — Distâncias de Segurança em Redes Elétricas",
   };
 
   return (
@@ -238,6 +241,44 @@ export default function TabEquipamentos() {
           </div>
           <div style={{fontSize:11,color:"#475569",marginTop:12,lineHeight:1.7}}>
             SWL conforme NBR 13545 / ASME B30.26 · Travar pino com arame de segurança · Manilhas pintadas: rejeitar.
+          </div>
+        </div>
+      )}
+
+      {/* REDE ELÉTRICA */}
+      {secao === "eletrica" && (
+        <div style={sCard}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "#f59e0b", marginBottom: 12 }}>
+            Distâncias Seguras de Redes de Alta Tensão
+          </div>
+          <div style={{ fontSize: 12, color: "#64748b", marginBottom: 16, lineHeight: 1.6 }}>
+            Distâncias mínimas obrigatórias entre qualquer parte do guindaste / lingada e a rede elétrica.
+            Em caso de dúvida, solicite a desenergização do circuito antes da operação.
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={sTable}>
+              <thead>
+                <tr style={{ background: "#0a0a0f" }}>
+                  <th style={sTh}>Tensão da rede</th>
+                  <th style={{ ...sTh, textAlign: "center" }}>Distância mínima</th>
+                  <th style={sTh}>Norma</th>
+                </tr>
+              </thead>
+              <tbody>
+                {HIGH_VOLTAGE_TABLE.map((row, i) => (
+                  <tr key={i} style={{ background: i % 2 === 0 ? "#0f172a" : "#0a0a0f", borderBottom: "1px solid #1e293b" }}>
+                    <td style={sTd}>{row.faixa}</td>
+                    <td style={{ ...sTdNum, color: row.minDist === null ? "#ef4444" : row.minDist >= 8 ? "#f59e0b" : "#22c55e", fontWeight: 700 }}>
+                      {row.minDist !== null ? `${row.minDist.toFixed(1).replace(".", ",")} m` : "⚠ " + row.norma}
+                    </td>
+                    <td style={{ ...sTd, color: "#64748b", fontSize: 11 }}>{row.minDist !== null ? row.norma : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ fontSize: 11, color: "#475569", marginTop: 14, lineHeight: 1.7 }}>
+            Acima de 230 kV: verificar com especialista em cada caso · Guindastes metálicos conduzem eletricidade · NR-10 exige formação específica para trabalhos em proximidade com redes energizadas.
           </div>
         </div>
       )}
