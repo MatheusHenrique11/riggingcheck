@@ -1,0 +1,119 @@
+networks:
+  # Rede interna dos serviços RiggingCheck (criada por este Compose)
+  riggingcheck:
+    name: riggingcheck_network
+
+  # Rede Docker EXTERNA onde o PostgreSQL existente já está rodando.
+  # Confirme com: docker inspect risecode_postgres -f '{{json .NetworkSettings.Networks}}'
+  postgres_net:
+    external: true
+    name: risecode_default
+
+volumes:
+  # Volume bind-mount para os certificados TLS gerenciados pelo Traefik.
+  # OBRIGATÓRIO: touch traefik/acme.json && chmod 600 traefik/acme.json
+  letsencrypt:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/letsencrypt
+
+services:
+  # ── Traefik — reverse proxy + TLS Let's Encrypt ───────────────────────────
+  traefik:
+    image: traefik:v3.0
+    container_name: riggingcheck_traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Traefik resolve ${LETSENCRYPT_EMAIL} em traefik.yml via variável de processo
+      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./letsencrypt:/letsencrypt
+    networks:
+      - riggingcheck
+    labels:
+      - "traefik.enable=false"
+
+  # ── Backend Spring Boot ───────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend/riggingcheck-api
+      dockerfile: Dockerfile
+    container_name: riggingcheck_backend
+    image: riggingcheck/backend:latest
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD}
+      SMTP_FROM: ${SMTP_FROM:-noreply@riggingcheck.com}
+      APP_BASE_URL: ${APP_BASE_URL:-https://riggingcheck.com}
+      CORS_ALLOWED_ORIGINS: ${VITE_FRONTEND_URL:-https://riggingcheck.com}
+      ALERT_DIGEST_ENABLED: ${ALERT_DIGEST_ENABLED:-false}
+      ALERT_DIGEST_CRON: ${ALERT_DIGEST_CRON:-0 0 7 * * MON-FRI}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_placeholder}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_placeholder}
+      STRIPE_PRICE_BASIC: ${STRIPE_PRICE_BASIC:-price_placeholder}
+      STRIPE_PRICE_UNLIMITED: ${STRIPE_PRICE_UNLIMITED:-price_placeholder}
+      STRIPE_SUCCESS_URL: ${STRIPE_SUCCESS_URL:-https://riggingcheck.com/app/dashboard}
+      STRIPE_CANCEL_URL: ${STRIPE_CANCEL_URL:-https://riggingcheck.com/pricing}
+    networks:
+      - riggingcheck
+      - postgres_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=riggingcheck_network"
+      # HTTPS — /api/* → backend
+      - "traefik.http.routers.backend.rule=Host(`riggingcheck.com`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.backend.loadbalancer.server.port=8080"
+      # HTTP — redireciona para HTTPS (middleware definido no serviço frontend)
+      - "traefik.http.routers.backend-http.rule=Host(`riggingcheck.com`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.backend-http.entrypoints=web"
+      - "traefik.http.routers.backend-http.middlewares=redirect-to-https@docker"
+    depends_on:
+      - traefik
+
+  # ── Frontend Nginx ────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-https://riggingcheck.com/api}
+        VITE_FRONTEND_URL: ${VITE_FRONTEND_URL:-https://riggingcheck.com}
+    container_name: riggingcheck_frontend
+    image: riggingcheck/frontend:latest
+    restart: unless-stopped
+    networks:
+      - riggingcheck
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=riggingcheck_network"
+      # HTTPS — tráfego do domínio principal → frontend
+      - "traefik.http.routers.frontend.rule=Host(`riggingcheck.com`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
+      # HTTP — redirect global para HTTPS
+      - "traefik.http.routers.frontend-http.rule=Host(`riggingcheck.com`)"
+      - "traefik.http.routers.frontend-http.entrypoints=web"
+      - "traefik.http.routers.frontend-http.middlewares=redirect-to-https@docker"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.permanent=true"
+    depends_on:
+      - traefik

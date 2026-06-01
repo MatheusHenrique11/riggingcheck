@@ -34,7 +34,17 @@ public class AuthorizationHelper {
     private static final Set<RoleEnum> ROLES_COM_RESOLUCAO = Set.of(
         RoleEnum.ADMIN_EMPRESA,
         RoleEnum.LIDER_EQUIPE,
-        RoleEnum.SUPER_ADMIN
+        RoleEnum.SUPER_ADMIN,
+        RoleEnum.SAFETY_ADMIN
+    );
+
+    /**
+     * Perfis que podem liberar exceção em plano BLOCKED.
+     * Apenas SUPER_ADMIN e SAFETY_ADMIN, com justificativa obrigatória.
+     */
+    private static final Set<RoleEnum> ROLES_EXCECAO_BLOCKED = Set.of(
+        RoleEnum.SUPER_ADMIN,
+        RoleEnum.SAFETY_ADMIN
     );
 
     /**
@@ -76,6 +86,18 @@ public class AuthorizationHelper {
         if (funcionario.getRole() != RoleEnum.SUPER_ADMIN) {
             throw new AcessoNegadoException();
         }
+    }
+
+    /** Exige perfil autorizado a liberar exceção em plano BLOCKED. */
+    public void requireExcecaoBlocked(Funcionario funcionario) {
+        requireAtivo(funcionario);
+        if (!ROLES_EXCECAO_BLOCKED.contains(funcionario.getRole())) {
+            throw new AcessoNegadoException();
+        }
+    }
+
+    public boolean podeAprovarBloqueado(Funcionario funcionario) {
+        return ROLES_EXCECAO_BLOCKED.contains(funcionario.getRole());
     }
 
     /**

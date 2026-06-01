@@ -1,0 +1,42 @@
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+api:
+  dashboard: false
+  insecure: false
+
+log:
+  level: WARN
+
+entryPoints:
+  # HTTP — redireciona todo tráfego para HTTPS automaticamente
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+
+  # HTTPS — TLS gerenciado pelo Let's Encrypt
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: riggingcheck_network
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      # OBRIGATÓRIO: substitua pelo e-mail real antes do primeiro deploy.
+      # O Traefik usa esta variável de ambiente se LETSENCRYPT_EMAIL estiver
+      # definida no container (passada via environment no docker-compose.prod.yml).
+      email: ${LETSENCRYPT_EMAIL}
+      storage: /letsencrypt/acme.json
+      httpChallenge:
+        entryPoint: web

@@ -1,5 +1,6 @@
 package com.riggingcheck.riggingcheckapi.service;
 
+import com.riggingcheck.riggingcheckapi.domain.ChecklistResposta;
 import com.riggingcheck.riggingcheckapi.domain.Empresa;
 import com.riggingcheck.riggingcheckapi.domain.Funcionario;
 import com.riggingcheck.riggingcheckapi.domain.SolicitacaoLiberacao;
@@ -9,6 +10,7 @@ import com.riggingcheck.riggingcheckapi.dto.LiberacaoResponse;
 import com.riggingcheck.riggingcheckapi.dto.ResolverLiberacaoRequest;
 import com.riggingcheck.riggingcheckapi.exception.RecursoNaoEncontradoException;
 import com.riggingcheck.riggingcheckapi.exception.RegraDeNegocioException;
+import com.riggingcheck.riggingcheckapi.repository.ChecklistRespostaRepository;
 import com.riggingcheck.riggingcheckapi.repository.EmpresaRepository;
 import com.riggingcheck.riggingcheckapi.repository.FuncionarioRepository;
 import com.riggingcheck.riggingcheckapi.repository.SolicitacaoLiberacaoRepository;
@@ -31,15 +33,21 @@ public class LiberacaoService {
     private final FuncionarioRepository          funcionarioRepository;
     private final EmpresaRepository              empresaRepository;
     private final AuthorizationHelper            authorizationHelper;
+    private final RiggingPlanAccessoryService    planAccessoryService;
+    private final ChecklistRespostaRepository    checklistRespostaRepository;
 
     public LiberacaoService(SolicitacaoLiberacaoRepository liberacaoRepository,
                             FuncionarioRepository funcionarioRepository,
                             EmpresaRepository empresaRepository,
-                            AuthorizationHelper authorizationHelper) {
-        this.liberacaoRepository = liberacaoRepository;
-        this.funcionarioRepository = funcionarioRepository;
-        this.empresaRepository   = empresaRepository;
-        this.authorizationHelper = authorizationHelper;
+                            AuthorizationHelper authorizationHelper,
+                            RiggingPlanAccessoryService planAccessoryService,
+                            ChecklistRespostaRepository checklistRespostaRepository) {
+        this.liberacaoRepository       = liberacaoRepository;
+        this.funcionarioRepository     = funcionarioRepository;
+        this.empresaRepository         = empresaRepository;
+        this.authorizationHelper       = authorizationHelper;
+        this.planAccessoryService      = planAccessoryService;
+        this.checklistRespostaRepository = checklistRespostaRepository;
     }
 
     @Transactional
@@ -48,12 +56,22 @@ public class LiberacaoService {
         Empresa empresa = buscarEmpresaOuLancar(solicitante.getEmpresaId());
 
         SolicitacaoLiberacao sol = montarSolicitacao(solicitante, empresa, request);
+        SolicitacaoLiberacao salva = liberacaoRepository.save(sol);
 
-        log.info("Solicitação criada: OS={} | rigger={} | empresa={}",
-                request.getOperacaoOs(), request.getRiggerNome(), empresa.getRazaoSocial());
-        return toResponse(liberacaoRepository.save(sol));
+        // Vincula acessórios na mesma transação — rollback automático em caso de erro
+        planAccessoryService.vincularLista(
+            salva.getId(), salva.getEmpresaId(), request.getAcessorios(), solicitante);
+
+        // Persiste itens individuais do checklist
+        salvarChecklistItens(salva.getId(), salva.getEmpresaId(), request.getChecklistItens());
+
+        log.info("Solicitação criada: OS={} | rigger={} | empresa={} | acessórios={}",
+                request.getOperacaoOs(), request.getRiggerNome(), empresa.getRazaoSocial(),
+                request.getAcessorios() != null ? request.getAcessorios().size() : 0);
+        return toResponse(salva);
     }
 
+    @Transactional(readOnly = true)
     public List<LiberacaoResponse> listar(String statusParam, String emailUsuario) {
         Funcionario usuario = buscarFuncionarioOuLancar(emailUsuario);
         authorizationHelper.requireAdmin(usuario);
@@ -68,6 +86,7 @@ public class LiberacaoService {
         return lista.stream().map(this::toResponse).toList();
     }
 
+    @Transactional(readOnly = true)
     public LiberacaoResponse buscar(UUID id, String emailUsuario) {
         Funcionario usuario = buscarFuncionarioOuLancar(emailUsuario);
         SolicitacaoLiberacao sol = buscarSolicitacaoOuLancar(id);
@@ -106,6 +125,11 @@ public class LiberacaoService {
         sol.setObservacao(observacao);
         sol.setResolvidoEm(LocalDateTime.now());
 
+        if (novoStatus == StatusLiberacao.PROSSEGUIR && sol.getPublicValidationToken() == null) {
+            sol.setPublicValidationToken(
+                java.util.UUID.randomUUID().toString().replace("-", ""));
+        }
+
         log.info("Solicitação {} {} por {}", id, novoStatus, emailAdmin);
         return toResponse(liberacaoRepository.save(sol));
     }
@@ -122,8 +146,37 @@ public class LiberacaoService {
 
         mapearCapacidade(sol, request.getDadosCapacidade());
         mapearEslinga(sol, request.getDadosEslinga());
+        mapearDadosOperacionais(sol, request.getDadosOperacionais());
+
+        if (request.getPetrobrasDataJson() != null) {
+            sol.setPetrobrasDataJson(request.getPetrobrasDataJson());
+        }
 
         return sol;
+    }
+
+    private void mapearDadosOperacionais(SolicitacaoLiberacao sol, LiberacaoRequest.DadosOperacionais op) {
+        if (op == null) return;
+        sol.setLocalOperacao(op.getLocalOperacao());
+        sol.setDataOperacao(op.getDataOperacao());
+        sol.setSupervisorNome(op.getSupervisorNome());
+        sol.setDescricaoAtividade(op.getDescricaoAtividade());
+    }
+
+    private void salvarChecklistItens(UUID solicitacaoId, UUID empresaId,
+                                       List<LiberacaoRequest.ChecklistItemRequest> itens) {
+        if (itens == null || itens.isEmpty()) return;
+        List<ChecklistResposta> respostas = itens.stream()
+            .map(it -> ChecklistResposta.builder()
+                .solicitacaoLiberacaoId(solicitacaoId)
+                .empresaId(empresaId)
+                .codigoItem(it.getCodigoItem())
+                .categoriaItem(it.getCategoriaItem())
+                .perguntaItem(it.getPerguntaItem())
+                .respondido(Boolean.TRUE.equals(it.getRespondido()))
+                .build())
+            .toList();
+        checklistRespostaRepository.saveAll(respostas);
     }
 
     private void mapearCapacidade(SolicitacaoLiberacao sol, LiberacaoRequest.DadosCapacidade cap) {
@@ -196,6 +249,9 @@ public class LiberacaoService {
                 .operacaoOs(sol.getOperacaoOs())
                 .riggerNome(sol.getRiggerNome())
                 .status(sol.getStatus() != null ? sol.getStatus().name() : null)
+                .workflowStatus(sol.getWorkflowStatus() != null ? sol.getWorkflowStatus().name() : null)
+                .technicalStatus(sol.getTechnicalStatus() != null ? sol.getTechnicalStatus().name() : null)
+                .publicValidationToken(sol.getPublicValidationToken())
                 .aprovadoPorNome(sol.getAprovadoPorNome())
                 .observacao(sol.getObservacao())
                 .criadoEm(sol.getCriadoEm())

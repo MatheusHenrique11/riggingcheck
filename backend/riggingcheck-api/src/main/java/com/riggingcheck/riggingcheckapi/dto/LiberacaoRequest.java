@@ -4,6 +4,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+
 @Data
 public class LiberacaoRequest {
 
@@ -18,6 +22,43 @@ public class LiberacaoRequest {
 
     @NotNull(message = "Dados de eslinga são obrigatórios")
     private DadosEslinga dadosEslinga;
+
+    /** Lista opcional de acessórios selecionados no Wizard. Null ou vazia = sem vínculos. */
+    private List<AcessorioVinculoRequest> acessorios;
+
+    /** Dados operacionais completos do Wizard — opcional para compatibilidade. */
+    private DadosOperacionais dadosOperacionais;
+
+    /** Itens individuais do checklist NR-11 / N-2869. */
+    private List<ChecklistItemRequest> checklistItens;
+
+    /** JSON serializado do módulo Petrobras N-2869 — opcional. */
+    private String petrobrasDataJson;
+
+    @Data
+    public static class DadosOperacionais {
+        private String localOperacao;
+        private LocalDate dataOperacao;
+        private String supervisorNome;
+        private String descricaoAtividade;
+    }
+
+    @Data
+    public static class ChecklistItemRequest {
+        @NotBlank(message = "Código do item é obrigatório")
+        private String codigoItem;
+        private String categoriaItem;
+        private String perguntaItem;
+        private Boolean respondido;
+    }
+
+    @Data
+    public static class AcessorioVinculoRequest {
+        @NotNull(message = "ID do acessório é obrigatório")
+        private UUID acessorioId;
+        private Double cargaAplicadaKg;
+        private String observacao;
+    }
 
     @Data
     public static class DadosCapacidade {

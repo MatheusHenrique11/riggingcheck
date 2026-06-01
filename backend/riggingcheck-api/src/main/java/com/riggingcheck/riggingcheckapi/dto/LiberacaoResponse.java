@@ -13,6 +13,9 @@ public class LiberacaoResponse {
     private String operacaoOs;
     private String riggerNome;
     private String status;
+    private String workflowStatus;
+    private String technicalStatus;
+    private String publicValidationToken;
     private String aprovadoPorNome;
     private String observacao;
     private LocalDateTime criadoEm;

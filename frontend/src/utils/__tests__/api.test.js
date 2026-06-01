@@ -1,3 +1,4 @@
+/* global global */
 import { describe, it, expect, beforeEach, afterEach, jest } from "@jest/globals";
 import { getToken, getUser, saveAuth, clearAuth, authFetch } from "../api.js";
 

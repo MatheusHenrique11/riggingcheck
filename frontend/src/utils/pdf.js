@@ -73,9 +73,7 @@ export const formatPetrobrasSection = (data) => {
     todosMarcados = false,
   } = data;
 
-  const corMap   = { ROTINEIRO: "#16a34a", NAO_ROTINEIRO: "#d97706", CRITICO: "#dc2626" };
   const labelMap = { ROTINEIRO: "ROTINEIRO", NAO_ROTINEIRO: "NÃO ROTINEIRO", CRITICO: "IÇAMENTO CRÍTICO" };
-  const cor      = corMap[classificacao]   ?? "#374151";
   const label    = labelMap[classificacao] ?? esc(classificacao);
 
   const fatores = [
@@ -161,7 +159,7 @@ export const openPrintWindow = (
     win.document.close();
     win.focus();
     setTimeout(() => {
-      try { win.print(); } catch (_) { }
+      try { win.print(); } catch { /* ignore */ }
     }, delay);
     return { success: true };
   }
@@ -192,10 +190,10 @@ export const openPrintWindow = (
   setTimeout(() => {
     try {
       iframe.contentWindow.print();
-    } catch (_) { }
+    } catch { /* ignore */ }
     // Limpa o iframe do DOM após a janela de impressão ser resolvida
     setTimeout(() => {
-      try { document.body.removeChild(iframe); } catch (_) { }
+      try { document.body.removeChild(iframe); } catch { /* ignore */ }
     }, 2000);
   }, delay);
 

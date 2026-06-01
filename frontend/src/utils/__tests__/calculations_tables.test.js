@@ -10,10 +10,6 @@ import {
   lookupWllFromMaterial,
   inchesToMm,
   mmToInches,
-  feetToMeters,
-  metersToFeet,
-  lbsToKg,
-  kgToLbs,
 } from "../calculations.js";
 
 // ── CABO_ACO_19AA_TABLE (6×19 AA/IWRC) ───────────────────────────────────────

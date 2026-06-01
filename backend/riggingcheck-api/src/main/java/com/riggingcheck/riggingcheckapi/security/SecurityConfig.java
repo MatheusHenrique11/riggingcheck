@@ -42,8 +42,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/setup").permitAll()
                 .requestMatchers("/api/calculation/**").permitAll()
                 .requestMatchers("/api/webhooks/**").permitAll()
+                .requestMatchers("/api/public/**").permitAll()
                 .requestMatchers("/api/auth/register").hasRole("SUPER_ADMIN")
                 .requestMatchers("/api/admin/**").hasRole("SUPER_ADMIN")
+                .requestMatchers("/api/planos/**").authenticated()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

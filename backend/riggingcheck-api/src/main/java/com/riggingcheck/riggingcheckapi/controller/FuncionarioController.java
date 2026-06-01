@@ -4,6 +4,7 @@ import com.riggingcheck.riggingcheckapi.dto.AlterarSenhaRequest;
 import com.riggingcheck.riggingcheckapi.dto.AtualizarFuncionarioRequest;
 import com.riggingcheck.riggingcheckapi.dto.FuncionarioRequest;
 import com.riggingcheck.riggingcheckapi.dto.FuncionarioResponse;
+import com.riggingcheck.riggingcheckapi.dto.TeamCompetencyDashboardResponse;
 import com.riggingcheck.riggingcheckapi.service.FuncionarioService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +23,12 @@ public class FuncionarioController {
 
     public FuncionarioController(FuncionarioService funcionarioService) {
         this.funcionarioService = funcionarioService;
+    }
+
+    @GetMapping("/dashboard-competencias")
+    public ResponseEntity<TeamCompetencyDashboardResponse> dashboardCompetencias(
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(funcionarioService.getDashboardCompetencias(userDetails.getUsername()));
     }
 
     @PostMapping

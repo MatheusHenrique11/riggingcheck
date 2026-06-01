@@ -1,9 +1,12 @@
 package com.riggingcheck.riggingcheckapi.domain;
 
 import com.riggingcheck.riggingcheckapi.domain.enums.StatusLiberacao;
+import com.riggingcheck.riggingcheckapi.domain.enums.TechnicalStatus;
+import com.riggingcheck.riggingcheckapi.domain.enums.WorkflowStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.Filter;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -92,6 +95,78 @@ public class SolicitacaoLiberacao {
     @Column(name = "esl_manilha_compativel")
     private Boolean eslManilhaCompativel;
 
+    // ── Compliance e Workflow ────────────────────────────────────────────────────
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "technical_status", columnDefinition = "VARCHAR(20)")
+    private TechnicalStatus technicalStatus;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "workflow_status", columnDefinition = "VARCHAR(40)")
+    private WorkflowStatus workflowStatus;
+
+    @Column(name = "current_version", nullable = false)
+    private Integer currentVersion = 1;
+
+    /** Plano bloqueado para edição após aprovação; revisão cria nova versão. */
+    @Column(name = "is_locked", nullable = false)
+    private Boolean isLocked = false;
+
+    @Column(name = "compliance_messages", columnDefinition = "TEXT")
+    private String complianceMessages;
+
+    // ── Dados Operacionais do Wizard ──────────────────────────────────────────────
+
+    @Column(name = "local_operacao", length = 300)
+    private String localOperacao;
+
+    @Column(name = "data_operacao")
+    private LocalDate dataOperacao;
+
+    @Column(name = "supervisor_nome", length = 200)
+    private String supervisorNome;
+
+    @Column(name = "descricao_atividade", columnDefinition = "TEXT")
+    private String descricaoAtividade;
+
+    @Column(name = "petrobras_data_json", columnDefinition = "TEXT")
+    private String petrobrasDataJson;
+
+    // ── Campos adicionais para regras de compliance ──────────────────────────────
+
+    @Column(name = "checklist_completo")
+    private Boolean checklistCompleto;
+
+    @Column(name = "dois_ou_mais_guindastes")
+    private Boolean doisOuMaisGuindastes;
+
+    @Column(name = "area_classificada")
+    private Boolean areaClassificada;
+
+    /** false = rede elétrica próxima sem distância validada → BLOCKED. */
+    @Column(name = "rede_eletrica_validada")
+    private Boolean redeEletricaValidada;
+
+    @Column(name = "pressao_patolas_kpa")
+    private Double pressaoPatolasKpa;
+
+    @Column(name = "resistencia_solo_kpa")
+    private Double resistenciaSoloKpa;
+
+    /** false = certificado ausente ou vencido → BLOCKED quando inventário vinculado. */
+    @Column(name = "certificados_validados")
+    private Boolean certificadosValidados;
+
+    // ── Validação Pública (Fase 20) ──────────────────────────────────────────────
+
+    /**
+     * Token público de validação gerado na aprovação. Imutável e opaco (UUID hex 128-bit).
+     * Usado para validação sem autenticação via /public/planos/{token}/validacao.
+     * Null para planos não aprovados ou anteriores à Fase 20.
+     */
+    @Column(name = "public_validation_token", unique = true, length = 64)
+    private String publicValidationToken;
+
     // ── Resolução ────────────────────────────────────────────────────────────────
     @Column(name = "aprovado_por_id")
     private UUID aprovadoPorId;
@@ -112,5 +187,8 @@ public class SolicitacaoLiberacao {
     protected void onCreate() {
         criadoEm = LocalDateTime.now();
         status = StatusLiberacao.ANALISAR;
+        workflowStatus = WorkflowStatus.DRAFT;
+        if (currentVersion == null) currentVersion = 1;
+        if (isLocked == null) isLocked = false;
     }
 }

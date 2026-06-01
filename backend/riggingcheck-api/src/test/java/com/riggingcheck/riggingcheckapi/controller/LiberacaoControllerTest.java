@@ -340,4 +340,337 @@ class LiberacaoControllerTest {
                 .header("Authorization", "Bearer " + tokenRigger))
             .andExpect(status().isForbidden());
     }
+
+    // ── Databook PDF (Fase 13) ────────────────────────────────────────────────
+
+    @Test
+    void rigger_geraDatabook_retornaPdfDaPropriaEmpresa() throws Exception {
+        String resp = mockMvc.perform(post("/api/liberacoes")
+                .header("Authorization", "Bearer " + tokenRigger)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(PAYLOAD_SOLICITACAO))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+
+        String id = resp.replaceAll(".*\"id\":\"([^\"]+)\".*", "$1");
+
+        mockMvc.perform(get("/api/liberacoes/" + id + "/databook")
+                .header("Authorization", "Bearer " + tokenRigger))
+            .andExpect(status().isOk())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PDF));
+    }
+
+    @Test
+    void admin_geraDatabook_retornaPdf() throws Exception {
+        String resp = mockMvc.perform(post("/api/liberacoes")
+                .header("Authorization", "Bearer " + tokenRigger)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(PAYLOAD_SOLICITACAO))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+
+        String id = resp.replaceAll(".*\"id\":\"([^\"]+)\".*", "$1");
+
+        byte[] pdf = mockMvc.perform(get("/api/liberacoes/" + id + "/databook")
+                .header("Authorization", "Bearer " + tokenAdmin))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsByteArray();
+
+        // PDF começa com %PDF
+        org.junit.jupiter.api.Assertions.assertTrue(pdf.length > 100, "PDF deve ter conteúdo");
+        org.junit.jupiter.api.Assertions.assertEquals('%', (char) pdf[0]);
+        org.junit.jupiter.api.Assertions.assertEquals('P', (char) pdf[1]);
+        org.junit.jupiter.api.Assertions.assertEquals('D', (char) pdf[2]);
+        org.junit.jupiter.api.Assertions.assertEquals('F', (char) pdf[3]);
+    }
+
+    @Test
+    void databookDePlanoInexistenteRetorna404() throws Exception {
+        mockMvc.perform(get("/api/liberacoes/00000000-0000-0000-0000-000000000001/databook")
+                .header("Authorization", "Bearer " + tokenAdmin))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void databookSemTokenRetornaErroDeAutenticacao() throws Exception {
+        mockMvc.perform(get("/api/liberacoes/00000000-0000-0000-0000-000000000001/databook"))
+            .andExpect(status().is4xxClientError());
+    }
+
+    // ── Relatório de Conformidade Regulatória (Fase 15A) ─────────────────────
+
+    @Test
+    void rigger_geraRelatorioConformidade_retornaPdf() throws Exception {
+        String resp = mockMvc.perform(post("/api/liberacoes")
+                .header("Authorization", "Bearer " + tokenRigger)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(PAYLOAD_SOLICITACAO))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+
+        String id = resp.replaceAll(".*\"id\":\"([^\"]+)\".*", "$1");
+
+        mockMvc.perform(get("/api/liberacoes/" + id + "/relatorio-conformidade")
+                .header("Authorization", "Bearer " + tokenRigger))
+            .andExpect(status().isOk())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PDF));
+    }
+
+    @Test
+    void admin_geraRelatorioConformidade_conteudoValido() throws Exception {
+        String resp = mockMvc.perform(post("/api/liberacoes")
+                .header("Authorization", "Bearer " + tokenRigger)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(PAYLOAD_SOLICITACAO))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+
+        String id = resp.replaceAll(".*\"id\":\"([^\"]+)\".*", "$1");
+
+        byte[] pdf = mockMvc.perform(get("/api/liberacoes/" + id + "/relatorio-conformidade")
+                .header("Authorization", "Bearer " + tokenAdmin))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsByteArray();
+
+        // PDF válido começa com %PDF
+        org.junit.jupiter.api.Assertions.assertTrue(pdf.length > 100);
+        org.junit.jupiter.api.Assertions.assertEquals('%', (char) pdf[0]);
+        org.junit.jupiter.api.Assertions.assertEquals('P', (char) pdf[1]);
+    }
+
+    @Test
+    void relatorioConformidade_semChecklist_geraComNota() throws Exception {
+        // Payload sem checklistItens → relatório deve conter nota sobre ausência
+        String resp = mockMvc.perform(post("/api/liberacoes")
+                .header("Authorization", "Bearer " + tokenRigger)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(PAYLOAD_SOLICITACAO))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+
+        String id = resp.replaceAll(".*\"id\":\"([^\"]+)\".*", "$1");
+
+        // Gera sem erro mesmo sem checklist
+        mockMvc.perform(get("/api/liberacoes/" + id + "/relatorio-conformidade")
+                .header("Authorization", "Bearer " + tokenAdmin))
+            .andExpect(status().isOk())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PDF));
+    }
+
+    @Test
+    void relatorioConformidade_comChecklist_geraCorretamente() throws Exception {
+        String payloadComChecklist = """
+            {
+              "operacaoOs": "OS-CONF-F15",
+              "riggerNome": "Rigger F15",
+              "dadosCapacidade": {
+                "capGuindasteKg": 50000.0, "capCargaKg": 8000.0,
+                "capAparelhoKg": 500.0, "capTotalKg": 8500.0,
+                "capUsoPercent": 17.0, "capRisco": "SAFE"
+              },
+              "dadosEslinga": {
+                "eslNumPernas": 2, "eslAnguloGraus": 60.0,
+                "eslTensaoPorPernaKg": 4908.0, "eslFatorCarga": 1.155,
+                "eslRisco": "SEGURO", "eslAnguloAviso": false,
+                "eslWllKg": 10000.0, "eslWllUsoPercent": 49.1,
+                "eslTemManilha": false, "eslManilhaCapacidadeKg": null,
+                "eslManilhaUsoPercent": null, "eslManilhaCompativel": null
+              },
+              "checklistItens": [
+                {"codigoItem":"c1","categoriaItem":"Guindastes & Solo","perguntaItem":"Estabilidade verificada","respondido":true},
+                {"codigoItem":"c9","categoriaItem":"Acessórios","perguntaItem":"Eslingas sem fios rompidos","respondido":true},
+                {"codigoItem":"c17","categoriaItem":"Ambiente","perguntaItem":"Velocidade do vento OK","respondido":true},
+                {"codigoItem":"c21","categoriaItem":"N-2869","perguntaItem":"Plano de içamento elaborado","respondido":false}
+              ],
+              "dadosOperacionais": {
+                "localOperacao": "Planta Alpha",
+                "dataOperacao": "2026-07-01",
+                "supervisorNome": "Carlos Supervisor"
+              }
+            }
+            """;
+
+        String resp = mockMvc.perform(post("/api/liberacoes")
+                .header("Authorization", "Bearer " + tokenRigger)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payloadComChecklist))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+
+        String id = resp.replaceAll(".*\"id\":\"([^\"]+)\".*", "$1");
+
+        byte[] pdf = mockMvc.perform(get("/api/liberacoes/" + id + "/relatorio-conformidade")
+                .header("Authorization", "Bearer " + tokenAdmin))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsByteArray();
+
+        org.junit.jupiter.api.Assertions.assertTrue(pdf.length > 500,
+            "Relatório com checklist deve ter conteúdo substantivo");
+    }
+
+    @Test
+    void relatorioConformidade_planInexistente_retorna404() throws Exception {
+        mockMvc.perform(get("/api/liberacoes/00000000-0000-0000-0000-000000000002/relatorio-conformidade")
+                .header("Authorization", "Bearer " + tokenAdmin))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void relatorioConformidade_semToken_retornaErro() throws Exception {
+        mockMvc.perform(get("/api/liberacoes/00000000-0000-0000-0000-000000000002/relatorio-conformidade"))
+            .andExpect(status().is4xxClientError());
+    }
+
+    // ── Persistência Completa dos Dados Operacionais (Fase 14) ───────────────
+
+    @Test
+    void submissaoComDadosOperacionaisCompletos_persiste() throws Exception {
+        String payload = """
+            {
+              "operacaoOs": "OS-F14-COMPLETO",
+              "riggerNome": "Rigger F14",
+              "dadosCapacidade": {
+                "capGuindasteKg": 50000.0, "capCargaKg": 8000.0,
+                "capAparelhoKg": 500.0, "capTotalKg": 8500.0,
+                "capUsoPercent": 17.0, "capRisco": "SAFE"
+              },
+              "dadosEslinga": {
+                "eslNumPernas": 2, "eslAnguloGraus": 60.0,
+                "eslTensaoPorPernaKg": 4908.0, "eslFatorCarga": 1.155,
+                "eslRisco": "SEGURO", "eslAnguloAviso": false,
+                "eslWllKg": 10000.0, "eslWllUsoPercent": 49.1,
+                "eslTemManilha": false, "eslManilhaCapacidadeKg": null,
+                "eslManilhaUsoPercent": null, "eslManilhaCompativel": null
+              },
+              "dadosOperacionais": {
+                "localOperacao": "Pátio B, Módulo 3",
+                "dataOperacao": "2026-06-15",
+                "supervisorNome": "João Supervisor",
+                "descricaoAtividade": "Içamento de reator R-101"
+              }
+            }
+            """;
+
+        String resp = mockMvc.perform(post("/api/liberacoes")
+                .header("Authorization", "Bearer " + tokenRigger)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").exists())
+            .andReturn().getResponse().getContentAsString();
+
+        String id = resp.replaceAll(".*\"id\":\"([^\"]+)\".*", "$1");
+
+        // Databook gerado com localOperacao
+        byte[] pdf = mockMvc.perform(get("/api/liberacoes/" + id + "/databook")
+                .header("Authorization", "Bearer " + tokenAdmin))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsByteArray();
+
+        org.junit.jupiter.api.Assertions.assertTrue(pdf.length > 100, "Databook deve ter conteúdo");
+    }
+
+    @Test
+    void submissaoComChecklistItens_persisteItens() throws Exception {
+        String payload = """
+            {
+              "operacaoOs": "OS-F14-CHECKLIST",
+              "riggerNome": "Rigger F14",
+              "dadosCapacidade": {
+                "capGuindasteKg": 50000.0, "capCargaKg": 8000.0,
+                "capAparelhoKg": 500.0, "capTotalKg": 8500.0,
+                "capUsoPercent": 17.0, "capRisco": "SAFE"
+              },
+              "dadosEslinga": {
+                "eslNumPernas": 2, "eslAnguloGraus": 60.0,
+                "eslTensaoPorPernaKg": 4908.0, "eslFatorCarga": 1.155,
+                "eslRisco": "SEGURO", "eslAnguloAviso": false,
+                "eslWllKg": 10000.0, "eslWllUsoPercent": 49.1,
+                "eslTemManilha": false, "eslManilhaCapacidadeKg": null,
+                "eslManilhaUsoPercent": null, "eslManilhaCompativel": null
+              },
+              "checklistItens": [
+                {"codigoItem":"c1","categoriaItem":"Guindastes & Solo","perguntaItem":"Estabilidade verificada","respondido":true},
+                {"codigoItem":"c2","categoriaItem":"Guindastes & Solo","perguntaItem":"Laudo de solo disponível","respondido":false},
+                {"codigoItem":"c5","categoriaItem":"Equipamentos","perguntaItem":"Condições do guindaste verificadas","respondido":true}
+              ]
+            }
+            """;
+
+        String resp = mockMvc.perform(post("/api/liberacoes")
+                .header("Authorization", "Bearer " + tokenRigger)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+
+        String id = resp.replaceAll(".*\"id\":\"([^\"]+)\".*", "$1");
+
+        // Databook deve incluir checklist → PDF gerado com sucesso
+        mockMvc.perform(get("/api/liberacoes/" + id + "/databook")
+                .header("Authorization", "Bearer " + tokenAdmin))
+            .andExpect(status().isOk())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PDF));
+    }
+
+    @Test
+    void submissaoSemDadosOpcionalsFunciona() throws Exception {
+        // Payload mínimo sem dadosOperacionais nem checklistItens — compatibilidade retroativa
+        mockMvc.perform(post("/api/liberacoes")
+                .header("Authorization", "Bearer " + tokenRigger)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(PAYLOAD_SOLICITACAO))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.operacaoOs").value("OS-TEST-001"));
+    }
+
+    @Test
+    void databookComChecklistExibeItens() throws Exception {
+        String payload = """
+            {
+              "operacaoOs": "OS-F14-DB-CHECK",
+              "riggerNome": "Rigger DB",
+              "dadosCapacidade": {
+                "capGuindasteKg": 50000.0, "capCargaKg": 5000.0,
+                "capAparelhoKg": 200.0, "capTotalKg": 5200.0,
+                "capUsoPercent": 10.4, "capRisco": "SAFE"
+              },
+              "dadosEslinga": {
+                "eslNumPernas": 2, "eslAnguloGraus": 60.0,
+                "eslTensaoPorPernaKg": 3000.0, "eslFatorCarga": 1.155,
+                "eslRisco": "SEGURO", "eslAnguloAviso": false,
+                "eslWllKg": 8000.0, "eslWllUsoPercent": 37.5,
+                "eslTemManilha": false, "eslManilhaCapacidadeKg": null,
+                "eslManilhaUsoPercent": null, "eslManilhaCompativel": null
+              },
+              "dadosOperacionais": {
+                "localOperacao": "Planta Petroquímica Alpha",
+                "dataOperacao": "2026-07-01",
+                "supervisorNome": "Maria Silva",
+                "descricaoAtividade": "Troca de vaso de pressão VP-201"
+              },
+              "checklistItens": [
+                {"codigoItem":"c1","categoriaItem":"Guindastes & Solo","perguntaItem":"Estabilidade verificada","respondido":true},
+                {"codigoItem":"c17","categoriaItem":"Ambiente","perguntaItem":"Velocidade do vento OK","respondido":true}
+              ],
+              "petrobrasDataJson": "{\\"classificacao\\":\\"ROTINEIRO\\",\\"todosMarcados\\":false}"
+            }
+            """;
+
+        String resp = mockMvc.perform(post("/api/liberacoes")
+                .header("Authorization", "Bearer " + tokenRigger)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+
+        String id = resp.replaceAll(".*\"id\":\"([^\"]+)\".*", "$1");
+
+        byte[] pdf = mockMvc.perform(get("/api/liberacoes/" + id + "/databook")
+                .header("Authorization", "Bearer " + tokenAdmin))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsByteArray();
+
+        org.junit.jupiter.api.Assertions.assertTrue(pdf.length > 500, "Databook com checklist deve ter conteúdo");
+    }
 }

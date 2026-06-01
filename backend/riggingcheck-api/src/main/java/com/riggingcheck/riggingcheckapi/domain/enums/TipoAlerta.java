@@ -1,0 +1,16 @@
+package com.riggingcheck.riggingcheckapi.domain.enums;
+
+public enum TipoAlerta {
+    CERTIFICADO_VENCIDO,
+    CERTIFICADO_A_VENCER,
+    INSPECAO_VENCIDA,
+    ACESSORIO_REPROVADO,
+    ASO_VENCIDO,
+    ASO_A_VENCER,
+    NR11_VENCIDA,
+    NR11_A_VENCER,
+    NR35_VENCIDA,
+    NR35_A_VENCER,
+    PLANO_BLOQUEADO,
+    PLANO_AGUARDANDO_APROVACAO
+}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { API, getToken, getUser, saveAuth } from "../utils/api";
 
 const CONSENT_KEY = "rc_consent";
@@ -43,12 +43,7 @@ const S = {
 };
 
 export default function CookieConsentModal({ onConsentGiven }) {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem(CONSENT_KEY);
-    if (!stored) setVisible(true);
-  }, []);
+  const [visible, setVisible] = useState(() => !localStorage.getItem(CONSENT_KEY));
 
   if (!visible) return null;
 

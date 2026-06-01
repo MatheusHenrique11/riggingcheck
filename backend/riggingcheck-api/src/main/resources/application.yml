@@ -16,6 +16,18 @@ spring:
     hibernate:
       ddl-auto: create-drop
     show-sql: false
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
 
 jwt:
   secret: ${JWT_SECRET}
@@ -32,6 +44,13 @@ stripe:
     unlimited: ${STRIPE_PRICE_UNLIMITED:price_placeholder_unlimited}
   success-url: ${STRIPE_SUCCESS_URL:http://localhost:5173}
   cancel-url: ${STRIPE_CANCEL_URL:http://localhost:5173/pricing}
+
+alert:
+  digest:
+    enabled: ${ALERT_DIGEST_ENABLED:false}
+    cron: ${ALERT_DIGEST_CRON:0 0 7 * * MON-FRI}
+    from: ${SMTP_FROM:noreply@riggingcheck.com}
+    base-url: ${APP_BASE_URL:https://riggingcheck.app}
 
 logging:
   level:
