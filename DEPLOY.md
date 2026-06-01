@@ -219,6 +219,100 @@ docker compose -f docker-compose.prod.yml logs backend --tail=30
 
 ---
 
+## Correção do Traefik — Docker Provider (FASE 21.5)
+
+> Execute esta seção se o Traefik logar `client version 1.24 is too old` ou se `acme.json` permanecer vazio.
+
+### Causa 1 — Docker API version incompatível
+
+O Docker Engine da VPS descartou suporte à API ≤ 1.24. O cliente Go interno do Traefik
+usa 1.24 por padrão quando herda o ambiente do host. A variável `DOCKER_API_VERSION=1.44`
+no serviço `traefik` do compose força o cliente a usar a versão correta.
+
+```bash
+# Confirmar a versão de API suportada pelo Docker Engine da VPS
+docker version --format 'Server API version: {{.Server.APIVersion}}'
+
+# Se for diferente de 1.44, ajustar o DOCKER_API_VERSION no docker-compose.prod.yml
+# para corresponder exatamente à versão reportada acima.
+```
+
+### Causa 2 — httpChallenge conflita com redirect HTTP→HTTPS global
+
+O `httpChallenge` (HTTP-01) exige que o Let's Encrypt acesse
+`http://api.riggingcheck.com/.well-known/acme-challenge/TOKEN` via porta 80.
+Como o entrypoint `web` redireciona TUDO para HTTPS, o desafio nunca é respondido
+e `acme.json` fica vazio. A correção foi trocar para `tlsChallenge` (TLS-ALPN-01,
+porta 443) que não depende de HTTP.
+
+### Comandos para aplicar a correção
+
+```bash
+# 1. Garantir que o acme.json existe com permissão correta
+touch /app/risecode/letsencrypt/acme.json
+chmod 600 /app/risecode/letsencrypt/acme.json
+ls -la /app/risecode/letsencrypt/acme.json   # deve mostrar -rw-------
+
+# 2. Parar e remover o container atual do Traefik
+docker rm -f riggingcheck_traefik
+
+# 3. Puxar a versão mais recente do código (com as correções)
+cd /app/risecode
+git pull origin master
+
+# 4. Recriar apenas o Traefik (sem derrubar o backend)
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d traefik
+
+# 5. Aguardar ~10 segundos e verificar os logs
+sleep 10
+docker logs riggingcheck_traefik --tail=150
+```
+
+**Saída esperada nos logs após a correção:**
+```
+time="..." level=info msg="Configuration loaded from file: /etc/traefik/traefik.yml"
+time="..." level=info msg="Provider connection established with docker daemon"
+time="..." level=info msg="...Obtained certificate for domains ['api.riggingcheck.com']"
+```
+
+**Se ainda aparecer erro de API version:**
+```bash
+# Ver a API exata do daemon
+docker version --format '{{.Server.APIVersion}}'
+# Editar o docker-compose.prod.yml e ajustar DOCKER_API_VERSION para o valor acima
+nano /app/risecode/docker-compose.prod.yml
+docker rm -f riggingcheck_traefik
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d traefik
+```
+
+### Testes de validação pós-correção
+
+```bash
+# 1. Traefik enxerga o backend (deve listar routers)
+docker exec riggingcheck_traefik traefik version
+
+# 2. Testar HTTPS — deve retornar 200 ou 401 (não 404 do Traefik)
+curl -k https://api.riggingcheck.com/actuator/health
+# Esperado: {"status":"UP"} ou {"timestamp":...,"status":401,...}
+
+# 3. Certificado emitido pelo Let's Encrypt (não autoassinado)
+curl -v --head https://api.riggingcheck.com/api/auth/login 2>&1 \
+  | grep -E "issuer|subject|expire"
+
+# 4. Verificar que acme.json foi preenchido (> 2 bytes)
+wc -c /app/risecode/letsencrypt/acme.json
+# Esperado: > 1000 bytes após emissão do certificado
+
+# 5. Redirect HTTP → HTTPS funcionando
+curl -I http://api.riggingcheck.com
+# Esperado: HTTP/1.1 301 Moved Permanently  +  Location: https://...
+
+# 6. Endpoint de saúde do backend
+curl -sk https://api.riggingcheck.com/actuator/health | python3 -m json.tool
+```
+
+---
+
 ## Checklist de Rollback
 
 Execute na ordem em caso de falha pós-deploy:

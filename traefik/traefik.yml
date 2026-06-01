@@ -28,15 +28,16 @@ providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
     exposedByDefault: false
-    network: riggingcheck_network
+    # network: removido — cada serviço declara a rede via label
+    # traefik.docker.network=riggingcheck_network no container do backend
 
 certificatesResolvers:
   letsencrypt:
     acme:
-      # OBRIGATÓRIO: substitua pelo e-mail real antes do primeiro deploy.
-      # O Traefik usa esta variável de ambiente se LETSENCRYPT_EMAIL estiver
-      # definida no container (passada via environment no docker-compose.prod.yml).
+      # E-mail injetado via variável de ambiente LETSENCRYPT_EMAIL no container.
       email: ${LETSENCRYPT_EMAIL}
       storage: /letsencrypt/acme.json
-      httpChallenge:
-        entryPoint: web
+      # tlsChallenge (TLS-ALPN-01): não depende de HTTP, compatível com o redirect
+      # global HTTP→HTTPS configurado acima. httpChallenge não pode ser usado aqui
+      # porque o entrypoint web redireciona TUDO para HTTPS, incluindo o desafio ACME.
+      tlsChallenge: {}

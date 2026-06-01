@@ -30,6 +30,10 @@ services:
       - "443:443"
     environment:
       LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
+      # Força o cliente Docker interno do Traefik a usar API >= 1.40.
+      # Necessário quando o Docker Engine da VPS descartou suporte a versões < 1.40.
+      # Ajuste o valor para a APIVersion real: docker version --format '{{.Server.APIVersion}}'
+      DOCKER_API_VERSION: "1.44"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
