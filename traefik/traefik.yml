@@ -10,7 +10,6 @@ log:
   level: WARN
 
 entryPoints:
-  # HTTP — redireciona todo tráfego para HTTPS automaticamente
   web:
     address: ":80"
     http:
@@ -20,7 +19,6 @@ entryPoints:
           scheme: https
           permanent: true
 
-  # HTTPS — TLS gerenciado pelo Let's Encrypt
   websecure:
     address: ":443"
 
@@ -28,16 +26,13 @@ providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
     exposedByDefault: false
-    # network: removido — cada serviço declara a rede via label
-    # traefik.docker.network=riggingcheck_network no container do backend
+    # A rede é declarada por label no container do backend:
+    # traefik.docker.network=riggingcheck_network
 
 certificatesResolvers:
   letsencrypt:
     acme:
-      # E-mail injetado via variável de ambiente LETSENCRYPT_EMAIL no container.
       email: ${LETSENCRYPT_EMAIL}
       storage: /letsencrypt/acme.json
-      # tlsChallenge (TLS-ALPN-01): não depende de HTTP, compatível com o redirect
-      # global HTTP→HTTPS configurado acima. httpChallenge não pode ser usado aqui
-      # porque o entrypoint web redireciona TUDO para HTTPS, incluindo o desafio ACME.
+      # tlsChallenge: não depende de HTTP, funciona com o redirect HTTP→HTTPS global.
       tlsChallenge: {}

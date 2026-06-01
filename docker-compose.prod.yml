@@ -1,17 +1,12 @@
 networks:
-  # Rede interna dos serviços RiggingCheck (criada por este Compose)
   riggingcheck:
     name: riggingcheck_network
 
-  # Rede Docker EXTERNA onde o PostgreSQL existente já está rodando.
-  # Confirme com: docker inspect risecode_postgres -f '{{json .NetworkSettings.Networks}}'
   postgres_net:
     external: true
     name: risecode_default
 
 volumes:
-  # Volume bind-mount para os certificados TLS gerenciados pelo Traefik.
-  # OBRIGATÓRIO: touch traefik/acme.json && chmod 600 traefik/acme.json
   letsencrypt:
     driver: local
     driver_opts:
@@ -21,11 +16,11 @@ volumes:
 
 services:
   # ── Traefik — reverse proxy + TLS Let's Encrypt ───────────────────────────
+  # IMPORTANTE: requer traefik:v3.7+ para que DOCKER_API_VERSION seja lido.
+  # v3.0/v3.3 não chamam client.FromEnv() no Docker provider — a env var era ignorada.
+  # v3.7 chama FromEnv() e portanto respeita DOCKER_API_VERSION=1.54.
   traefik:
-    # v3.3 usa cliente Go do Docker que faz o ping de negociação sem prefixo de versão
-    # (/_ping em vez de /v1.24/_ping), resolvendo a incompatibilidade com Docker Engine >= 26.
-    # v3.0 tinha o defaultVersion="1.24" hardcoded e não lia DOCKER_API_VERSION do ambiente.
-    image: traefik:v3.3
+    image: traefik:v3.7
     container_name: riggingcheck_traefik
     restart: unless-stopped
     ports:
@@ -33,6 +28,10 @@ services:
       - "443:443"
     environment:
       LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
+      # Força o cliente Docker interno do Traefik a usar API 1.54.
+      # Necessário: esta VPS (Docker Engine ≥ 28) exige mínimo API 1.40.
+      # Versões antigas do Traefik usavam defaultVersion="1.24" hardcoded.
+      DOCKER_API_VERSION: "1.54"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
@@ -78,11 +77,9 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=riggingcheck_network"
-      # HTTPS — todo o tráfego de api.riggingcheck.com vai para o backend
       - "traefik.http.routers.backend.rule=Host(`api.riggingcheck.com`)"
       - "traefik.http.routers.backend.entrypoints=websecure"
       - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.backend.loadbalancer.server.port=8080"
-      # HTTP — o redirecionamento para HTTPS é feito globalmente no traefik.yml
     depends_on:
       - traefik
