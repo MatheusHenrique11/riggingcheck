@@ -185,7 +185,7 @@ export default function GerenteDashboard({ onVoltar, isMobile }) {
       <div style={S.header(isMobile)}>
         <div style={S.headerTop(isMobile)}>
           <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-            <button onClick={onVoltar} style={{ ...S.logoutBtn(isMobile), borderColor:"#38bdf844", color:"#38bdf8" }}>← Voltar</button>
+            <button onClick={onVoltar} style={{ ...S.logoutBtn(isMobile), borderColor:"#fb923c44", color:"#fb923c" }}>← Voltar</button>
             <div>
               <div style={S.logoText(isMobile)}>Painel de Controle</div>
               <div style={S.logoSub(isMobile)}>{user?.empresaName||"RiggingCheck"}</div>
@@ -194,7 +194,7 @@ export default function GerenteDashboard({ onVoltar, isMobile }) {
           <div style={S.userInfo(isMobile)}>
             <div style={S.roleBadge(isMobile)}>{roleLabel(user?.role)}</div>
             <div style={S.userBadge(isMobile)}>{user?.userName}</div>
-            <button style={{ ...S.logoutBtn(isMobile), borderColor:"#38bdf844", color:"#38bdf8" }} onClick={() => setShowModalSenha(true)}>
+            <button style={{ ...S.logoutBtn(isMobile), borderColor:"#fb923c44", color:"#fb923c" }} onClick={() => setShowModalSenha(true)}>
               {isMobile?"🔑":"Alterar Senha"}
             </button>
           </div>
@@ -211,7 +211,7 @@ export default function GerenteDashboard({ onVoltar, isMobile }) {
         ) : painel === "analitico" ? (
           <>
             <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:32 }}>
-              <StatCard label="Total Solicitações" value={total}          color="#38bdf8" />
+              <StatCard label="Total Solicitações" value={total}          color="#fb923c" />
               <StatCard label="Taxa de Aprovação"  value={`${taxaAprov}%`} color="#22c55e" sub={`${aprovadas} aprovadas`} />
               <StatCard label="Pendentes"           value={pendentes}     color="#f59e0b" />
               <StatCard label="Reprovadas"          value={reprovadas}    color="#ef4444" />

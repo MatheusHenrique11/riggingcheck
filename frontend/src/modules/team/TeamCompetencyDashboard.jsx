@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { authFetch } from "../../utils/api";
+import LoadingBlock from "../../components/Spinner";
 
 const API = import.meta.env.VITE_API_URL ?? "https://riggingcheck-production.up.railway.app";
 
@@ -81,7 +82,7 @@ function PorFuncaoRow({ item }) {
       marginBottom: 6, flexWrap: "wrap",
     }}>
       <div style={{ minWidth: 160, flex: 1 }}>
-        <span style={{ color: "#38bdf8", fontWeight: 700, fontSize: 12, fontFamily: "monospace" }}>
+        <span style={{ color: "#fb923c", fontWeight: 700, fontSize: 12, fontFamily: "monospace" }}>
           {item.funcao}
         </span>
         <div style={{ height: 4, background: "#1e293b", borderRadius: 99, marginTop: 4, overflow: "hidden" }}>
@@ -123,11 +124,7 @@ export default function TeamCompetencyDashboard() {
 
   useEffect(() => { load(); }, [load]);
 
-  if (loading) return (
-    <div style={{ padding: "20px 0", color: "#64748b", fontSize: 13 }}>
-      Carregando dashboard de competências...
-    </div>
-  );
+  if (loading) return <LoadingBlock label="Carregando dashboard de competências..." padding={20} />;
 
   if (error) return null; // falha silenciosa — roles sem permissão ou API offline
 
@@ -160,7 +157,7 @@ export default function TeamCompetencyDashboard() {
         gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
         gap: 10, marginBottom: 16,
       }}>
-        <KpiChip label="Total"       value={data.totalFuncionarios} color="#3b82f6" icon="👤" />
+        <KpiChip label="Total"       value={data.totalFuncionarios} color="#ea580c" icon="👤" />
         <KpiChip label="Aptos"       value={data.aptos}             color="#22c55e" icon="✅" />
         <KpiChip label="Bloqueados"  value={data.bloqueados}        color="#ef4444" icon="🚫" />
         <KpiChip label="A Vencer"    value={data.aVencer}           color="#f59e0b" icon="⏰" />

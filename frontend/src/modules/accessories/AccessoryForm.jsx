@@ -17,7 +17,7 @@ const S = {
   input:  { width: "100%", boxSizing: "border-box", background: "#0f172a", border: "1px solid #334155", borderRadius: 8, color: "#e2e8f0", fontSize: 14, padding: "10px 14px" },
   grid:   { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px,1fr))", gap: 16, marginBottom: 16 },
   btnRow: { display: "flex", gap: 12, marginTop: 24 },
-  btnOk:  { background: "#3b82f6", border: "none", color: "#fff", borderRadius: 8, padding: "11px 28px", cursor: "pointer", fontWeight: 700, fontSize: 14 },
+  btnOk:  { background: "#ea580c", border: "none", color: "#fff", borderRadius: 8, padding: "11px 28px", cursor: "pointer", fontWeight: 700, fontSize: 14 },
   btnCnl: { background: "transparent", border: "1px solid #334155", color: "#94a3b8", borderRadius: 8, padding: "11px 20px", cursor: "pointer", fontSize: 14 },
 };
 
@@ -57,7 +57,7 @@ export default function AccessoryForm({ initial, onSave, onCancel, loading, erro
 
       <form onSubmit={handleSubmit}>
         <div style={S.card}>
-          <div style={{ fontSize: 12, color: "#38bdf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 }}>
+          <div style={{ fontSize: 12, color: "#fb923c", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 }}>
             Identificação
           </div>
           <div style={S.grid}>
@@ -79,7 +79,7 @@ export default function AccessoryForm({ initial, onSave, onCancel, loading, erro
         </div>
 
         <div style={S.card}>
-          <div style={{ fontSize: 12, color: "#38bdf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 }}>
+          <div style={{ fontSize: 12, color: "#fb923c", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 }}>
             Dados Técnicos
           </div>
           <div style={S.grid}>

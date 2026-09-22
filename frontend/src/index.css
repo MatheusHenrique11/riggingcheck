@@ -1,3 +1,38 @@
+:root {
+  /* Paleta de marca — navy + laranja, extraída da logo RiggingCheck. */
+  --rc-navy-900: #0a0f1e;
+  --rc-navy-800: #0f3d5f;
+  --rc-navy-700: #123a5c;
+  --rc-navy-600: #2b6a99;
+  --rc-orange-700: #c2410c;
+  --rc-orange-600: #ea580c;
+  --rc-orange-400: #fb923c;
+  --rc-orange-300: #fdba74;
+}
+
 *, *::before, *::after { box-sizing: border-box; }
 body { margin: 0; padding: 0; background: #0a0a0f; }
 #root { min-height: 100vh; }
+
+/* ── Interatividade discreta e global ──────────────────────────────────────
+   Não sobrescreve cores/fundos definidos inline pelos componentes — apenas
+   adiciona resposta tátil (leve elevação/compressão) e foco visível, sem
+   mudar a linguagem visual existente. */
+button, a, [role="button"] {
+  transition: transform 0.12s ease, filter 0.12s ease, opacity 0.12s ease;
+}
+button:not(:disabled):hover, [role="button"]:not([aria-disabled="true"]):hover {
+  filter: brightness(1.06);
+}
+button:not(:disabled):active, [role="button"]:not([aria-disabled="true"]):active {
+  transform: scale(0.98);
+}
+button:disabled { filter: none; }
+
+:focus-visible {
+  outline: 2px solid var(--rc-orange-600);
+  outline-offset: 2px;
+}
+
+@keyframes rc-spin { to { transform: rotate(360deg); } }
+@keyframes rc-fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }

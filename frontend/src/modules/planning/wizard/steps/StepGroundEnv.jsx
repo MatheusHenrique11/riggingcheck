@@ -12,12 +12,12 @@ import TabPetrobras from "../../tabs/TabPetrobras";
 
 const S = {
   card:   { background: "#1e293b", borderRadius: 12, padding: 24, marginBottom: 16, border: "1px solid #334155" },
-  title:  { fontSize: 12, color: "#38bdf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 },
+  title:  { fontSize: 12, color: "#fb923c", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 },
   label:  { display: "block", fontSize: 11, color: "#64748b", letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 },
   input:  { width: "100%", boxSizing: "border-box", background: "#0f172a", border: "1px solid #334155", borderRadius: 8, color: "#e2e8f0", fontSize: 15, padding: "10px 14px" },
   grid:   { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 16, marginBottom: 16 },
   toggle: (on) => ({ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid #1e293b", cursor: "pointer", fontSize: 13, color: on ? "#f1f5f9" : "#64748b" }),
-  check:  (on) => ({ width: 20, height: 20, borderRadius: 4, border: `2px solid ${on ? "#3b82f6" : "#334155"}`, background: on ? "#3b82f6" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }),
+  check:  (on) => ({ width: 20, height: 20, borderRadius: 4, border: `2px solid ${on ? "#ea580c" : "#334155"}`, background: on ? "#ea580c" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }),
 };
 
 export default function StepGroundEnv({ planData, onSave }) {

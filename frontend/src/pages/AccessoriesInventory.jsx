@@ -5,6 +5,7 @@ import AccessoriesList from "../modules/accessories/AccessoriesList";
 import AccessoryForm from "../modules/accessories/AccessoryForm";
 import AccessoryDetails from "../modules/accessories/AccessoryDetails";
 import { listarAcessorios, criarAcessorio, atualizarAcessorio } from "../modules/accessories/accessoriesApi";
+import LoadingBlock from "../components/Spinner";
 
 const ROLES_GESTAO = ["SUPER_ADMIN", "SAFETY_ADMIN", "ADMIN_EMPRESA", "LIDER_EQUIPE", "GERENTE_OPERACOES"];
 
@@ -61,7 +62,7 @@ export default function AccessoriesInventory() {
   return (
     <AppShell breadcrumb={breadcrumb}>
       {loading && view === "list" ? (
-        <div style={{ textAlign: "center", padding: 60, color: "#64748b" }}>Carregando inventário...</div>
+        <LoadingBlock label="Carregando inventário..." padding={60} />
       ) : view === "list" ? (
         <AccessoriesList
           acessorios={acessorios}

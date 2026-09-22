@@ -237,7 +237,7 @@ export default function StepFinalReport({ planData, onReset }) {
   };
 
   const statusCfg = !solicitacao
-    ? { icon: "📄", title: "Plano Concluído", subtitle: "Aprovação não solicitada nesta sessão.", color: "#3b82f6", bg: "#1e3a5f22" }
+    ? { icon: "📄", title: "Plano Concluído", subtitle: "Aprovação não solicitada nesta sessão.", color: "#ea580c", bg: "#1e3a5f22" }
     : solicitacao.status === "PROSSEGUIR"
     ? { icon: "✅", title: "IÇAMENTO AUTORIZADO", subtitle: `Autorizado por: ${solicitacao.aprovadoPorNome}`, color: "#22c55e", bg: "#052e16" }
     : solicitacao.status === "PARAR"
@@ -310,7 +310,7 @@ export default function StepFinalReport({ planData, onReset }) {
 
       {/* Ações */}
       <div style={S.card}>
-        <div style={{ fontSize: 12, color: "#38bdf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: "#fb923c", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 }}>
           Documentação
         </div>
 
@@ -406,7 +406,7 @@ export default function StepFinalReport({ planData, onReset }) {
 
       {/* Nova operação */}
       <div style={S.card}>
-        <div style={{ fontSize: 12, color: "#38bdf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
+        <div style={{ fontSize: 12, color: "#fb923c", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
           Encerrar Plano
         </div>
         <p style={{ color: "#64748b", fontSize: 13, margin: "0 0 16px" }}>

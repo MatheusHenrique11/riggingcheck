@@ -109,7 +109,7 @@ export default function WizardSummaryPanel({ planData, currentStep }) {
       {/* Etapa atual */}
       <div style={{ marginTop: 8, borderTop: "1px solid #1e293b", paddingTop: 8 }}>
         <div style={{ fontSize: 10, color: "#334155", marginBottom: 3 }}>ETAPA ATUAL</div>
-        <div style={{ fontSize: 12, color: "#38bdf8", fontWeight: 600 }}>{currentStep?.icon} {currentStep?.label}</div>
+        <div style={{ fontSize: 12, color: "#fb923c", fontWeight: 600 }}>{currentStep?.icon} {currentStep?.label}</div>
         <div style={{ fontSize: 10, color: "#475569", marginTop: 2 }}>{currentStep?.description}</div>
       </div>
 

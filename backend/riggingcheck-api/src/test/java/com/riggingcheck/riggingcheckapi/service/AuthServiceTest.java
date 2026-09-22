@@ -10,6 +10,7 @@ import com.riggingcheck.riggingcheckapi.exception.CredenciaisInvalidasException;
 import com.riggingcheck.riggingcheckapi.exception.RegraDeNegocioException;
 import com.riggingcheck.riggingcheckapi.repository.EmpresaRepository;
 import com.riggingcheck.riggingcheckapi.repository.FuncionarioRepository;
+import com.riggingcheck.riggingcheckapi.repository.PasswordResetTokenRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,15 +31,18 @@ class AuthServiceTest {
 
     @Mock private FuncionarioRepository funcionarioRepository;
     @Mock private EmpresaRepository empresaRepository;
+    @Mock private PasswordResetTokenRepository passwordResetTokenRepository;
     @Mock private JwtService jwtService;
     @Mock private BCryptPasswordEncoder passwordEncoder;
+    @Mock private EmailNotificationService emailNotificationService;
 
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
         authService = new AuthService(
-            funcionarioRepository, empresaRepository, jwtService, passwordEncoder
+            funcionarioRepository, empresaRepository, passwordResetTokenRepository,
+            jwtService, passwordEncoder, emailNotificationService
         );
     }
 

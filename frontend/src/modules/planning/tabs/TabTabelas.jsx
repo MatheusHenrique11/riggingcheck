@@ -22,7 +22,7 @@ export default function TabEquipamentos() {
   const sTdNum  = { ...sTd, textAlign: "right", fontVariantNumeric: "tabular-nums" };
   const sTable  = { width: "100%", borderCollapse: "collapse", overflowX: "auto" };
 
-  const wllColor = (t) => t >= 10 ? "#22c55e" : t >= 5 ? "#38bdf8" : t >= 2 ? "#f59e0b" : "#94a3b8";
+  const wllColor = (t) => t >= 10 ? "#22c55e" : t >= 5 ? "#fb923c" : t >= 2 ? "#f59e0b" : "#94a3b8";
   const Num = ({ v, unit = "t" }) => (
     <span style={{ color: wllColor(v), fontWeight: 600 }}>
       {v != null ? `${typeof v === "number" ? v.toFixed(2) : v} ${unit}` : "—"}
@@ -55,7 +55,7 @@ export default function TabEquipamentos() {
   return (
     <div style={sBase}>
       <div style={{ ...sCard, background: "#0a0f1a", borderColor: "#0ea5e944", marginBottom: 20 }}>
-        <div style={{ fontSize: 17, fontWeight: 700, color: "#38bdf8", marginBottom: 4 }}>
+        <div style={{ fontSize: 17, fontWeight: 700, color: "#fb923c", marginBottom: 4 }}>
           📊 Tabelas de Capacidade de Materiais de Içamento
         </div>
         <div style={{ fontSize: 12, color: "#64748b" }}>
@@ -94,7 +94,7 @@ export default function TabEquipamentos() {
               </thead>
               <tbody>
                 {CINTA_SINTETICA_TABLE.map((e, i) => {
-                  const COR_HEX = { Violeta:"#7c3aed", Verde:"#22c55e", Amarelo:"#f59e0b", Cinza:"#94a3b8", Vermelho:"#ef4444", Branco:"#f1f5f9", Laranja:"#f97316", Marrom:"#92400e", Azul:"#3b82f6" };
+                  const COR_HEX = { Violeta:"#7c3aed", Verde:"#22c55e", Amarelo:"#f59e0b", Cinza:"#94a3b8", Vermelho:"#ef4444", Branco:"#f1f5f9", Laranja:"#f97316", Marrom:"#92400e", Azul:"#ea580c" };
                   return (
                     <tr key={e.cor} style={{ background: i%2===0?"#0f172a":"#0a0a0f" }}>
                       <td style={sTd}>
@@ -128,7 +128,7 @@ export default function TabEquipamentos() {
               <button key={c.id} onClick={()=>setSubCabo(c.id)} style={{
                 padding:"6px 14px", borderRadius:6, border:"none", cursor:"pointer", fontSize:12,
                 background: subCabo===c.id?"#1e40af":"#1e293b",
-                color:      subCabo===c.id?"#93c5fd":"#64748b",
+                color:      subCabo===c.id?"#fdba74":"#64748b",
               }}>{c.label}</button>
             ))}
           </div>
@@ -287,7 +287,7 @@ export default function TabEquipamentos() {
       <div style={{...sCard,background:"#0a0a0f"}}>
         <div style={{fontSize:11,color:"#475569",marginBottom:6,fontWeight:600,letterSpacing:"1px",textTransform:"uppercase"}}>Escala de Cores — WLL</div>
         <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
-          {[{label:"< 2 t",cor:"#94a3b8"},{label:"2–5 t",cor:"#f59e0b"},{label:"5–10 t",cor:"#38bdf8"},{label:"≥ 10 t",cor:"#22c55e"}].map(l=>(
+          {[{label:"< 2 t",cor:"#94a3b8"},{label:"2–5 t",cor:"#f59e0b"},{label:"5–10 t",cor:"#fb923c"},{label:"≥ 10 t",cor:"#22c55e"}].map(l=>(
             <div key={l.label} style={{display:"flex",alignItems:"center",gap:6,fontSize:12}}>
               <div style={{width:12,height:12,borderRadius:3,background:l.cor}} />
               <span style={{color:l.cor}}>{l.label}</span>

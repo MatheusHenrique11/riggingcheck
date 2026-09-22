@@ -12,8 +12,42 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="RiggingCheck" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
+    <style>
+      /* Preloader crítico — pintado antes de qualquer JS/CSS externo carregar,
+         para eliminar o flash em branco no primeiro carregamento. */
+      #app-preloader {
+        position: fixed; inset: 0; z-index: 9999;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 22px;
+        background: #0a0f1e;
+        transition: opacity 0.35s ease, visibility 0.35s ease;
+      }
+      #app-preloader.ap-hide { opacity: 0; visibility: hidden; pointer-events: none; }
+      #app-preloader .ap-logo {
+        width: 68px; height: 68px; border-radius: 18px; overflow: hidden;
+        box-shadow: 0 0 0 1px #1e293b, 0 12px 32px rgba(0,0,0,0.45);
+        animation: ap-pulse 1.8s ease-in-out infinite;
+      }
+      #app-preloader .ap-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+      #app-preloader .ap-spinner {
+        width: 30px; height: 30px; border-radius: 50%;
+        border: 3px solid #16324d; border-top-color: #ea580c;
+        animation: ap-spin 0.8s linear infinite;
+      }
+      #app-preloader .ap-label {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #475569;
+      }
+      @keyframes ap-spin { to { transform: rotate(360deg); } }
+      @keyframes ap-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    </style>
   </head>
   <body>
+    <div id="app-preloader" aria-hidden="true">
+      <div class="ap-logo"><img src="/logo.jpeg" alt="" /></div>
+      <div class="ap-spinner"></div>
+      <div class="ap-label">RiggingCheck</div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

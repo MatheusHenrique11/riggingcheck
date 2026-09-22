@@ -199,7 +199,7 @@ export default function SuperAdminDashboard({ onVoltar, isMobile }) {
           <div style={S.userInfo(isMobile)}>
             <div style={{ fontSize:10, padding:"3px 10px", borderRadius:6, border:`1px solid ${C}44`, color:C, fontWeight:700, letterSpacing:"1px" }}>SUPER ADMIN</div>
             <div style={S.userBadge(isMobile)}>{user?.userName}</div>
-            <button style={{ ...S.logoutBtn(isMobile), borderColor:"#38bdf844", color:"#38bdf8" }} onClick={() => setShowModalSenha(true)}>
+            <button style={{ ...S.logoutBtn(isMobile), borderColor:"#fb923c44", color:"#fb923c" }} onClick={() => setShowModalSenha(true)}>
               {isMobile?"🔑":"Alterar Senha"}
             </button>
           </div>
@@ -223,7 +223,7 @@ export default function SuperAdminDashboard({ onVoltar, isMobile }) {
               <StatCard label="Total de Empresas"   value={totalEmpresas} color={C}         sub={`${empAtivas} ativa${empAtivas!==1?"s":""}`} />
               <StatCard label="Empresas Ativas"     value={empAtivas}     color="#22c55e"    sub="em operação" />
               <StatCard label="Empresas Inativas"   value={empInativas}   color="#ef4444"    sub="suspensas" />
-              <StatCard label="Funcionários Ativos" value={totalFunc}     color="#38bdf8"    sub="em todas as empresas" />
+              <StatCard label="Funcionários Ativos" value={totalFunc}     color="#fb923c"    sub="em todas as empresas" />
               <StatCard label="Total Solicitações"  value={totalLib}      color="#f59e0b"    sub={`${libPendentes} pendente${libPendentes!==1?"s":""}`} />
             </div>
             <div style={{ fontSize:11, color:"#475569", letterSpacing:"2px", textTransform:"uppercase", marginBottom:16 }}>Últimas empresas cadastradas</div>
@@ -303,7 +303,7 @@ export default function SuperAdminDashboard({ onVoltar, isMobile }) {
                 </div>
                 <div style={{ marginTop:14, display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))", gap:10 }}>
                   {[
-                    {label:"Funcionários",value:emp.totalFuncionarios,color:"#38bdf8"},
+                    {label:"Funcionários",value:emp.totalFuncionarios,color:"#fb923c"},
                     {label:"Solicitações",value:emp.totalLiberacoes??0,color:"#f59e0b"},
                     {label:"Aprovadas",value:emp.liberacoesProsseguir??0,color:"#22c55e"},
                     {label:"Negadas",value:emp.liberacoesParar??0,color:"#ef4444"},
@@ -342,7 +342,7 @@ export default function SuperAdminDashboard({ onVoltar, isMobile }) {
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))", gap:10 }}>
                 {[
-                  {label:"Funcionários",value:empresaSel.totalFuncionarios??0,color:"#38bdf8"},
+                  {label:"Funcionários",value:empresaSel.totalFuncionarios??0,color:"#fb923c"},
                   {label:"Solicitações",value:empresaSel.totalLiberacoes??0,color:"#f59e0b"},
                   {label:"Aprovadas",value:empresaSel.liberacoesProsseguir??0,color:"#22c55e"},
                   {label:"Negadas",value:empresaSel.liberacoesParar??0,color:"#ef4444"},
@@ -426,7 +426,7 @@ export default function SuperAdminDashboard({ onVoltar, isMobile }) {
                           <div style={{ fontWeight:700, color:f.ativo!==false?"#e2e8f0":"#475569", fontSize:14 }}>{f.nome}</div>
                           <div style={{ fontSize:12, color:"#64748b", marginTop:2 }}>{f.email}</div>
                           <div style={{ display:"flex", gap:8, alignItems:"center", marginTop:6 }}>
-                            <span style={{ background:"#1e2a3a", color:"#38bdf8", fontSize:11, padding:"2px 8px", borderRadius:4 }}>{roleLabel(f.role)}</span>
+                            <span style={{ background:"#1e2a3a", color:"#fb923c", fontSize:11, padding:"2px 8px", borderRadius:4 }}>{roleLabel(f.role)}</span>
                             <span style={{ fontSize:10, padding:"2px 8px", borderRadius:4, fontWeight:700, background:f.ativo!==false?"#052e16":"#2d0000", color:f.ativo!==false?"#22c55e":"#ef4444" }}>
                               {f.ativo!==false?"ATIVO":"INATIVO"}
                             </span>

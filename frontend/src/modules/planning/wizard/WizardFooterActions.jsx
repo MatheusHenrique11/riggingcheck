@@ -60,7 +60,7 @@ export default function WizardFooterActions({ isFirst, isLast, onPrev, onNext, o
           <button
             onClick={onNext}
             style={{
-              background: "#3b82f6",
+              background: "#ea580c",
               border: "none",
               color: "#fff",
               borderRadius: 8,
@@ -68,7 +68,7 @@ export default function WizardFooterActions({ isFirst, isLast, onPrev, onNext, o
               cursor: "pointer",
               fontWeight: 700,
               fontSize: 14,
-              boxShadow: "0 4px 14px rgba(59,130,246,0.25)",
+              boxShadow: "0 4px 14px rgba(234,88,12,0.25)",
             }}
           >
             Próximo →

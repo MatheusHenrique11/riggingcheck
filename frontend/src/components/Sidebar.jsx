@@ -5,7 +5,7 @@ const ROLE_LABELS = {
   SUPER_ADMIN:        { label: "Super Admin",       color: "#a78bfa", icon: "⚡" },
   SAFETY_ADMIN:       { label: "Safety Admin",      color: "#f97316", icon: "🛡" },
   ADMIN_EMPRESA:      { label: "Admin Empresa",     color: "#f59e0b", icon: "🏢" },
-  GERENTE_OPERACOES:  { label: "Gerente Operações", color: "#38bdf8", icon: "📊" },
+  GERENTE_OPERACOES:  { label: "Gerente Operações", color: "#fb923c", icon: "📊" },
   LIDER_EQUIPE:       { label: "Líder de Equipe",   color: "#22c55e", icon: "👷" },
   RIGGER:             { label: "Rigger",            color: "#94a3b8", icon: "🪝" },
   OPERADOR:           { label: "Operador",          color: "#94a3b8", icon: "🔧" },
@@ -34,6 +34,7 @@ function navItems(role) {
       { path: "/app/central-aprovacao", icon: "✅", label: "Aprovações" },
       { path: "/app/alertas",           icon: "🔔", label: "Alertas" },
       ...(isAdmin || isSuper ? [{ path: "/app/equipes", icon: "👥", label: "Equipe" }] : []),
+      ...(isAdmin || isSuper ? [{ path: "/app/auditoria", icon: "🕵", label: "Auditoria" }] : []),
     ]});
   }
 
@@ -62,20 +63,22 @@ function NavItem({ item, active, onClick }) {
         width: "100%",
         padding: "9px 16px",
         background: active ? "#1e3a5f" : "transparent",
-        border: active ? "1px solid #2563eb44" : "1px solid transparent",
+        border: active ? "1px solid #c2410c44" : "1px solid transparent",
         borderRadius: 8,
-        color: active ? "#93c5fd" : "#94a3b8",
+        color: active ? "#fdba74" : "#94a3b8",
         fontSize: 14,
         fontWeight: active ? 600 : 400,
         cursor: "pointer",
         textAlign: "left",
-        transition: "all 0.15s",
+        transition: "background 0.15s, color 0.15s, transform 0.15s",
       }}
       onMouseEnter={e => {
-        if (!active) e.currentTarget.style.background = "#1e293b";
+        if (!active) { e.currentTarget.style.background = "#1e293b"; e.currentTarget.style.color = "#e2e8f0"; }
+        e.currentTarget.style.transform = "translateX(2px)";
       }}
       onMouseLeave={e => {
-        if (!active) e.currentTarget.style.background = "transparent";
+        if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#94a3b8"; }
+        e.currentTarget.style.transform = "translateX(0)";
       }}
     >
       <span style={{ fontSize: 16, lineHeight: 1 }}>{item.icon}</span>

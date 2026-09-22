@@ -87,7 +87,7 @@ export default function LiderEquipeDashboard({ onVoltar, isMobile }) {
           <div style={S.userInfo(isMobile)}>
             <div style={S.roleBadge(isMobile)}>{roleLabel(user?.role)}</div>
             <div style={S.userBadge(isMobile)}>{user?.userName}</div>
-            <button style={{ ...S.logoutBtn(isMobile), borderColor:"#38bdf844", color:"#38bdf8" }} onClick={() => setShowModalSenha(true)}>
+            <button style={{ ...S.logoutBtn(isMobile), borderColor:"#fb923c44", color:"#fb923c" }} onClick={() => setShowModalSenha(true)}>
               {isMobile?"🔑":"Alterar Senha"}
             </button>
           </div>

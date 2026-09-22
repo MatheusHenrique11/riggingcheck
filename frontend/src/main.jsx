@@ -51,3 +51,15 @@ createRoot(document.getElementById('root')).render(
     </ErrorBoundary>
   </StrictMode>,
 )
+
+// Remove o preloader estático (index.html) assim que o React pintou a
+// primeira tela real — dois requestAnimationFrame garantem que o navegador
+// já renderizou o frame antes de iniciarmos o fade-out.
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    const preloader = document.getElementById('app-preloader');
+    if (!preloader) return;
+    preloader.classList.add('ap-hide');
+    setTimeout(() => preloader.remove(), 400);
+  });
+});

@@ -141,7 +141,7 @@ export default function PublicPlanValidation() {
 
           {/* Identificação do plano */}
           <div style={{ background: "#1e293b", borderRadius: 12, padding: 20, border: "1px solid #334155" }}>
-            <div style={{ fontSize: 11, color: "#38bdf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: "#fb923c", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
               Identificação
             </div>
             <InfoLine label="Empresa"       value={data.empresaNome} />
@@ -154,7 +154,7 @@ export default function PublicPlanValidation() {
 
           {/* Status técnico e aprovação */}
           <div style={{ background: "#1e293b", borderRadius: 12, padding: 20, border: "1px solid #334155" }}>
-            <div style={{ fontSize: 11, color: "#38bdf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: "#fb923c", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
               Status
             </div>
             <InfoLine label="Status técnico"   value={data.statusTecnico} />
@@ -164,7 +164,7 @@ export default function PublicPlanValidation() {
 
           {/* Recursos vinculados */}
           <div style={{ background: "#1e293b", borderRadius: 12, padding: 20, border: "1px solid #334155" }}>
-            <div style={{ fontSize: 11, color: "#38bdf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: "#fb923c", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
               Recursos
             </div>
             <InfoLine label="Acessórios vinculados" value={`${data.quantidadeAcessorios} acessório(s)`} />
@@ -173,7 +173,7 @@ export default function PublicPlanValidation() {
 
           {/* QR Code desta página */}
           <div style={{ background: "#1e293b", borderRadius: 12, padding: 20, border: "1px solid #334155", textAlign: "center" }}>
-            <div style={{ fontSize: 11, color: "#38bdf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: "#fb923c", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
               QR Code desta validação
             </div>
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>

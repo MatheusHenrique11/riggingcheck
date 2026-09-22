@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { authFetch } from "../utils/api";
 import CompliancePanel from "../components/CompliancePanel";
 import AppShell from "../layouts/AppShell";
+import LoadingBlock, { Spinner } from "../components/Spinner";
 
 const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL ?? window.location.origin;
 
@@ -10,7 +11,7 @@ const API = import.meta.env.VITE_API_URL ?? "https://riggingcheck-production.up.
 
 const WORKFLOW_LABELS = {
   DRAFT:                    { label: "Rascunho",             color: "#64748b" },
-  SUBMITTED:                { label: "Enviado",              color: "#3b82f6" },
+  SUBMITTED:                { label: "Enviado",              color: "#ea580c" },
   UNDER_REVIEW:             { label: "Em Análise",           color: "#8b5cf6" },
   CHANGES_REQUESTED:        { label: "Ajuste Solicitado",    color: "#f97316" },
   RESUBMITTED:              { label: "Reenviado",            color: "#06b6d4" },
@@ -172,7 +173,7 @@ function DecisionModal({ plan, userRole, onClose, onRefresh }) {
             onClick={submit}
             disabled={loading}
             style={{
-              background: "#3b82f6", border: "none",
+              background: "#ea580c", border: "none",
               color: "#fff", borderRadius: 8, padding: "8px 20px",
               cursor: loading ? "not-allowed" : "pointer", fontWeight: 700,
             }}
@@ -197,7 +198,7 @@ function HistoryPanel({ planId }) {
       .finally(() => setLoading(false));
   }, [planId]);
 
-  if (loading) return <p style={{ color: "#64748b", fontSize: 13 }}>Carregando histórico...</p>;
+  if (loading) return <LoadingBlock label="Carregando histórico..." padding={20} size={16} />;
   if (!history.length) return <p style={{ color: "#475569", fontSize: 13 }}>Nenhuma decisão registrada.</p>;
 
   return (
@@ -363,9 +364,9 @@ export default function ApprovalCenter() {
               key={f}
               onClick={() => setStatusFilter(f)}
               style={{
-                border: `1px solid ${statusFilter === f ? "#3b82f6" : "#334155"}`,
+                border: `1px solid ${statusFilter === f ? "#ea580c" : "#334155"}`,
                 background: statusFilter === f ? "#1e3a5f" : "transparent",
-                color: statusFilter === f ? "#93c5fd" : "#64748b",
+                color: statusFilter === f ? "#fdba74" : "#64748b",
                 borderRadius: 20, padding: "5px 14px",
                 cursor: "pointer", fontSize: 13,
               }}
@@ -377,7 +378,7 @@ export default function ApprovalCenter() {
 
         {/* Lista */}
         {loading ? (
-          <p style={{ textAlign: "center", color: "#475569", padding: 40 }}>Carregando planos...</p>
+          <LoadingBlock label="Carregando planos..." padding={40} />
         ) : plans.length === 0 ? (
           <div style={{ textAlign: "center", color: "#475569", padding: 60, border: "1px dashed #334155", borderRadius: 12 }}>
             Nenhum plano encontrado com o filtro selecionado.
@@ -494,8 +495,8 @@ export default function ApprovalCenter() {
                     <button
                       onClick={() => { setSelected(plan); setShowDecision(true); }}
                       style={{
-                        background: "#1e3a5f", border: "1px solid #3b82f6",
-                        color: "#93c5fd", borderRadius: 8, padding: "6px 14px",
+                        background: "#1e3a5f", border: "1px solid #ea580c",
+                        color: "#fdba74", borderRadius: 8, padding: "6px 14px",
                         cursor: "pointer", fontWeight: 600, fontSize: 13,
                       }}
                     >
@@ -513,7 +514,7 @@ export default function ApprovalCenter() {
                 <div style={{ marginTop: 14, borderTop: "1px solid #334155", paddingTop: 14 }}>
                   <h4 style={{ color: "#67e8f9", margin: "0 0 10px", fontSize: 13 }}>👥 Equipe Operacional</h4>
                   {!teamData[plan.id] ? (
-                    <p style={{ color: "#64748b", fontSize: 12 }}>Carregando...</p>
+                    <p style={{ color: "#64748b", fontSize: 12, display: "flex", alignItems: "center", gap: 8 }}><Spinner size={13} /> Carregando...</p>
                   ) : teamData[plan.id].length === 0 ? (
                     <p style={{ color: "#475569", fontSize: 12, fontStyle: "italic" }}>Nenhum membro vinculado formalmente a este plano.</p>
                   ) : (

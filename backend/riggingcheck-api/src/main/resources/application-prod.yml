@@ -19,9 +19,24 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update
+      # O schema agora é gerenciado por migrações versionadas do Flyway
+      # (src/main/resources/db/migration). Hibernate só valida que as
+      # entidades batem com o schema aplicado — nunca mais altera
+      # colunas/tabelas sozinho.
+      ddl-auto: validate
     show-sql: false
     open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # O banco de produção já existia (criado ao longo do tempo por
+    # ddl-auto: update). baseline-on-migrate faz o Flyway, na primeira
+    # execução, registrar o schema atual como "já aplicado" na versão 1
+    # SEM rodar o V1__baseline.sql (que apenas documenta esse schema).
+    # Em um banco novo e vazio, V1 roda normalmente e cria tudo do zero.
+    baseline-on-migrate: true
+    baseline-version: 1
+    baseline-description: "Baseline pre-Flyway (schema criado via ddl-auto)"
   mail:
     host: ${SMTP_HOST}
     port: ${SMTP_PORT:587}
@@ -38,6 +53,9 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION_MS:86400000}
+
+app:
+  base-url: ${APP_BASE_URL}
 
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS}

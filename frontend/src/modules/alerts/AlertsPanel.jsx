@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { fetchAlerts, gerarAlertas, visualizarAlerta, resolverAlerta, ignorarAlerta } from "./alertsApi";
 import { authFetch } from "../../utils/api";
+import LoadingBlock from "../../components/Spinner";
 
 const API = import.meta.env.VITE_API_URL ?? "https://riggingcheck-production.up.railway.app";
 
@@ -16,11 +17,11 @@ const SEV_CFG = {
   BLOCKED:    { color: "#ef4444", bg: "#ef444411", icon: "⛔", label: "Bloqueado"   },
   RESTRICTED: { color: "#f97316", bg: "#f9731611", icon: "🚫", label: "Restrito"    },
   WARNING:    { color: "#f59e0b", bg: "#f59e0b11", icon: "⚠",  label: "Atenção"     },
-  INFO:       { color: "#38bdf8", bg: "#38bdf811", icon: "ℹ",  label: "Informativo" },
+  INFO:       { color: "#fb923c", bg: "#fb923c11", icon: "ℹ",  label: "Informativo" },
 };
 
 const STATUS_CFG = {
-  NOVO:        { color: "#3b82f6",  label: "Novo"       },
+  NOVO:        { color: "#ea580c",  label: "Novo"       },
   VISUALIZADO: { color: "#94a3b8",  label: "Visualizado" },
   RESOLVIDO:   { color: "#22c55e",  label: "Resolvido"  },
   IGNORADO:    { color: "#475569",  label: "Ignorado"   },
@@ -203,7 +204,7 @@ export default function AlertsPanel() {
             onClick={handleGerar}
             disabled={generating}
             style={{
-              background: generating ? "#1e293b" : "linear-gradient(135deg,#1e3a5f,#3b82f6)",
+              background: generating ? "#1e293b" : "linear-gradient(135deg,#1e3a5f,#ea580c)",
               border: "none", color: "#fff", borderRadius: 8,
               padding: "9px 18px", cursor: generating ? "not-allowed" : "pointer",
               fontWeight: 700, fontSize: 13, opacity: generating ? 0.7 : 1,
@@ -250,9 +251,9 @@ export default function AlertsPanel() {
             key={f}
             onClick={() => setStatusFilter(f)}
             style={{
-              border: `1px solid ${statusFilter === f ? "#3b82f6" : "#334155"}`,
+              border: `1px solid ${statusFilter === f ? "#ea580c" : "#334155"}`,
               background: statusFilter === f ? "#1e3a5f" : "transparent",
-              color: statusFilter === f ? "#93c5fd" : "#64748b",
+              color: statusFilter === f ? "#fdba74" : "#64748b",
               borderRadius: 20, padding: "5px 14px",
               cursor: "pointer", fontSize: 12,
             }}
@@ -264,7 +265,7 @@ export default function AlertsPanel() {
 
       {/* Lista */}
       {loading ? (
-        <p style={{ color: "#64748b", fontSize: 13 }}>Carregando alertas...</p>
+        <LoadingBlock label="Carregando alertas..." padding={32} />
       ) : alertas.length === 0 ? (
         <div style={{
           textAlign: "center", padding: "40px 20px",

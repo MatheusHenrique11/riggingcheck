@@ -160,7 +160,7 @@ export default function AdminDashboard({ onVoltar, isMobile }) {
           <div style={S.userInfo(isMobile)}>
             <div style={S.roleBadge(isMobile)}>{roleLabel(user?.role)}</div>
             <div style={S.userBadge(isMobile)}>{user?.userName}</div>
-            <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => setShowModalSenha(true)}>
+            <button style={{ ...S.logoutBtn(isMobile), borderColor: "#fb923c44", color: "#fb923c" }} onClick={() => setShowModalSenha(true)}>
               {isMobile ? "🔑" : "Alterar Senha"}
             </button>
           </div>
@@ -288,12 +288,12 @@ export default function AdminDashboard({ onVoltar, isMobile }) {
                       <div style={{ fontWeight:700, color:f.ativo?"#e2e8f0":"#475569", fontSize:14 }}>{f.nome}</div>
                       <div style={{ color:"#64748b", fontSize:12, marginTop:2 }}>{f.email}</div>
                       <div style={{ marginTop:6, display:"flex", gap:8 }}>
-                        <span style={{ background:"#1e2a3a", color:"#38bdf8", fontSize:11, padding:"2px 8px", borderRadius:4 }}>{roleLabel(f.role)}</span>
+                        <span style={{ background:"#1e2a3a", color:"#fb923c", fontSize:11, padding:"2px 8px", borderRadius:4 }}>{roleLabel(f.role)}</span>
                         {!f.ativo && <span style={{ background:"#2d0000", color:"#ef4444", fontSize:11, padding:"2px 8px", borderRadius:4 }}>Inativo</span>}
                       </div>
                     </div>
                     <div style={{ display:"flex", gap:8 }}>
-                      <button onClick={()=>iniciarEdicao(f)} style={{ fontSize:12, padding:"8px 16px", borderRadius:8, border:"1px solid #1e3a5a", cursor:"pointer", background:"rgba(56,189,248,0.08)", color:"#38bdf8" }}>Editar</button>
+                      <button onClick={()=>iniciarEdicao(f)} style={{ fontSize:12, padding:"8px 16px", borderRadius:8, border:"1px solid #1e3a5a", cursor:"pointer", background:"rgba(251,146,60,0.08)", color:"#fb923c" }}>Editar</button>
                       <button onClick={()=>alternarAtivo(f.id,f.ativo)} style={{ fontSize:12, padding:"8px 16px", borderRadius:8, border:"1px solid", cursor:"pointer", background:f.ativo?"rgba(239,68,68,0.08)":"rgba(34,197,94,0.08)", borderColor:f.ativo?"#ef444444":"#22c55e44", color:f.ativo?"#ef4444":"#22c55e" }}>
                         {f.ativo?"Desativar":"Reativar"}
                       </button>

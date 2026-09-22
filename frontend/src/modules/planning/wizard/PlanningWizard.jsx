@@ -105,12 +105,12 @@ export default function PlanningWizard() {
               <div style={{
                 height: "100%",
                 width: `${Math.round((currentStepIndex / (totalSteps - 1)) * 100)}%`,
-                background: "linear-gradient(90deg,#3b82f6,#22c55e)",
+                background: "linear-gradient(90deg,#ea580c,#22c55e)",
                 borderRadius: 99,
                 transition: "width 0.4s",
               }} />
             </div>
-            <span style={{ fontSize: 12, color: "#38bdf8", fontWeight: 700 }}>
+            <span style={{ fontSize: 12, color: "#fb923c", fontWeight: 700 }}>
               {Math.round((currentStepIndex / (totalSteps - 1)) * 100)}%
             </span>
           </div>

@@ -40,6 +40,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers("/api/auth/login").permitAll()
                 .requestMatchers("/api/auth/setup").permitAll()
+                .requestMatchers("/api/auth/esqueci-senha").permitAll()
+                .requestMatchers("/api/auth/redefinir-senha").permitAll()
                 .requestMatchers("/api/calculation/**").permitAll()
                 .requestMatchers("/api/webhooks/**").permitAll()
                 .requestMatchers("/api/public/**").permitAll()

@@ -121,7 +121,10 @@ export default function AppShell({ children, title, breadcrumb }) {
         </header>
 
         {/* Page content */}
-        <main style={{ flex: 1, padding: "24px 20px", maxWidth: 1100, width: "100%", margin: "0 auto", boxSizing: "border-box" }}>
+        <main style={{
+          flex: 1, padding: "24px 20px", maxWidth: 1100, width: "100%", margin: "0 auto",
+          boxSizing: "border-box", animation: "rc-fade-in 0.25s ease",
+        }}>
           {children}
         </main>
 

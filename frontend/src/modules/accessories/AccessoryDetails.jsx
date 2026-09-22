@@ -3,6 +3,7 @@ import { buscarAcessorio, listarCertificados, listarInspecoes, atualizarStatus }
 import CertificatePanel from "./CertificatePanel";
 import InspectionPanel from "./InspectionPanel";
 import QrCodePanel from "./QrCodePanel";
+import LoadingBlock from "../../components/Spinner";
 
 const TABS = [
   { id: "info",     label: "Informações" },
@@ -43,7 +44,7 @@ export default function AccessoryDetails({ acessorioId, onBack, onEdit, canManag
 
   const S = {
     card: { background: "#1e293b", borderRadius: 12, padding: 20, marginBottom: 14, border: "1px solid #334155" },
-    tab:  (active) => ({ padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: active ? 700 : 400, background: active ? "#1e3a5f" : "transparent", color: active ? "#93c5fd" : "#64748b" }),
+    tab:  (active) => ({ padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: active ? 700 : 400, background: active ? "#1e3a5f" : "transparent", color: active ? "#fdba74" : "#64748b" }),
     inp:  { background: "#0f172a", border: "1px solid #334155", borderRadius: 8, color: "#e2e8f0", fontSize: 13, padding: "8px 12px" },
   };
 
@@ -78,7 +79,7 @@ export default function AccessoryDetails({ acessorioId, onBack, onEdit, canManag
     }
   };
 
-  if (loading) return <div style={{ textAlign: "center", padding: 60, color: "#64748b" }}>Carregando...</div>;
+  if (loading) return <LoadingBlock label="Carregando..." padding={60} />;
   if (!acessorio) return null;
 
   const cfg = STATUS_CFG[acessorio.status] ?? { label: acessorio.status, color: "#64748b" };
@@ -122,7 +123,7 @@ export default function AccessoryDetails({ acessorioId, onBack, onEdit, canManag
             <div style={{ fontSize: 11, color: "#64748b", marginBottom: 6 }}>MOTIVO</div>
             <input style={{ ...S.inp, width: "100%", boxSizing: "border-box" }} value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Motivo da alteração..." />
           </div>
-          <button onClick={handleStatusSave} disabled={statusLoading} style={{ background: "#3b82f6", border: "none", color: "#fff", borderRadius: 8, padding: "9px 18px", cursor: "pointer", fontWeight: 700, fontSize: 13 }}>
+          <button onClick={handleStatusSave} disabled={statusLoading} style={{ background: "#ea580c", border: "none", color: "#fff", borderRadius: 8, padding: "9px 18px", cursor: "pointer", fontWeight: 700, fontSize: 13 }}>
             {statusLoading ? "..." : "Confirmar"}
           </button>
           <button onClick={() => setStatusEdit(false)} style={{ background: "transparent", border: "1px solid #334155", color: "#64748b", borderRadius: 8, padding: "9px 14px", cursor: "pointer", fontSize: 13 }}>
@@ -141,7 +142,7 @@ export default function AccessoryDetails({ acessorioId, onBack, onEdit, canManag
       {/* Conteúdo */}
       {tab === "info" && (
         <div style={S.card}>
-          <InfoRow label="Código Interno"   value={acessorio.codigoInterno} color="#38bdf8" />
+          <InfoRow label="Código Interno"   value={acessorio.codigoInterno} color="#fb923c" />
           <InfoRow label="Tipo"             value={acessorio.tipo} />
           <InfoRow label="Fabricante"       value={acessorio.fabricante} />
           <InfoRow label="Modelo"           value={acessorio.modelo} />

@@ -176,7 +176,7 @@ export default function PrivacyCenterPage({ onVoltar }) {
             Baixe um arquivo JSON com todos os seus dados pessoais armazenados na plataforma
             (Art. 18, V da LGPD — portabilidade de dados).
           </p>
-          <button style={S.btn("#38bdf8")} onClick={exportarDados} disabled={loading}>
+          <button style={S.btn("#fb923c")} onClick={exportarDados} disabled={loading}>
             {loading ? "Gerando arquivo..." : "Baixar meus dados (JSON)"}
           </button>
         </div>

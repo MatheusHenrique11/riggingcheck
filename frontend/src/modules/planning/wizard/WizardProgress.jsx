@@ -7,7 +7,7 @@ export default function WizardProgress({ steps, currentIndex, stepStatus, onGoTo
 
   const statusStyle = (status) => ({
     done:    { bg: "#052e16", border: "#22c55e",   color: "#22c55e",   icon: "✓" },
-    active:  { bg: "#1e3a5f", border: "#3b82f6",   color: "#93c5fd",   icon: null },
+    active:  { bg: "#1e3a5f", border: "#ea580c",   color: "#fdba74",   icon: null },
     pending: { bg: "#0f172a", border: "#334155",   color: "#475569",   icon: null },
   }[status] || { bg: "#0f172a", border: "#334155", color: "#475569", icon: null });
 
@@ -25,10 +25,10 @@ export default function WizardProgress({ steps, currentIndex, stepStatus, onGoTo
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#64748b", marginBottom: 6 }}>
             <span style={{ textTransform: "uppercase", letterSpacing: 1 }}>Progresso</span>
-            <span style={{ color: "#38bdf8", fontWeight: 700 }}>{pct}%</span>
+            <span style={{ color: "#fb923c", fontWeight: 700 }}>{pct}%</span>
           </div>
           <div style={{ height: 4, background: "#1e293b", borderRadius: 99, overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg,#3b82f6,#22c55e)", borderRadius: 99, transition: "width 0.4s" }} />
+            <div style={{ height: "100%", width: `${pct}%`, background: "linear-gradient(90deg,#ea580c,#22c55e)", borderRadius: 99, transition: "width 0.4s" }} />
           </div>
         </div>
 

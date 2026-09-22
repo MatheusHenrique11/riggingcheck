@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { authFetch } from "../../utils/api";
+import { Spinner } from "../../components/Spinner";
 
 const API = import.meta.env.VITE_API_URL ?? "https://riggingcheck-production.up.railway.app";
 
@@ -57,7 +58,7 @@ function CriticoRow({ item }) {
     }}>
       <span style={{ fontSize: 16, flexShrink: 0 }}>{cfg.icon}</span>
       <div style={{ flex: 1, minWidth: 120 }}>
-        <span style={{ color: "#38bdf8", fontWeight: 700, fontFamily: "monospace", fontSize: 13 }}>
+        <span style={{ color: "#fb923c", fontWeight: 700, fontFamily: "monospace", fontSize: 13 }}>
           {item.codigoInterno}
         </span>
         <span style={{ color: "#64748b", fontSize: 12, marginLeft: 8 }}>
@@ -92,7 +93,7 @@ export default function InventoryHealthPanel() {
 
   if (loading) return (
     <div style={{ background: "#1e293b", borderRadius: 12, padding: 20, border: "1px solid #334155", marginBottom: 28 }}>
-      <div style={{ color: "#475569", fontSize: 13 }}>Carregando integridade do inventário...</div>
+      <div style={{ color: "#475569", fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}><Spinner size={14} /> Carregando integridade do inventário...</div>
     </div>
   );
 
@@ -143,7 +144,7 @@ export default function InventoryHealthPanel() {
         gap: 10,
         marginBottom: 16,
       }}>
-        <KpiChip label="Total"           value={data.totalAcessorios}    color="#38bdf8" icon="📦" />
+        <KpiChip label="Total"           value={data.totalAcessorios}    color="#fb923c" icon="📦" />
         <KpiChip label="Ativos"          value={data.ativos}             color="#22c55e" icon="✅" />
         {data.bloqueados > 0 && (
           <KpiChip label="Bloqueados"    value={data.bloqueados}         color="#ef4444" icon="🚫" />

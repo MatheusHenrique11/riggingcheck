@@ -25,7 +25,7 @@ export default function AccessoriesList({ acessorios, onSelect, onNovo }) {
     td:     { padding: "12px 14px", borderBottom: "1px solid #1e293b", color: "#e2e8f0" },
     row:    { cursor: "pointer", transition: "background 0.1s" },
     badge:  (color) => ({ display: "inline-block", background: color + "22", color, border: `1px solid ${color}44`, borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 700 }),
-    btn:    { background: "#3b82f6", border: "none", color: "#fff", borderRadius: 8, padding: "10px 20px", cursor: "pointer", fontWeight: 700, fontSize: 13 },
+    btn:    { background: "#ea580c", border: "none", color: "#fff", borderRadius: 8, padding: "10px 20px", cursor: "pointer", fontWeight: 700, fontSize: 13 },
     empty:  { textAlign: "center", padding: "48px 16px", color: "#475569" },
   };
 
@@ -71,7 +71,7 @@ export default function AccessoriesList({ acessorios, onSelect, onNovo }) {
                     onMouseEnter={e => (e.currentTarget.style.background = "#0f172a")}
                     onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                   >
-                    <td style={{ ...S.td, fontFamily: "monospace", color: "#38bdf8", fontWeight: 700 }}>{a.codigoInterno}</td>
+                    <td style={{ ...S.td, fontFamily: "monospace", color: "#fb923c", fontWeight: 700 }}>{a.codigoInterno}</td>
                     <td style={S.td}>{TIPO_LABEL[a.tipo] ?? a.tipo}</td>
                     <td style={{ ...S.td, maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.descricao}</td>
                     <td style={{ ...S.td, fontWeight: 600 }}>{a.capacidadeWllKg != null ? a.capacidadeWllKg.toLocaleString("pt-BR") : "—"}</td>

@@ -65,6 +65,57 @@ public class EmailNotificationService {
         }
     }
 
+    /**
+     * Envia o link de redefinição de senha. Erros SMTP são logados e NÃO
+     * relançados — a chamada (AuthService) nunca revela ao chamador se o
+     * envio funcionou, para não permitir enumeração de e-mails cadastrados.
+     */
+    public boolean enviarRedefinicaoSenha(String toEmail, String toNome, String resetLink) {
+        try {
+            MimeMessage msg = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(msg, true, StandardCharsets.UTF_8.name());
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("[RiggingCheck] Redefinição de senha");
+            helper.setText(buildResetHtml(toNome, resetLink), true);
+
+            mailSender.send(msg);
+            log.info("E-mail de redefinição de senha enviado para {}.", toEmail);
+            return true;
+        } catch (Exception e) {
+            log.error("Falha ao enviar e-mail de redefinição de senha para {}: {}", toEmail, e.getMessage());
+            return false;
+        }
+    }
+
+    private String buildResetHtml(String nome, String resetLink) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<!DOCTYPE html><html lang=\"pt-BR\"><head>")
+          .append("<meta charset=\"UTF-8\">")
+          .append("<style>")
+          .append("body{font-family:Arial,sans-serif;font-size:14px;color:#111;background:#f4f7fb;margin:0;padding:20px}")
+          .append(".card{background:#fff;border-radius:10px;padding:28px 32px;max-width:520px;margin:0 auto;box-shadow:0 2px 8px #0001}")
+          .append(".header{background:#1e3a5f;color:#fff;border-radius:8px;padding:16px 24px;margin-bottom:24px}")
+          .append(".logo{font-size:20px;font-weight:800;letter-spacing:1px}")
+          .append(".cta{display:block;text-align:center;margin:24px 0;padding:12px 24px;background:#1e3a5f;color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px}")
+          .append(".footer{font-size:11px;color:#9ca3af;text-align:center;margin-top:20px;border-top:1px solid #e5e7eb;padding-top:16px}")
+          .append("</style></head><body><div class=\"card\">");
+
+        sb.append("<div class=\"header\"><div class=\"logo\">RIGGINGCHECK</div></div>");
+        sb.append("<p>Olá, <strong>").append(escHtml(nome)).append("</strong>!</p>")
+          .append("<p>Recebemos uma solicitação para redefinir a senha da sua conta no RiggingCheck. ")
+          .append("Clique no botão abaixo para escolher uma nova senha. Este link expira em 1 hora.</p>");
+
+        sb.append("<a href=\"").append(resetLink).append("\" class=\"cta\">Redefinir minha senha</a>");
+
+        sb.append("<p style=\"font-size:12px;color:#6b7280\">Se você não solicitou essa redefinição, ignore este e-mail — sua senha permanece inalterada.</p>");
+
+        sb.append("<div class=\"footer\">Este é um e-mail automático do RiggingCheck. Não responda.</div>");
+        sb.append("</div></body></html>");
+        return sb.toString();
+    }
+
     // ── Template HTML ─────────────────────────────────────────────────────────────
 
     private String buildHtml(String nome, String empresa, List<OperationalAlert> alertas) {

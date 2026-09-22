@@ -73,14 +73,14 @@ export default function QrCodePanel({ acessorioId }) {
       {/* URL */}
       <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8, padding: "10px 14px", width: "100%", maxWidth: 400 }}>
         <div style={{ fontSize: 10, color: "#475569", marginBottom: 4, textTransform: "uppercase", letterSpacing: 1 }}>URL de Consulta</div>
-        <div style={{ fontSize: 12, color: "#38bdf8", wordBreak: "break-all" }}>{qrData?.url}</div>
+        <div style={{ fontSize: 12, color: "#fb923c", wordBreak: "break-all" }}>{qrData?.url}</div>
       </div>
 
       {/* Ações */}
       <div style={{ display: "flex", gap: 10 }}>
         <button
           onClick={baixarQr}
-          style={{ background: "#1e3a5f", border: "1px solid #3b82f644", color: "#93c5fd", borderRadius: 8, padding: "9px 20px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}
+          style={{ background: "#1e3a5f", border: "1px solid #ea580c44", color: "#fdba74", borderRadius: 8, padding: "9px 20px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}
         >
           ⬇ Baixar QR Code
         </button>

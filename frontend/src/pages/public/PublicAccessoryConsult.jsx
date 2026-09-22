@@ -127,7 +127,7 @@ export default function PublicAccessoryConsult() {
 
           {/* Identificação */}
           <div style={{ background: "#1e293b", borderRadius: 12, padding: 20, border: "1px solid #334155" }}>
-            <div style={{ fontSize: 11, color: "#38bdf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: "#fb923c", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
               Identificação
             </div>
             <InfoLine label="Tipo"         value={TIPO_LABEL[data.tipo] ?? data.tipo} />
@@ -139,7 +139,7 @@ export default function PublicAccessoryConsult() {
 
           {/* Certificado */}
           <div style={{ background: "#1e293b", borderRadius: 12, padding: 20, border: "1px solid #334155" }}>
-            <div style={{ fontSize: 11, color: "#38bdf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: "#fb923c", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
               Certificado
             </div>
             {certCfg && (
@@ -154,7 +154,7 @@ export default function PublicAccessoryConsult() {
 
           {/* Inspeção */}
           <div style={{ background: "#1e293b", borderRadius: 12, padding: 20, border: "1px solid #334155" }}>
-            <div style={{ fontSize: 11, color: "#38bdf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: "#fb923c", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
               Última Inspeção
             </div>
             {data.resultadoUltimaInspecao ? (

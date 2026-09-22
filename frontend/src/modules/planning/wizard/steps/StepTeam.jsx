@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { authFetch } from "../../../../utils/api";
+import LoadingBlock from "../../../../components/Spinner";
 
 const API = import.meta.env.VITE_API_URL ?? "https://riggingcheck-production.up.railway.app";
 
@@ -236,7 +237,7 @@ export default function StepTeam({ planData }) {
             <div style={{ color: "#64748b", fontSize: 11 }}>BLOQUEADO(S)</div>
           </div>
           <div style={{ textAlign: "center" }}>
-            <div style={{ color: "#38bdf8", fontSize: 24, fontWeight: 800 }}>{membros.length}</div>
+            <div style={{ color: "#fb923c", fontSize: 24, fontWeight: 800 }}>{membros.length}</div>
             <div style={{ color: "#64748b", fontSize: 11 }}>TOTAL</div>
           </div>
         </div>
@@ -244,11 +245,11 @@ export default function StepTeam({ planData }) {
 
       {/* Membros vinculados */}
       <div style={S.card}>
-        <div style={{ fontSize: 12, color: "#38bdf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
+        <div style={{ fontSize: 12, color: "#fb923c", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
           Membros Vinculados
         </div>
         {loadingTeam ? (
-          <p style={{ color: "#64748b", fontSize: 13 }}>Carregando equipe...</p>
+          <LoadingBlock label="Carregando equipe..." padding={20} />
         ) : membros.length === 0 ? (
           <p style={{ color: "#475569", fontSize: 13, fontStyle: "italic" }}>
             Nenhum membro vinculado ainda. Use o formulário abaixo para adicionar.
@@ -262,7 +263,7 @@ export default function StepTeam({ planData }) {
 
       {/* Adicionar membro */}
       <div style={S.card}>
-        <div style={{ fontSize: 12, color: "#38bdf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 14 }}>
+        <div style={{ fontSize: 12, color: "#fb923c", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 14 }}>
           Adicionar Membro
         </div>
 
@@ -330,7 +331,7 @@ export default function StepTeam({ planData }) {
                 type="checkbox"
                 checked={responsavel}
                 onChange={e => setResponsavel(e.target.checked)}
-                style={{ accentColor: "#3b82f6" }}
+                style={{ accentColor: "#ea580c" }}
               />
               Responsável
             </label>
@@ -356,7 +357,7 @@ export default function StepTeam({ planData }) {
           onClick={adicionar}
           disabled={!selectedFuncionario || adding}
           style={{
-            background: selectedFuncionario ? "linear-gradient(135deg,#1e3a5f,#3b82f6)" : "#1e293b",
+            background: selectedFuncionario ? "linear-gradient(135deg,#1e3a5f,#ea580c)" : "#1e293b",
             border: "none",
             color: selectedFuncionario ? "#fff" : "#475569",
             borderRadius: 8, padding: "10px 22px",

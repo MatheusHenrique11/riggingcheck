@@ -173,7 +173,7 @@ export default function TabPetrobras({ planData = {}, onSave }) {
 
       {/* FS */}
       <div style={{ ...sCard, background:"#0a0f1a", borderColor:"#0ea5e944" }}>
-        <div style={{ fontWeight:600, color:"#38bdf8", marginBottom:8 }}>Fatores de Segurança — N-2869</div>
+        <div style={{ fontWeight:600, color:"#fb923c", marginBottom:8 }}>Fatores de Segurança — N-2869</div>
         <div style={{ fontSize:13, color:"#cbd5e1", lineHeight:1.8 }}>
           <div>• Utilização máxima: <strong style={{color:"#f59e0b"}}>90% da capacidade nominal</strong> no raio de operação</div>
           <div>• Içamentos acima de 75% são classificados como Críticos</div>

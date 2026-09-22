@@ -2,12 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { authFetch } from "../utils/api";
 import AppShell from "../layouts/AppShell";
+import LoadingBlock from "../components/Spinner";
 
 const API = import.meta.env.VITE_API_URL ?? "https://riggingcheck-production.up.railway.app";
 
 const ROLE_LABELS = {
   ADMIN_EMPRESA:      { label: "Admin Empresa",     color: "#f59e0b" },
-  GERENTE_OPERACOES:  { label: "Gerente Operações", color: "#38bdf8" },
+  GERENTE_OPERACOES:  { label: "Gerente Operações", color: "#fb923c" },
   LIDER_EQUIPE:       { label: "Líder de Equipe",   color: "#22c55e" },
   RIGGER:             { label: "Rigger",            color: "#94a3b8" },
   OPERADOR:           { label: "Operador",          color: "#94a3b8" },
@@ -163,7 +164,7 @@ export default function TeamManagement() {
             <button
               onClick={() => { setShowForm(!showForm); setFormError(null); setFormSuccess(null); }}
               style={{
-                background: "#3b82f6", border: "none",
+                background: "#ea580c", border: "none",
                 color: "#fff", borderRadius: 10, padding: "10px 20px",
                 cursor: "pointer", fontWeight: 700, fontSize: 14,
               }}
@@ -176,7 +177,7 @@ export default function TeamManagement() {
         {/* Form novo membro */}
         {showForm && canManage && (
           <div style={{
-            background: "#1e293b", border: "1px solid #3b82f666",
+            background: "#1e293b", border: "1px solid #ea580c66",
             borderRadius: 12, padding: 20, marginBottom: 24,
           }}>
             <h3 style={{ color: "#f1f5f9", margin: "0 0 16px", fontSize: 16 }}>Novo Membro da Equipe</h3>
@@ -225,7 +226,7 @@ export default function TeamManagement() {
                 onClick={criar}
                 disabled={formLoading}
                 style={{
-                  background: "#3b82f6", border: "none",
+                  background: "#ea580c", border: "none",
                   color: "#fff", borderRadius: 8, padding: "9px 22px",
                   cursor: formLoading ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 14,
                 }}
@@ -253,9 +254,9 @@ export default function TeamManagement() {
               key={v}
               onClick={() => setFilter(v)}
               style={{
-                border: `1px solid ${filter === v ? "#3b82f6" : "#334155"}`,
+                border: `1px solid ${filter === v ? "#ea580c" : "#334155"}`,
                 background: filter === v ? "#1e3a5f" : "transparent",
-                color: filter === v ? "#93c5fd" : "#64748b",
+                color: filter === v ? "#fdba74" : "#64748b",
                 borderRadius: 20, padding: "5px 14px",
                 cursor: "pointer", fontSize: 13,
               }}
@@ -267,7 +268,7 @@ export default function TeamManagement() {
 
         {/* Lista */}
         {loading ? (
-          <p style={{ textAlign: "center", color: "#475569", padding: 40 }}>Carregando equipe...</p>
+          <LoadingBlock label="Carregando equipe..." padding={40} />
         ) : error ? (
           <p style={{ color: "#ef4444", fontSize: 13 }}>{error}</p>
         ) : filtered.length === 0 ? (

@@ -9,7 +9,7 @@ import { CHECKLIST_CAMPO, CL_KEY } from "../../shared/planningConstants";
 
 const S = {
   card:     { background: "#1e293b", borderRadius: 12, padding: 24, marginBottom: 16, border: "1px solid #334155" },
-  title:    { fontSize: 12, color: "#38bdf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 },
+  title:    { fontSize: 12, color: "#fb923c", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 },
   catTitle: { fontSize: 11, color: "#f59e0b", letterSpacing: 2, textTransform: "uppercase", marginTop: 20, marginBottom: 8 },
   row:      (checked) => ({ display: "flex", alignItems: "flex-start", gap: 12, padding: "10px 0", borderBottom: "1px solid #1e293b", cursor: "pointer", opacity: checked ? 0.55 : 1 }),
   box:      (checked) => ({ width: 20, height: 20, minWidth: 20, borderRadius: 5, border: `2px solid ${checked ? "#22c55e" : "#334155"}`, background: checked ? "#22c55e" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 1, flexShrink: 0 }),

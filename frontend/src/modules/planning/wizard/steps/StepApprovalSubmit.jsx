@@ -184,7 +184,7 @@ export default function StepApprovalSubmit({ planData, onSave }) {
 
       {/* Resumo técnico */}
       <div style={S.card}>
-        <div style={{ fontSize: 12, color: "#38bdf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
+        <div style={{ fontSize: 12, color: "#fb923c", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
           Resumo do Plano
         </div>
         <SummaryRow label="OS" value={planData.operacaoOs || "—"} />
@@ -221,7 +221,7 @@ export default function StepApprovalSubmit({ planData, onSave }) {
 
       {/* Solicitação de liberação */}
       <div style={S.card}>
-        <div style={{ fontSize: 12, color: "#38bdf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
+        <div style={{ fontSize: 12, color: "#fb923c", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
           Solicitação de Liberação
         </div>
 
@@ -292,7 +292,7 @@ export default function StepApprovalSubmit({ planData, onSave }) {
               disabled={loading}
               style={{
                 marginTop: 16,
-                background: loading ? "#1e293b" : "#3b82f6",
+                background: loading ? "#1e293b" : "#ea580c",
                 border: "none",
                 color: loading ? "#475569" : "#fff",
                 borderRadius: 8,

@@ -6,6 +6,7 @@ import AppShell from "../layouts/AppShell";
 import InventoryHealthPanel from "../modules/accessories/InventoryHealthPanel";
 import TeamCompetencyDashboard from "../modules/team/TeamCompetencyDashboard";
 import AlertsSummaryCard from "../modules/alerts/AlertsSummaryCard";
+import LoadingBlock from "../components/Spinner";
 
 const API = import.meta.env.VITE_API_URL ?? "https://riggingcheck-production.up.railway.app";
 
@@ -19,7 +20,7 @@ const TECH_STATUS_CFG = {
 };
 
 const WORKFLOW_CFG = {
-  SUBMITTED:         { label: "Aguardando",   color: "#3b82f6" },
+  SUBMITTED:         { label: "Aguardando",   color: "#ea580c" },
   RESUBMITTED:       { label: "Reenviado",    color: "#06b6d4" },
   UNDER_REVIEW:      { label: "Em Análise",   color: "#8b5cf6" },
   CHANGES_REQUESTED: { label: "Ajuste",       color: "#f97316" },
@@ -295,7 +296,7 @@ export default function Dashboard() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: 60, color: "#475569" }}>Carregando dados...</div>
+        <LoadingBlock label="Carregando dados..." padding={60} />
       ) : (
         <>
           {/* KPIs principais */}
@@ -318,7 +319,7 @@ export default function Dashboard() {
             <MetricCard
               label="Operações Totais"
               value={stats.total}
-              color="#3b82f6"
+              color="#ea580c"
               icon="📋"
               sub="No período"
             />
@@ -416,9 +417,9 @@ export default function Dashboard() {
               gap: 12,
             }}>
               {[
-                canPlan    && { label: "Novo Plano",       icon: "➕", path: "/app/operacoes",         color: "#3b82f6" },
+                canPlan    && { label: "Novo Plano",       icon: "➕", path: "/app/operacoes",         color: "#ea580c" },
                 canApprove && { label: "Ver Aprovações",   icon: "✅", path: "/app/central-aprovacao", color: "#22c55e" },
-                             { label: "Calculadoras",      icon: "🧮", path: "/",                      color: "#38bdf8" },
+                             { label: "Calculadoras",      icon: "🧮", path: "/",                      color: "#fb923c" },
                              { label: "Tabelas Técnicas",  icon: "📑", path: "/app/tabelas",           color: "#8b5cf6" },
               ].filter(Boolean).map(item => item && (
                 <button
@@ -485,7 +486,7 @@ export default function Dashboard() {
                 <button
                   onClick={() => navigate("/app/operacoes")}
                   style={{
-                    background: "#3b82f6", border: "none",
+                    background: "#ea580c", border: "none",
                     color: "#fff", borderRadius: 10, padding: "12px 28px",
                     cursor: "pointer", fontWeight: 700, fontSize: 15,
                   }}

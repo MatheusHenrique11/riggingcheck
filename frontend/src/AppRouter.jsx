@@ -12,8 +12,10 @@ import PlanningWorkspace from "./pages/PlanningWorkspace.jsx";
 import PlanningWizardPage from "./pages/PlanningWizardPage.jsx";
 import AccessoriesInventory from "./pages/AccessoriesInventory.jsx";
 import AlertsCenter from "./pages/AlertsCenter.jsx";
+import AuditLogPage from "./pages/AuditLogPage.jsx";
 import PublicAccessoryConsult from "./pages/public/PublicAccessoryConsult.jsx";
 import PublicPlanValidation   from "./pages/public/PublicPlanValidation.jsx";
+import ResetPasswordScreen    from "./pages/auth/ResetPasswordScreen.jsx";
 
 /**
  * Guard: exige autenticação ativa.
@@ -67,6 +69,8 @@ export default function AppRouter() {
           <Route path="/public/acessorios/:id"    element={<PublicAccessoryConsult />} />
           {/* Validação pública de plano aprovado via QR Code — sem autenticação */}
           <Route path="/public/planos/:token"     element={<PublicPlanValidation />} />
+          {/* Redefinição de senha — link enviado por e-mail, sem autenticação */}
+          <Route path="/redefinir-senha"          element={<ResetPasswordScreen />} />
 
           {/* Legado — gerencia auth internamente, fora do RequireAuth */}
           <Route path="/admin"     element={<App adminMode />} />
@@ -106,6 +110,9 @@ export default function AppRouter() {
 
               {/* Central de Alertas */}
               <Route path="/app/alertas" element={<AlertsCenter />} />
+
+              {/* Trilho de Auditoria — ADMIN_EMPRESA/SUPER_ADMIN (reforçado no backend) */}
+              <Route path="/app/auditoria" element={<AuditLogPage />} />
 
               {/* Tabelas técnicas (reutiliza App com aba de tabelas) */}
               <Route path="/app/tabelas" element={<App tabInicial="equipamentos" />} />

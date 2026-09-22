@@ -11,7 +11,7 @@ const SEV_CFG = {
   bloqueados: { color: "#ef4444", icon: "⛔", label: "Bloqueados"  },
   restritos:  { color: "#f97316", icon: "🚫", label: "Restritos"   },
   avisos:     { color: "#f59e0b", icon: "⚠",  label: "Avisos"      },
-  infos:      { color: "#38bdf8", icon: "ℹ",  label: "Informativos" },
+  infos:      { color: "#fb923c", icon: "ℹ",  label: "Informativos" },
 };
 
 export default function AlertsSummaryCard() {
@@ -37,7 +37,7 @@ export default function AlertsSummaryCard() {
   const hasUrgent = summary.bloqueados > 0 || summary.restritos > 0;
   const borderColor = summary.bloqueados > 0 ? "#ef4444"
     : summary.restritos > 0 ? "#f97316"
-    : summary.avisos > 0 ? "#f59e0b" : "#38bdf8";
+    : summary.avisos > 0 ? "#f59e0b" : "#fb923c";
 
   return (
     <div style={{

@@ -131,7 +131,7 @@ export default function App({ adminMode = false, tabInicial = "guindaste", embed
             {isSuperAdmin   && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#a78bfa44", color: "#a78bfa" }} onClick={() => navigate("/admin")}>{isMobile ? "⚙️" : "⚙️ Painel SaaS"}</button>}
             {isAdminEmpresa && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#f59e0b44", color: "#f59e0b" }} onClick={() => navigate("/admin")}>{isMobile ? "🔑" : "🔑 Painel Admin"}</button>}
             {isLider        && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#22c55e44", color: "#22c55e" }} onClick={() => navigate("/admin")}>{isMobile ? "📋" : "📋 Solicitações"}</button>}
-            {isGerente      && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => navigate("/admin")}>{isMobile ? "📊" : "📊 Painel Gerente"}</button>}
+            {isGerente      && <button style={{ ...S.logoutBtn(isMobile), borderColor: "#fb923c44", color: "#fb923c" }} onClick={() => navigate("/admin")}>{isMobile ? "📊" : "📊 Painel Gerente"}</button>}
             <button
               onClick={() => { setPetrobras(p => !p); if (petrobras) setAba("guindaste"); }}
               style={{ ...S.logoutBtn(isMobile), borderColor: petrobras ? "#7c3aed44" : "#47556944", color: petrobras ? "#a78bfa" : "#64748b" }}
@@ -141,7 +141,7 @@ export default function App({ adminMode = false, tabInicial = "guindaste", embed
             </button>
             {authenticated ? (
               <>
-                <button style={{ ...S.logoutBtn(isMobile), borderColor: "#38bdf844", color: "#38bdf8" }} onClick={() => setShowModalSenha(true)}>{isMobile ? "🔑" : "Alterar Senha"}</button>
+                <button style={{ ...S.logoutBtn(isMobile), borderColor: "#fb923c44", color: "#fb923c" }} onClick={() => setShowModalSenha(true)}>{isMobile ? "🔑" : "Alterar Senha"}</button>
                 <button style={{ ...S.logoutBtn(isMobile), borderColor: "#47556944", color: "#64748b" }} onClick={() => navigate("/privacidade")} title="Central de Privacidade LGPD">{isMobile ? "🔒" : "Privacidade"}</button>
                 {(user?.subscriptionStatus === "PAST_DUE" || user?.subscriptionStatus === "CANCELED") && (
                   <button style={{ ...S.logoutBtn(isMobile), borderColor: "#ef444444", color: "#ef4444" }} onClick={() => navigate("/pricing")}>Renovar Assinatura</button>
@@ -194,7 +194,7 @@ export default function App({ adminMode = false, tabInicial = "guindaste", embed
             {nextAba && (
               <button 
                 onClick={() => setAba(nextAba.id)}
-                style={{ background: "#38bdf8", color: "#0f172a", border: "none", borderRadius: 8, padding: "10px 24px", fontWeight: 700, fontSize: 14, cursor: "pointer", boxShadow: "0 4px 14px rgba(56,189,248,0.2)" }}
+                style={{ background: "#fb923c", color: "#0f172a", border: "none", borderRadius: 8, padding: "10px 24px", fontWeight: 700, fontSize: 14, cursor: "pointer", boxShadow: "0 4px 14px rgba(251,146,60,0.2)" }}
               >
                 Próximo ({nextAba.label}) →
               </button>

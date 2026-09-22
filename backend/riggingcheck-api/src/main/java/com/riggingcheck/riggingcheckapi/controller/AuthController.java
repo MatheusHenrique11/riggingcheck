@@ -1,8 +1,10 @@
 package com.riggingcheck.riggingcheckapi.controller;
 
+import com.riggingcheck.riggingcheckapi.dto.ForgotPasswordRequest;
 import com.riggingcheck.riggingcheckapi.dto.LoginRequest;
 import com.riggingcheck.riggingcheckapi.dto.LoginResponse;
 import com.riggingcheck.riggingcheckapi.dto.RegisterEmpresaRequest;
+import com.riggingcheck.riggingcheckapi.dto.ResetPasswordRequest;
 import com.riggingcheck.riggingcheckapi.dto.SetupRequest;
 import com.riggingcheck.riggingcheckapi.service.AuthService;
 import jakarta.validation.Valid;
@@ -38,6 +40,23 @@ public class AuthController {
     @PostMapping("/setup")
     public ResponseEntity<Void> setup(@Valid @RequestBody SetupRequest request) {
         authService.setupSuperAdmin(request);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Solicita redefinição de senha ("esqueci minha senha"). Sempre retorna
+     * 200 — não revela se o e-mail existe, para evitar enumeração de contas.
+     */
+    @PostMapping("/esqueci-senha")
+    public ResponseEntity<Void> esqueciSenha(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.solicitarResetSenha(request);
+        return ResponseEntity.ok().build();
+    }
+
+    /** Efetiva a redefinição a partir do token recebido por e-mail. */
+    @PostMapping("/redefinir-senha")
+    public ResponseEntity<Void> redefinirSenha(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.redefinirSenha(request);
         return ResponseEntity.ok().build();
     }
 

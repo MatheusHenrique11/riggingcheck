@@ -18,7 +18,7 @@ export default function PlanningWorkspace() {
       {/* Banner de convite para o novo wizard */}
       <div style={{
         background: "linear-gradient(135deg, #1e3a5f, #1e293b)",
-        border: "1px solid #3b82f644",
+        border: "1px solid #ea580c44",
         borderRadius: 12,
         padding: "16px 20px",
         marginBottom: 24,
@@ -29,7 +29,7 @@ export default function PlanningWorkspace() {
         gap: 12,
       }}>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#93c5fd", marginBottom: 4 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#fdba74", marginBottom: 4 }}>
             Novo: Wizard Guiado de Içamento
           </div>
           <div style={{ fontSize: 12, color: "#64748b" }}>
@@ -39,7 +39,7 @@ export default function PlanningWorkspace() {
         <button
           onClick={() => navigate("/app/operacoes/novo")}
           style={{
-            background: "#3b82f6",
+            background: "#ea580c",
             border: "none",
             color: "#fff",
             borderRadius: 8,
@@ -47,7 +47,7 @@ export default function PlanningWorkspace() {
             cursor: "pointer",
             fontWeight: 700,
             fontSize: 13,
-            boxShadow: "0 4px 14px rgba(59,130,246,0.25)",
+            boxShadow: "0 4px 14px rgba(234,88,12,0.25)",
             flexShrink: 0,
           }}
         >

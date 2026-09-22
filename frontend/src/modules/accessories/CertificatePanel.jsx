@@ -32,7 +32,7 @@ function CertRow({ cert }) {
         <span>Validade: <strong style={{ color: cfg.color }}>{cert.dataValidade || "—"}</strong></span>
       </div>
       {cert.arquivoUrl && (
-        <a href={cert.arquivoUrl} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 8, fontSize: 12, color: "#38bdf8" }}>
+        <a href={cert.arquivoUrl} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 8, fontSize: 12, color: "#fb923c" }}>
           📄 Ver documento
         </a>
       )}
@@ -66,8 +66,8 @@ export default function CertificatePanel({ acessorioId, certificados, onAdded })
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: "#38bdf8" }}>Certificados ({certificados.length})</div>
-        <button onClick={() => setShowForm(v => !v)} style={{ background: "transparent", border: "1px solid #3b82f644", color: "#38bdf8", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 12 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "#fb923c" }}>Certificados ({certificados.length})</div>
+        <button onClick={() => setShowForm(v => !v)} style={{ background: "transparent", border: "1px solid #ea580c44", color: "#fb923c", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 12 }}>
           {showForm ? "Cancelar" : "+ Adicionar"}
         </button>
       </div>
@@ -98,7 +98,7 @@ export default function CertificatePanel({ acessorioId, certificados, onAdded })
               </div>
             </div>
             {error && <div style={{ color: "#ef4444", fontSize: 12, marginBottom: 10 }}>{error}</div>}
-            <button type="submit" disabled={loading} style={{ background: "#3b82f6", border: "none", color: "#fff", borderRadius: 8, padding: "9px 22px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: loading ? 0.6 : 1 }}>
+            <button type="submit" disabled={loading} style={{ background: "#ea580c", border: "none", color: "#fff", borderRadius: 8, padding: "9px 22px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: loading ? 0.6 : 1 }}>
               {loading ? "Salvando..." : "Salvar Certificado"}
             </button>
           </form>

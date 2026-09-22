@@ -27,7 +27,7 @@ function InspRow({ insp }) {
       <div style={{ fontSize: 12, color: "#94a3b8" }}>Inspetor: <strong>{insp.inspetorNome || "—"}</strong></div>
       {insp.observacoes && <div style={{ marginTop: 6, fontSize: 12, color: "#64748b", fontStyle: "italic" }}>"{insp.observacoes}"</div>}
       {insp.proximaInspecao && (
-        <div style={{ marginTop: 6, fontSize: 12, color: "#38bdf8" }}>Próxima inspeção: {insp.proximaInspecao}</div>
+        <div style={{ marginTop: 6, fontSize: 12, color: "#fb923c" }}>Próxima inspeção: {insp.proximaInspecao}</div>
       )}
     </div>
   );
@@ -62,8 +62,8 @@ export default function InspectionPanel({ acessorioId, inspecoes, onAdded }) {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: "#38bdf8" }}>Inspeções ({inspecoes.length})</div>
-        <button onClick={() => setShowForm(v => !v)} style={{ background: "transparent", border: "1px solid #3b82f644", color: "#38bdf8", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 12 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "#fb923c" }}>Inspeções ({inspecoes.length})</div>
+        <button onClick={() => setShowForm(v => !v)} style={{ background: "transparent", border: "1px solid #ea580c44", color: "#fb923c", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 12 }}>
           {showForm ? "Cancelar" : "+ Registrar"}
         </button>
       </div>
@@ -94,7 +94,7 @@ export default function InspectionPanel({ acessorioId, inspecoes, onAdded }) {
               </div>
             </div>
             {error && <div style={{ color: "#ef4444", fontSize: 12, marginBottom: 10 }}>{error}</div>}
-            <button type="submit" disabled={loading} style={{ background: "#3b82f6", border: "none", color: "#fff", borderRadius: 8, padding: "9px 22px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: loading ? 0.6 : 1 }}>
+            <button type="submit" disabled={loading} style={{ background: "#ea580c", border: "none", color: "#fff", borderRadius: 8, padding: "9px 22px", cursor: "pointer", fontWeight: 700, fontSize: 13, opacity: loading ? 0.6 : 1 }}>
               {loading ? "Salvando..." : "Registrar Inspeção"}
             </button>
           </form>

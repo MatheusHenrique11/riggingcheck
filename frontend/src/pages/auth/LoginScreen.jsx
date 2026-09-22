@@ -18,6 +18,8 @@ export default function LoginScreen({ onAuth }) {
   const [success, setSuccess] = useState(null);
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [setupForm, setSetupForm] = useState({ nome: "", email: "", senha: "" });
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotFromMode, setForgotFromMode] = useState("usuario");
 
   const goTo = (m) => { setMode(m); setError(null); setSuccess(null); };
 
@@ -68,7 +70,24 @@ export default function LoginScreen({ onAuth }) {
     }
   };
 
-  const accentUsuario   = "#38bdf8";
+  const handleForgotPassword = async () => {
+    setLoading(true); setError(null); setSuccess(null);
+    try {
+      await fetch(`${API}/api/auth/esqueci-senha`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+      // Resposta sempre genérica — o backend não revela se o e-mail existe.
+      setSuccess("Se este e-mail estiver cadastrado, você receberá um link para redefinir sua senha em instantes.");
+    } catch {
+      setError("Não foi possível conectar ao servidor.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const accentUsuario   = "#2b6a99";
   const accentAdmin     = "#f59e0b";
   const accentSuperAdmin = "#ef4444";
   const isAdmin      = mode === "admin" || mode === "register";
@@ -115,6 +134,34 @@ export default function LoginScreen({ onAuth }) {
           <button style={{ background: "none", border: "none", color: "#475569", marginTop: 24, cursor: "pointer", fontSize: 11, width: "100%", textTransform: "uppercase", letterSpacing: "1px" }}
             onClick={() => goTo("superadmin")}>
             Acesso Root / Sistema
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "forgot") {
+    return (
+      <div style={S.loginWrap}>
+        <div style={S.loginCard(isMobile)}>
+          <button onClick={() => goTo(forgotFromMode)} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 13, marginBottom: 20, padding: 0, display: "flex", alignItems: "center", gap: 6 }}>← Voltar</button>
+          <div style={{ textAlign: "center", marginBottom: 28 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 13, margin: "0 auto 14px", background: `${accentUsuario}18`, border: `1px solid ${accentUsuario}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>✉️</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0" }}>Esqueci minha senha</div>
+            <div style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>Informe seu e-mail para receber o link de redefinição</div>
+          </div>
+          <div style={S.field}>
+            <label style={S.label}>Email</label>
+            <input style={{ ...S.input, borderColor: `${accentUsuario}44` }} type="email" placeholder="seu@email.com"
+              value={forgotEmail}
+              onChange={e => setForgotEmail(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleForgotPassword()} />
+          </div>
+          {error   && <div style={{ ...S.errorBox,   marginTop: 12 }}>{error}</div>}
+          {success && <div style={{ ...S.successBox, marginTop: 12 }}>{success}</div>}
+          <button style={{ ...S.btnFull(loading), marginTop: 20, background: `linear-gradient(135deg, ${accentUsuario}, #123a5c)` }}
+            onClick={handleForgotPassword} disabled={loading || !forgotEmail}>
+            {loading ? "Enviando..." : "Enviar link de redefinição"}
           </button>
         </div>
       </div>
@@ -173,9 +220,15 @@ export default function LoginScreen({ onAuth }) {
               onKeyDown={e=>e.key==="Enter"&&handleLogin()} />
           </div>
         ))}
+        <div style={{ textAlign: "right", marginTop: 8 }}>
+          <button style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 11, padding: 0 }}
+            onClick={() => { setForgotFromMode(mode); setForgotEmail(loginForm.email); goTo("forgot"); }}>
+            Esqueci minha senha
+          </button>
+        </div>
         {error   && <div style={{ ...S.errorBox,   marginTop: 12 }}>{error}</div>}
         {success && <div style={{ ...S.successBox, marginTop: 12 }}>{success}</div>}
-        <button style={{ ...S.btnFull(loading), marginTop: 20, background: `linear-gradient(135deg, ${accent}, ${isSuperAdmin?"#b91c1c":(isAdmin?"#fb923c":"#0ea5e9")})` }}
+        <button style={{ ...S.btnFull(loading), marginTop: 20, background: `linear-gradient(135deg, ${accent}, ${isSuperAdmin?"#b91c1c":(isAdmin?"#fb923c":"#123a5c")})` }}
           onClick={handleLogin} disabled={loading}>
           {loading ? "Entrando..." : "Entrar"}
         </button>

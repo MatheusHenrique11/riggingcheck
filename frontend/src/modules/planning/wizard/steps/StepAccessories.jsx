@@ -74,10 +74,10 @@ function AcessorioCard({ acessorio, onAdd, selected, cargaExigidaKg }) {
   const stCfg = STATUS_CFG[acessorio.status] ?? { label: acessorio.status, color: "#64748b" };
 
   return (
-    <div style={{ background: "#0f172a", border: `1px solid ${bloqueado ? "#ef444433" : selected ? "#3b82f644" : "#1e293b"}`, borderRadius: 10, padding: 14, marginBottom: 10 }}>
+    <div style={{ background: "#0f172a", border: `1px solid ${bloqueado ? "#ef444433" : selected ? "#ea580c44" : "#1e293b"}`, borderRadius: 10, padding: 14, marginBottom: 10 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 700, color: "#38bdf8", fontSize: 13, fontFamily: "monospace" }}>{acessorio.codigoInterno}</div>
+          <div style={{ fontWeight: 700, color: "#fb923c", fontSize: 13, fontFamily: "monospace" }}>{acessorio.codigoInterno}</div>
           <div style={{ color: "#cbd5e1", fontSize: 13, marginTop: 2 }}>{acessorio.descricao}</div>
           <div style={{ color: "#64748b", fontSize: 12, marginTop: 1 }}>{TIPO_LABEL[acessorio.tipo] ?? acessorio.tipo} · WLL: <strong style={{ color: "#22c55e" }}>{acessorio.capacidadeWllKg?.toLocaleString("pt-BR")} kg</strong></div>
           <div style={{ marginTop: 6 }}>
@@ -90,7 +90,7 @@ function AcessorioCard({ acessorio, onAdd, selected, cargaExigidaKg }) {
         <button
           onClick={() => onAdd(acessorio)}
           disabled={selected}
-          style={{ background: selected ? "#052e16" : "#1e3a5f", border: `1px solid ${selected ? "#22c55e44" : "#3b82f644"}`, color: selected ? "#22c55e" : "#93c5fd", borderRadius: 8, padding: "7px 14px", cursor: selected ? "default" : "pointer", fontSize: 12, fontWeight: 700, flexShrink: 0 }}
+          style={{ background: selected ? "#052e16" : "#1e3a5f", border: `1px solid ${selected ? "#22c55e44" : "#ea580c44"}`, color: selected ? "#22c55e" : "#fdba74", borderRadius: 8, padding: "7px 14px", cursor: selected ? "default" : "pointer", fontSize: 12, fontWeight: 700, flexShrink: 0 }}
         >
           {selected ? "✓ Vinculado" : "+ Vincular"}
         </button>
@@ -153,7 +153,7 @@ export default function StepAccessories({ planData, onSave }) {
       {/* Acessórios vinculados */}
       {vinculados.length > 0 && (
         <div style={{ background: "#0a0f1e", border: "1px solid #1e293b", borderRadius: 12, padding: 16, marginBottom: 20 }}>
-          <div style={{ fontSize: 12, color: "#38bdf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
+          <div style={{ fontSize: 12, color: "#fb923c", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
             Vinculados ao plano ({vinculados.length})
           </div>
           {vinculados.map(a => {
@@ -162,7 +162,7 @@ export default function StepAccessories({ planData, onSave }) {
             return (
               <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #1e293b" }}>
                 <div>
-                  <span style={{ color: "#38bdf8", fontWeight: 700, fontFamily: "monospace", fontSize: 13 }}>{a.codigoInterno}</span>
+                  <span style={{ color: "#fb923c", fontWeight: 700, fontFamily: "monospace", fontSize: 13 }}>{a.codigoInterno}</span>
                   <span style={{ color: "#64748b", fontSize: 12, marginLeft: 10 }}>{a.descricao}</span>
                   {alertas.map((al, i) => <AlertBadge key={i} severity={al.severity} msg={al.msg} />)}
                 </div>
@@ -180,7 +180,7 @@ export default function StepAccessories({ planData, onSave }) {
 
       {/* Busca */}
       <div style={{ background: "#1e293b", borderRadius: 12, padding: 20, border: "1px solid #334155" }}>
-        <div style={{ fontSize: 12, color: "#38bdf8", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
+        <div style={{ fontSize: 12, color: "#fb923c", fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 12 }}>
           Buscar no Inventário
         </div>
         <input
@@ -194,7 +194,7 @@ export default function StepAccessories({ planData, onSave }) {
 
         {!buscando && resultados.length === 0 && (
           <div style={{ color: "#475569", fontSize: 13, textAlign: "center", padding: "20px 0" }}>
-            Nenhum acessório encontrado. Cadastre no <strong style={{ color: "#38bdf8" }}>Inventário</strong>.
+            Nenhum acessório encontrado. Cadastre no <strong style={{ color: "#fb923c" }}>Inventário</strong>.
           </div>
         )}
 
